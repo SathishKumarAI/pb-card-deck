@@ -66,8 +66,8 @@ export default function DecksPanel({
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => setCreating(true)}
-              className="pressable flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white font-semibold"
-              style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dim))" }}
+              className="pressable flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold"
+              style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
             >
               <Plus size={18} /> New deck
             </button>
@@ -94,8 +94,8 @@ export default function DecksPanel({
               <button
                 onClick={doImport}
                 disabled={!code.trim()}
-                className="pressable px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-                style={{ background: "var(--accent)" }}
+                className="pressable px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
+                style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
                 Add
               </button>
@@ -115,8 +115,8 @@ export default function DecksPanel({
                   <button
                     onClick={() => onPlay(d)}
                     disabled={d.cards.length === 0}
-                    className="pressable p-2 rounded-full text-white disabled:opacity-40"
-                    style={{ background: "var(--accent)" }}
+                    className="pressable p-2 rounded-full disabled:opacity-40"
+                    style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
                     aria-label={`Play ${d.name}`}
                   >
                     <Play size={16} />
@@ -206,7 +206,7 @@ function DeckEditor({ onCancel, onSaved }: { onCancel: () => void; onSaved: () =
 
       <div className="flex gap-2 mt-1">
         <button onClick={onCancel} className="pressable flex-1 px-4 py-2.5 rounded-full text-sm font-medium" style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)" }}>Cancel</button>
-        <button onClick={save} disabled={!name.trim() || cards.length === 0} className="pressable flex-1 px-4 py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-50" style={{ background: "var(--accent)" }}>
+        <button onClick={save} disabled={!name.trim() || cards.length === 0} className="pressable flex-1 px-4 py-2.5 rounded-full text-sm font-semibold disabled:opacity-50" style={{ background: "var(--accent)", color: "var(--accent-ink)" }}>
           Save deck ({cards.length})
         </button>
       </div>

@@ -65,11 +65,11 @@ Everything the app does, grouped so you can find it fast.
 ### 🧭 Learn & understand (no pickleball knowledge needed)
 | Feature | What it does |
 |---|---|
-| **Welcome tour** | On first open, a short swipeable tour: what the app is, how to play, and how to get around. Replayable from **Rules & help**. |
-| **Tap-to-define jargon** | Terms on a card (dink, kitchen, erne, side-out…) are underlined - tap one for a plain-language definition. One shared glossary powers this and the Rules tab. |
+| **Welcome tour** | On first open, three short slides: what the app is, how a point works, and where help lives. Hands over to the manual, and is replayable from **Help**. |
+| **Tap-to-define jargon** | Terms on a card (dink, kitchen, erne, side-out…) are underlined - tap one for a plain-language definition. One shared glossary powers this and the manual. |
 | **Per-card "?" explainer** | Every card has a **?** that opens *what this means · how to play it · what kind of card* in beginner-friendly words. |
 | **"What to do" line** | The card always shows a concrete "what to do this point", not just the constraint - plus a one-time in-game hint. |
-| **"Why & how" help tab** | Rules & help opens on a benefits + navigation tab so a newcomer knows *why* to use it and *where* everything is. |
+| **Searchable manual** | **Help** sits in the header on every screen: 30 plain-language answers grouped from "Start here" to "Your data", with a search box and three quick links. Written for someone who has never played pickleball. |
 
 ### 🏓 Coach / Umpire mode - "Track a match"
 | Feature | What it does |

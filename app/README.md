@@ -91,11 +91,11 @@ The tradeoff we accept: **no cross-device sync.** Custom decks and match history
 - **PWA** - installable, full-screen, safe-area aware, works offline after first load.
 
 ### Learn & understand (no pickleball knowledge needed)
-- **Welcome tour** - on first open, a short swipeable carousel (what the app is / how to play / how to get around); replayable any time from **Rules & help**.
+- **Welcome tour** - on first open, three slides (what this is / a point start to finish / where help lives); hands over to the manual, replayable any time from **Help**.
 - **Tap-to-define jargon** - terms on a card (dink, kitchen, erne, side-out…) are underlined; tap one for a plain-language definition, powered by the shared `lib/glossary.ts`.
 - **Per-card "?" explainer** - every card has a **?** that opens *what this means · how to play it · what kind of card* in beginner words (from `CATEGORY_INFO`).
 - **"What to do" line** - the card always shows a concrete action for the point, not just the constraint, plus a one-time in-game hint.
-- **"Why & how" help tab** - Rules & help opens on a benefits + navigation tab so a newcomer knows *why* to use it and *where* everything is.
+- **Searchable manual** - `Help` in the header on every screen opens `components/HelpPanel.tsx`: 30 answers from `lib/manual.ts` in plain language, with search (every query word must match) and three quick links.
 
 ### Coach / Umpire mode - "Track a match"
 - **One-tap mode switch** - home has a `Play with cards` / `Track a match` toggle that swaps the whole flow.
@@ -196,8 +196,8 @@ app/
 │   ├── HistoryPanel.tsx         # Match history sheet (+ reusable Sheet)
 │   ├── DecksPanel.tsx           # Custom deck list + editor
 │   ├── FeedbackPanel.tsx        # Rating + message → mailto
-│   ├── RulesPanel.tsx           # Rules & help (incl. "Why & how" + glossary)
-│   ├── WelcomeTour.tsx          # First-run onboarding carousel (replayable)
+│   ├── HelpPanel.tsx            # Searchable manual (content in lib/manual.ts) + glossary
+│   ├── WelcomeTour.tsx          # First-run tour, three slides (replayable)
 │   ├── GlossaryText.tsx         # Tap-to-define jargon highlighter
 │   ├── OfficialMatchSetup.tsx   # "Track a match" setup (singles/doubles, etc.)
 │   ├── OfficialControls.tsx     # Coach/umpire controls: server, timeouts, faults

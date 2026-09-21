@@ -94,19 +94,19 @@ export default function WinCelebration({
             <button
               ref={nextBtn}
               onClick={onNewMatch}
-              className="pressable flex items-center justify-center gap-2 px-6 py-3 text-white font-bold rounded-full shadow-lg"
-              style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dim))" }}
+              className="pressable flex items-center justify-center gap-2 px-6 py-3 font-bold rounded-full"
+              style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
             >
-              <RotateCcw size={18} /> New Match
+              <RotateCcw size={18} /> New match
             </button>
           ) : (
             <button
               ref={nextBtn}
               onClick={onNewGame}
-              className="pressable flex items-center justify-center gap-2 px-6 py-3 text-white font-bold rounded-full shadow-lg"
-              style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dim))" }}
+              className="pressable flex items-center justify-center gap-2 px-6 py-3 font-bold rounded-full"
+              style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
             >
-              <RotateCcw size={18} /> Next Game
+              <RotateCcw size={18} /> Next game
             </button>
           )}
           <button
@@ -122,7 +122,7 @@ export default function WinCelebration({
             className="pressable px-6 py-3 font-medium rounded-full"
             style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
           >
-            End Match
+            End match
           </button>
         </div>
       </div>

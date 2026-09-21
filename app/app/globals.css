@@ -295,12 +295,12 @@ svg.lucide { flex-shrink: 0; }
 
 /* Keyboard focus visibility (backlog F142). The CSS reset strips default
    outlines, leaving keyboard users with no focus cue; restore a clear ring on
-   keyboard focus only (mouse/touch taps don't trigger :focus-visible). */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 6px;
-}
+   keyboard focus only (mouse/touch taps don't trigger :focus-visible).
+
+   Scoped to elements a person can actually focus by keyboard. A bare
+   `:focus-visible` also rings dialog containers, which are given tabindex="-1"
+   and focused programmatically on open - that painted a 2px accent outline
+   around every sheet the moment it appeared. */
 a:focus-visible,
 button:focus-visible,
 [role="button"]:focus-visible,

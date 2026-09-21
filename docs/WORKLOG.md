@@ -1,5 +1,52 @@
 # Worklog
 
+## 2026-09-21 16:40 — Premium UI pass + in-app manual, and the .gitignore line that broke Tailwind
+
+**Summary:** Rebuilt the home and game screens around one design-token scale and one primary
+action, replaced the Rules panel with a searchable plain-language manual reachable from a Help
+button on every screen, and fixed three rendering bugs found by measuring the running app rather
+than reading the markup.
+
+**Root cause worth remembering:** the root `.gitignore` had `app/app/` (added to hide a stray
+nested npm install). Tailwind v4 automatic source detection honours `.gitignore`, so it skipped
+the entire App Router directory and never generated any class used only in `app/app/page.tsx` —
+`gap-8`, `justify-start`, `-mb-3`, `z-[70]`, `sr-only`. Measured, not guessed:
+`getComputedStyle('.sr-only').position === 'static'`, which is why the screen-reader-only line
+"Score: Team 1 0, Team 2 0." was rendering as visible text under the scoreboard, and why the
+landing page had no vertical rhythm. Now ignoring the two stray files by exact path. Tailwind
+caches the ignore list — the dev server needs a restart after editing `.gitignore`.
+
+**Changes:**
+- `fix(build)`: narrow the `.gitignore` rule; verified the five classes now resolve.
+- Design tokens in `globals.css`: `--r-chip/-ctl/-panel/-hero` (radius now carries hierarchy),
+  `--elev-1..3`, `--accent-ink` (white on `#34d399` vibrates), `.tnum` for scores/clocks/counts,
+  `.eyebrow` as the single label treatment.
+- Home: one identity ("PB Card Deck", matching the manifest), one sentence, one primary action
+  (Start playing, remembering the last deck). The two competing pickers became a hierarchy —
+  three level cards, five theme chips — instead of eight equal choices. Killed the duplicated
+  count in "All 1,729 cards · 1729 cards".
+- Game: six floating words under the top bar became one match strip with hairline dividers; the
+  scoreboard is one panel where the numeral is the scoreboard and the team colour is a marker on
+  it; removed the second Back button that competed with Draw.
+- `components/HelpPanel.tsx` + `lib/manual.ts`: 30 answers in plain language for someone who has
+  never played pickleball, with search (every query word must match) and three quick links.
+  Replaces `RulesPanel.tsx`; glossary still read from `lib/glossary.ts`. `lib/manual.test.ts`
+  covers search. Welcome tour cut to three slides and hands over to the manual.
+- Two more measured bugs fixed: a long card title was clipped under the card header with no way
+  to scroll to it (`justify-center` on a scroll container centres by overflowing *both* ends —
+  now `m-auto`), and every sheet drew a 2px accent focus ring on open because a bare
+  `:focus-visible` matched dialog containers focused programmatically with `tabindex="-1"`.
+
+**Verification:** `npm run build` clean, `tsc --noEmit` clean, `npm test` 75 passed (6 new),
+`eslint` 0 errors / 14 pre-existing warnings. Home, game, card face, win screen, help panel,
+match history and Track-a-match checked in Chrome at 390 px in both themes.
+
+**Follow-ups:**
+- [ ] `components/GameSettings.tsx` and `components/DeckModeSelector.tsx` are still orphans
+      (nothing imports them) and are the last two files using `bg-green-600 text-white`.
+- [ ] The stray `app/app/package.json` + `package-lock.json` still exist; deleting them would
+      remove the reason the ignore rule was ever added.
+
 ## 2026-07-03 19:42 — Ship: repo+URL rename, deploy, dead-code cleanup, PR
 
 **Summary:** Deployed PB Card Deck to production, renamed repo + live URL to `pb-card-deck`,

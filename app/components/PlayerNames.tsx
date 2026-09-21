@@ -24,7 +24,7 @@ export default function PlayerNames({
       <input value={team1} onChange={(e) => setTeam1(e.target.value)} placeholder="Team 1" maxLength={20} className={input} style={inputStyle} />
       <span className="text-sm" style={{ color: "var(--text-muted)" }}>vs</span>
       <input value={team2} onChange={(e) => setTeam2(e.target.value)} placeholder="Team 2" maxLength={20} className={input} style={inputStyle} />
-      <button onClick={save} className="pressable flex items-center gap-1 px-3 py-1.5 text-white text-xs rounded-full" style={{ background: "var(--accent)" }}>
+      <button onClick={save} className="pressable flex items-center gap-1 px-3 py-1.5 text-xs rounded-full" style={{ background: "var(--accent)", color: "var(--accent-ink)" }}>
         <Check size={14} /> Save
       </button>
     </div>

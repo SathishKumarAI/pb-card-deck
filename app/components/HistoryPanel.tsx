@@ -68,7 +68,7 @@ export default function HistoryPanel({ open, onClose }: { open: boolean; onClose
         <div className="stagger flex flex-col gap-2">
           {records.length > 0 && (
             <div className="rounded-xl p-3 mb-1" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-              <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Win - loss record</div>
+              <div className="eyebrow mb-2">Win - loss record</div>
               <div className="flex flex-col gap-1">
                 {records.slice(0, 5).map((r) => (
                   <div key={r.name} className="flex items-center justify-between text-sm">

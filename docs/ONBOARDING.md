@@ -14,11 +14,11 @@ A free pickleball party game fused with a scorekeeper. Tap to draw a card, play 
 ## What's new (look out for these)
 
 - **Understand & Play (v1)** - onboarding + self-explaining cards for people with zero pickleball knowledge:
-  - **Welcome tour** on first open (what it is / how to play / how to navigate), replayable from Rules & help.
+  - **Welcome tour** on first open (what it is / a point start to finish / where help lives), replayable from Help.
   - **Tap-to-define jargon** - underlined terms on a card open a plain-language definition (shared `lib/glossary.ts`).
   - **Per-card "?" explainer** - "what this means / how to play it / what kind of card" (plain-language `CATEGORY_INFO`).
   - **Always-shown "What to do"** line + a one-time in-game coaching hint.
-  - **Rules & help → "Why & how"** tab (benefits + navigation), Glossary now sourced from the shared file.
+  - **Help** in the header on every screen - a searchable manual (`lib/manual.ts`), Glossary sourced from the shared file.
 - **Coach / Umpire "Track a match" mode** - home toggle `Play with cards` / `Track a match`; run and record a real match (singles/doubles, two-server rotation, timeouts/faults, side-switch), saved to Match history with a downloadable match sheet.
 - **1,729-card deck** with per-card metadata - `rarity` (badge on the card), `intensity`, `tags`, plus both a concise `effect` and a `commentary` string. Full dataset + the "why 1729": [`docs/data/cards.json`](data/cards.json).
 - **Commentator voice toggle** (Settings) - switch every card between concise rules and hyped commentator text.

@@ -220,7 +220,7 @@ export default function CardDisplay({
 
             <div className="flex flex-col gap-4">
               <section>
-                <h3 className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--accent)" }}>What this means</h3>
+                <h3 className="text-xs font-bold mb-1" style={{ color: "var(--accent)" }}>What this means</h3>
                 <p className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
                   <GlossaryText>{card.effect}</GlossaryText>
                 </p>
@@ -228,7 +228,7 @@ export default function CardDisplay({
 
               {card.detail && (
                 <section>
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--accent)" }}>How to play it</h3>
+                  <h3 className="text-xs font-bold mb-1" style={{ color: "var(--accent)" }}>How to play it</h3>
                   <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
                     <GlossaryText>{card.detail}</GlossaryText>
                   </p>
@@ -237,7 +237,7 @@ export default function CardDisplay({
 
               {CATEGORY_INFO[card.category] && (
                 <section>
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--accent)" }}>What kind of card</h3>
+                  <h3 className="text-xs font-bold mb-1" style={{ color: "var(--accent)" }}>What kind of card</h3>
                   <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>{CATEGORY_INFO[card.category]}</p>
                 </section>
               )}
