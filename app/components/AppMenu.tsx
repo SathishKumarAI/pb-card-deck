@@ -98,7 +98,7 @@ export default function AppMenu({
 
       {open && (
         <div role="menu" className="anim-pop absolute right-0 mt-2 w-52 rounded-2xl overflow-hidden z-50 shadow-2xl" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-          <Item icon={<BookOpen size={16} />} label="Rules & help" onClick={() => { setOpen(false); onOpenRules(); }} />
+          <Item icon={<BookOpen size={16} />} label="Help & manual" onClick={() => { setOpen(false); onOpenRules(); }} />
           <Item icon={<Library size={16} />} label="Browse cards" onClick={() => { setOpen(false); onOpenBrowser(); }} />
           <Item icon={<History size={16} />} label="Match history" onClick={() => { setOpen(false); onOpenHistory(); }} />
           <Item icon={<Star size={16} />} label="Favorite cards" onClick={() => { setOpen(false); onOpenFavorites(); }} />

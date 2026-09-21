@@ -1,80 +1,87 @@
 "use client";
 
+/**
+ * First-run tour. Owns the three things someone needs before their first tap:
+ * what this is, how a point works, and where help lives. Anything longer than
+ * three slides gets skipped, so the detail lives in HelpPanel instead - the
+ * last slide hands over to it.
+ */
+
 import { useRef, useState } from "react";
-import { Sparkles, ListChecks, Compass, Rocket, ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 
 type Slide = {
-  icon: React.ReactNode;
   title: string;
   body: React.ReactNode;
 };
 
 const SLIDES: Slide[] = [
   {
-    icon: <Sparkles size={46} strokeWidth={1.5} />,
-    title: "Welcome",
+    title: "Pickleball, with twists",
     body: (
       <>
-        <p className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
-          Turn any pickleball game into a party. Between points you <strong>draw a twist card</strong> — a fun
-          mini-rule for the next rally — while the app keeps score for you.
+        <p className="text-[0.95rem] leading-relaxed" style={{ color: "var(--text)" }}>
+          Play your normal game. Between points you draw a <strong>twist card</strong>: a small rule
+          for the next rally, like &ldquo;soft shots only&rdquo; or &ldquo;swap partners&rdquo;. The app keeps score
+          while you play.
         </p>
-        <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-          Free, no signup, works offline on the court. Your data stays on your phone.
+        <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+          It is free, needs no account, and works on the court with no signal.
         </p>
       </>
     ),
   },
   {
-    icon: <ListChecks size={46} strokeWidth={1.5} />,
-    title: "How to play",
+    title: "A point, start to finish",
     body: (
-      <ol className="flex flex-col gap-2.5 text-left">
+      <ol className="flex flex-col gap-3 text-left">
         {[
-          "Tap the card to draw a twist — a simple rule for the next point.",
-          "Play that point under the rule. Unsure? Tap the ? on the card.",
-          "Tap a team's score to give them the point. First to 11, win by 2.",
+          "Tap the card. Read the twist out loud so everyone hears it.",
+          "Play the rally under that twist.",
+          "Tap the score of whoever won the rally - the app works out serve and side-out.",
         ].map((s, i) => (
-          <li key={i} className="flex items-start gap-3">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "var(--accent)" }}>{i + 1}</span>
-            <span className="text-sm" style={{ color: "var(--text)" }}>{s}</span>
+          <li key={s} className="flex items-start gap-3">
+            <span
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+              style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+            >
+              {i + 1}
+            </span>
+            <span className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>{s}</span>
           </li>
         ))}
       </ol>
     ),
   },
   {
-    icon: <Compass size={46} strokeWidth={1.5} />,
-    title: "Find your way around",
+    title: "Never stuck for long",
     body: (
-      <ul className="flex flex-col gap-2 text-left text-sm" style={{ color: "var(--text-secondary)" }}>
+      <ul className="flex flex-col gap-2.5 text-left text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
         {[
-          ["The card", "Tap it (or Draw) to get a twist. ? explains it, star saves it, Skip swaps it."],
-          ["No pickleball terms?", "Underlined words on a card explain themselves when you tap them."],
-          ["The menu (top-right)", "Your decks, match history, favourites, achievements and full rules."],
-          ["Settings (gear)", "Points to win, sound, light/dark, and Commentator voice."],
+          ["A word you don't know", "Underlined words on a card explain themselves when you tap them."],
+          ["A card you don't get", "The ? on the card says what it means and how to play it."],
+          ["Anything else", "Help, top right, answers it - and has a search box."],
         ].map(([k, v]) => (
           <li key={k}>
-            <strong style={{ color: "var(--text)" }}>{k}:</strong> {v}
+            <strong style={{ color: "var(--text)" }}>{k}.</strong>{" "}{v}
           </li>
         ))}
       </ul>
     ),
   },
-  {
-    icon: <Rocket size={46} strokeWidth={1.5} />,
-    title: "You're ready",
-    body: (
-      <p className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
-        Pick a <strong>deck mode</strong> below — Family, Party, Drill, Tournament or Chaos — then tap the card and
-        play. Tap <strong>?</strong> on any card whenever you&apos;re unsure. Have fun!
-      </p>
-    ),
-  },
 ];
 
-export default function WelcomeTour({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function WelcomeTour({
+  open,
+  onClose,
+  onOpenHelp,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Hand over to the full manual from the last slide. */
+  onOpenHelp?: () => void;
+}) {
   const [i, setI] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   useFocusTrap(ref, open, onClose);
@@ -83,66 +90,70 @@ export default function WelcomeTour({ open, onClose }: { open: boolean; onClose:
 
   const last = i === SLIDES.length - 1;
   const slide = SLIDES[i];
-
   const finish = () => { setI(0); onClose(); };
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Welcome tour"
+      aria-label="Welcome"
       className="fixed inset-0 z-[85] flex items-center justify-center p-6 bg-black/70 backdrop-blur-md"
     >
-      <div ref={ref} tabIndex={-1} className="glass rounded-3xl p-7 max-w-sm w-full shadow-2xl anim-pop outline-none" style={{ border: "1px solid var(--accent)" }}>
-        <div className="flex justify-center mb-3" style={{ color: "var(--accent)" }}>
-          {slide.icon}
+      <div
+        ref={ref}
+        tabIndex={-1}
+        className="glass w-full max-w-sm p-6 anim-pop outline-none"
+        style={{ border: "1px solid var(--border)", borderRadius: "var(--r-panel)", boxShadow: "var(--elev-3)" }}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <span className="eyebrow">
+            Step {i + 1} of {SLIDES.length}
+          </span>
+          <button
+            onClick={finish}
+            className="pressable px-2 py-1 text-sm font-medium"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Skip
+          </button>
         </div>
-        <h2 className="font-display text-2xl font-black text-center mb-4" style={{ color: "var(--text)" }}>{slide.title}</h2>
 
-        <div className="min-h-[8.5rem] flex flex-col justify-center mb-5">{slide.body}</div>
+        <h2 className="font-display mb-3 text-2xl font-black leading-tight" style={{ color: "var(--text)" }}>
+          {slide.title}
+        </h2>
 
-        {/* Dot pager */}
-        <div className="flex items-center justify-center gap-1.5 mb-5" aria-hidden>
-          {SLIDES.map((_, idx) => (
-            <span
-              key={idx}
-              className="rounded-full transition-all"
-              style={{
-                width: idx === i ? 20 : 7,
-                height: 7,
-                background: idx === i ? "var(--accent)" : "var(--border)",
-              }}
-            />
-          ))}
-        </div>
+        <div className="mb-6 min-h-[9.5rem]">{slide.body}</div>
 
         <div className="flex items-center gap-2">
-          {i > 0 ? (
+          {i > 0 && (
             <button
               onClick={() => setI(i - 1)}
-              className="pressable flex items-center gap-1.5 px-4 py-3 text-sm font-semibold rounded-full"
-              style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
+              aria-label="Previous step"
+              className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+              style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
             >
-              <ArrowLeft size={16} /> Back
-            </button>
-          ) : (
-            <button
-              onClick={finish}
-              className="pressable px-4 py-3 text-sm font-semibold rounded-full"
-              style={{ color: "var(--text-muted)" }}
-            >
-              Skip
+              <ArrowLeft size={17} />
             </button>
           )}
           <button
             autoFocus
             onClick={() => (last ? finish() : setI(i + 1))}
-            className="pressable flex-1 flex items-center justify-center gap-1.5 px-6 py-3 text-white font-bold rounded-full shadow-lg"
-            style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dim))" }}
+            className="pressable flex flex-1 items-center justify-center gap-1.5 px-6 py-3 font-bold"
+            style={{ background: "var(--accent)", color: "var(--accent-ink)", borderRadius: "var(--r-chip)" }}
           >
-            {last ? "Let's play" : "Next"} {!last && <ArrowRight size={16} />}
+            {last ? "Start playing" : "Next"} {!last && <ArrowRight size={16} />}
           </button>
         </div>
+
+        {last && onOpenHelp && (
+          <button
+            onClick={() => { setI(0); onOpenHelp(); }}
+            className="pressable mt-2.5 flex w-full items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold"
+            style={{ color: "var(--text-secondary)", borderRadius: "var(--r-chip)" }}
+          >
+            <BookOpen size={15} /> Read the full manual first
+          </button>
+        )}
       </div>
     </div>
   );

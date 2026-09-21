@@ -1,24 +1,48 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────
+   Scales shared by both themes.
+
+   Radius carries hierarchy: a chip is not a panel and a panel is not THE card.
+   Before these existed every surface was rounded-2xl/3xl, which is why the UI
+   read as one flat pile of boxes. Pick by role, never by eye:
+     --r-chip   pills, badges, small controls
+     --r-ctl    buttons, inputs, list rows
+     --r-panel  cards, sheets, dialogs
+     --r-hero   the playing card only
+   ───────────────────────────────────────────── */
+:root {
+  --r-chip: 999px;
+  --r-ctl: 12px;
+  --r-panel: 18px;
+  --r-hero: 26px;
+
+  /* Elevation. Three steps, no ad-hoc box-shadows. */
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --elev-2: 0 8px 22px -12px rgba(0, 0, 0, 0.5);
+  --elev-3: 0 24px 54px -22px rgba(0, 0, 0, 0.65);
+}
+
 /* Dark mode (default) - softened to reduce eye strain (no pure black / pure white) */
 :root, [data-theme="dark"] {
-  --bg: #0e0e11;
-  --bg-card: #18181b;
-  --bg-elevated: #202024;
-  --border: #2c2c31;
-  --text: #ededee;
-  --text-secondary: #9a9aa1;
-  --text-muted: #7e7e87;
+  --bg: #0b0e0f;
+  --bg-card: #13181a;
+  --bg-elevated: #1a2123;
+  --border: #242d2f;
+  --text: #e9efec;
+  --text-secondary: #94a29e;
+  --text-muted: #74827e;
   --accent: #34d399;
   --accent-dim: #0b6b4f;
-  --accent-glow: rgba(52, 211, 153, 0.22);
+  --accent-ink: #04150f; /* text ON the accent - never white, which vibrates */
+  --accent-glow: rgba(52, 211, 153, 0.18);
   --blue: #60a5fa;
   --red: #f87171;
   --yellow: #fbbf24;
-  --mesh-1: rgba(52, 211, 153, 0.08);
-  --mesh-2: rgba(96, 165, 250, 0.07);
-  --mesh-3: rgba(203, 166, 247, 0.06);
-  --glass: rgba(24, 24, 27, 0.72);
+  --mesh-1: rgba(52, 211, 153, 0.07);
+  --mesh-2: rgba(96, 165, 250, 0.05);
+  --mesh-3: rgba(203, 166, 247, 0.04);
+  --glass: rgba(19, 24, 26, 0.76);
 }
 
 /* Light mode - soft mint-tinted, with visible colour depth (not flat grey) */
@@ -32,13 +56,17 @@
   --text-muted: #71837b;
   --accent: #059669;
   --accent-dim: #047857;
-  --accent-glow: rgba(5, 150, 105, 0.28);
+  --accent-ink: #ffffff;
+  --accent-glow: rgba(5, 150, 105, 0.22);
   --blue: #2563eb;
   --red: #e11d48;
   --yellow: #d97706;
-  --mesh-1: rgba(16, 185, 129, 0.18);
-  --mesh-2: rgba(56, 130, 246, 0.14);
-  --mesh-3: rgba(168, 85, 247, 0.12);
+  /* Light mode sits behind dark text, so the mesh has to stay near-invisible -
+     at the old alphas the blue and violet lobes turned the middle of the page
+     grey-purple. */
+  --mesh-1: rgba(16, 185, 129, 0.11);
+  --mesh-2: rgba(56, 130, 246, 0.05);
+  --mesh-3: rgba(168, 85, 247, 0.04);
   --glass: rgba(255, 255, 255, 0.78);
 }
 
@@ -188,6 +216,17 @@ svg.lucide { flex-shrink: 0; }
 }
 .card-face--back { transform: rotateY(180deg); }
 
+/* The deck back: chalk court lines at 45 degrees, barely there. The only
+   decorative texture in the app, on the one surface that earns it. */
+.deck-back::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.075) 0 1px, transparent 1px 15px);
+  pointer-events: none;
+}
+
 /* Shine sweep overlay */
 .shine { position: relative; overflow: hidden; }
 .shine::after {
@@ -218,12 +257,17 @@ svg.lucide { flex-shrink: 0; }
 /* Distinctive display face for headings, scores, and card text */
 .font-display { font-family: var(--font-display), var(--font-body), system-ui, sans-serif; }
 
-/* Keyboard focus - visible ring on every interactive element (the tap-highlight
-   kill above removes the only other affordance, so this is the sole focus cue) */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 4px;
+/* Scoreboard numerals. Proportional digits make a score jitter sideways as it
+   climbs (1 is narrower than 8); tabular figures hold the column still. Use on
+   anything that counts: scores, clocks, card counts. */
+.tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+/* The one section-label treatment, so labels stop being invented per screen. */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
 }
 
 /* Hide scrollbar but keep scrolling (used inside the card face) */

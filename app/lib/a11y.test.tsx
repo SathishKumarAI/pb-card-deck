@@ -35,7 +35,7 @@ const card: Card = {
 describe("accessibility (axe)", () => {
   it("CardDisplay has no detectable violations", async () => {
     const { container } = render(
-      <CardDisplay card={card} onDraw={() => {}} deckRemaining={42} onFavorite={() => {}} onSkip={() => {}} onBack={() => {}} />,
+      <CardDisplay card={card} onDraw={() => {}} deckRemaining={42} onFavorite={() => {}} onSkip={() => {}} />,
     );
     expect(await axe(container)).toHaveNoViolations();
   });

@@ -2,7 +2,7 @@
 
 import { Card, CATEGORY_COLORS, CATEGORY_INFO, RARITY_STYLE } from "@/lib/cards";
 import { CategoryIcon } from "./icons";
-import { Shuffle, Star, SkipForward, ArrowLeft, HelpCircle, X } from "lucide-react";
+import { Shuffle, Star, SkipForward, HelpCircle, X } from "lucide-react";
 import { useState } from "react";
 import GlossaryText from "./GlossaryText";
 
@@ -39,7 +39,6 @@ export default function CardDisplay({
   isFavorite,
   onFavorite,
   onSkip,
-  onBack,
   commentary = false,
   large = false,
 }: {
@@ -49,7 +48,6 @@ export default function CardDisplay({
   isFavorite?: boolean;
   onFavorite?: () => void;
   onSkip?: () => void;
-  onBack?: () => void;
   commentary?: boolean;
   large?: boolean;
 }) {
@@ -101,24 +99,27 @@ export default function CardDisplay({
         <div className={`card-3d-inner ${flipped ? "is-flipped" : ""}`}>
           {/* Back of card */}
           <div
-            className="card-face w-full h-full rounded-3xl flex flex-col items-center justify-center gap-3 select-none shadow-2xl anim-glow"
+            className="card-face deck-back w-full h-full flex flex-col items-center justify-center gap-4 select-none"
             style={{
-              background: "linear-gradient(150deg, var(--accent), var(--accent-dim))",
-              border: "1px solid rgba(255,255,255,0.15)",
+              background: "linear-gradient(155deg, var(--accent), var(--accent-dim))",
+              border: "1px solid rgba(255,255,255,0.14)",
+              borderRadius: "var(--r-hero)",
+              boxShadow: "var(--elev-3)",
             }}
           >
-            <div className="anim-float text-white" style={{ filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.3))" }}>
-              <Shuffle size={56} strokeWidth={1.5} />
+            <div className="anim-float" style={{ color: "var(--accent-ink)", opacity: 0.85 }}>
+              <Shuffle size={48} strokeWidth={1.5} />
             </div>
-            <div className="text-2xl font-black text-white tracking-[0.2em]">SHUFFLE</div>
-            <div className="text-sm text-white/70 mt-1">Tap to draw</div>
-            <div className="absolute bottom-5 text-xs text-white/50 px-3 py-1 rounded-full bg-white/10">
-              {deckRemaining} cards left
+            <div className="font-display text-2xl font-black" style={{ color: "var(--accent-ink)" }}>
+              Tap to draw
+            </div>
+            <div className="tnum absolute bottom-5 text-xs px-3 py-1 rounded-full" style={{ background: "rgba(0,0,0,0.14)", color: "var(--accent-ink)", opacity: 0.8 }}>
+              {deckRemaining.toLocaleString()} cards left
             </div>
           </div>
 
           {/* Face of card */}
-          <div className={`card-face card-face--back shine ${shine ? "shine-run" : ""} w-full h-full rounded-3xl overflow-hidden bg-gradient-to-br ${gradient} flex flex-col p-5 select-none shadow-2xl`} style={{ border: "1px solid rgba(255,255,255,0.2)" }}>
+          <div className={`card-face card-face--back shine ${shine ? "shine-run" : ""} w-full h-full overflow-hidden bg-gradient-to-br ${gradient} flex flex-col p-5 select-none`} style={{ border: "1px solid rgba(255,255,255,0.18)", borderRadius: "var(--r-hero)", boxShadow: "var(--elev-3)" }}>
             <div className="flex justify-between items-start">
               <span className="flex items-center gap-2 min-w-0">
                 <span className="text-white drop-shadow shrink-0">{card && <CategoryIcon category={card.category} size={30} strokeWidth={2} />}</span>
@@ -145,14 +146,20 @@ export default function CardDisplay({
               </span>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar w-full flex flex-col items-center justify-center gap-2 text-center px-1 py-2">
+            {/* The text scrolls when a card runs long. `justify-center` on a
+                scroll container centres by OVERFLOWING both ends, which clips
+                the title under the header with no way to scroll up to it - so
+                the inner block centres with `m-auto` instead, which collapses
+                to zero once the content is taller than the box. */}
+            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar w-full flex flex-col px-1 py-2">
+              <div className="m-auto flex flex-col items-center gap-2 text-center w-full">
               <h2 className={`font-display ${large ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl"} font-black text-white leading-tight drop-shadow-sm break-words`}>{card?.name}</h2>
               <p className={`${large ? "text-base sm:text-lg font-medium" : commentary ? "text-xs sm:text-sm" : "text-sm sm:text-base"} leading-snug text-white drop-shadow-sm`}>
                 <GlossaryText>{(commentary && card?.commentary ? card.commentary : card?.effect) ?? ""}</GlossaryText>
               </p>
               {card?.detail && (
                 <p className={`${large ? "text-sm" : "text-[11px] sm:text-xs"} leading-snug text-white/80 max-w-[18rem]`}>
-                  <span className="font-bold text-white/60 uppercase tracking-wider text-[9px] mr-1">What to do</span>
+                  <span className="font-semibold text-white/60 mr-1">What to do:</span>
                   <GlossaryText>{card.detail}</GlossaryText>
                 </p>
               )}
@@ -162,6 +169,7 @@ export default function CardDisplay({
               {card?.callout && (
                 <p className="text-[11px] font-bold italic text-white/70">&ldquo;{card.callout}&rdquo;</p>
               )}
+              </div>
             </div>
 
             <div className="flex justify-between items-end gap-2">
@@ -176,26 +184,15 @@ export default function CardDisplay({
         </div>
       </div>
 
-      {/* Draw + Back row */}
-      <div className="flex items-center justify-center gap-3 flex-wrap">
-        <button
-          onClick={handleDraw}
-          className="pressable flex items-center gap-2 px-9 py-3.5 text-white text-base font-semibold rounded-full shadow-lg anim-glow"
-          style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dim))" }}
-        >
-          <Shuffle size={18} /> {flipped ? "Draw Again" : "Draw Card"}
-        </button>
-        {onBack && (
-          <button
-            onClick={onBack}
-            aria-label="Back to home"
-            className="pressable flex items-center gap-1.5 px-5 py-3.5 text-sm font-semibold rounded-full"
-            style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
-          >
-            <ArrowLeft size={16} /> Back
-          </button>
-        )}
-      </div>
+      {/* One action under the card. Leaving is Back in the top bar - a second
+          exit down here only competed with the thing you came to press. */}
+      <button
+        onClick={handleDraw}
+        className="pressable flex items-center justify-center gap-2 w-full max-w-[22rem] px-8 py-3.5 text-base font-bold"
+        style={{ background: "var(--accent)", color: "var(--accent-ink)", borderRadius: "var(--r-chip)", boxShadow: "var(--elev-2)" }}
+      >
+        <Shuffle size={18} /> {flipped ? "Draw again" : "Draw a card"}
+      </button>
 
       {/* Per-card plain-language explainer (F: zero-knowledge users) */}
       {explainerOpen && card && (

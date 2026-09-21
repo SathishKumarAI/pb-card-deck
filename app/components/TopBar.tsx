@@ -12,6 +12,45 @@ const SKILL_ICONS: Record<SkillLevel, typeof Sprout> = {
   advanced: Flame,
 };
 
+/** A round icon-only control in row 1. */
+function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className="pressable flex items-center justify-center w-10 h-10 rounded-full"
+      style={{ color: "var(--text-secondary)" }}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** A segment of the match strip. Divider on the left of every one but the first. */
+function StripButton({
+  label, onClick, disabled, pressed, tone, children,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  pressed?: boolean;
+  tone?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      aria-pressed={pressed}
+      className="flex flex-1 items-center justify-center gap-1.5 min-h-[44px] px-2 text-xs font-medium transition-colors disabled:opacity-30 active:bg-[var(--bg-card)]"
+      style={{ color: tone ?? "var(--text-secondary)", borderLeft: "1px solid var(--border)" }}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function TopBar({
   game,
   mode,
@@ -54,55 +93,63 @@ export default function TopBar({
 
   return (
     <div className="w-full sticky top-0 z-30 glass" style={{ borderBottom: "1px solid var(--border)", paddingTop: "env(safe-area-inset-top)" }}>
-      {/* Main bar */}
-      <div className="flex items-center justify-between gap-2 px-4 py-3 max-w-lg mx-auto">
-        <button onClick={onBack} className="pressable shrink-0 flex items-center gap-1 text-sm" style={{ color: "var(--accent)" }}>
-          <ArrowLeft size={16} /> Back
+      {/* Row 1 - where am I, and how do I leave. Nothing that changes the score. */}
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5 max-w-lg mx-auto">
+        <button onClick={onBack} aria-label="Back to home" className="pressable shrink-0 flex items-center gap-1 pr-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+          <ArrowLeft size={17} /> Back
         </button>
 
-        <button onClick={() => setShowModes(!showModes)} aria-haspopup="true" aria-expanded={showModes} aria-label="Change deck mode" className="pressable min-w-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: "var(--bg-elevated)" }}>
-          <ModeIcon size={15} style={{ color: "var(--accent)" }} />
+        <button onClick={() => setShowModes(!showModes)} aria-haspopup="true" aria-expanded={showModes} aria-label="Change deck" className="pressable min-w-0 flex items-center gap-1.5 px-3 py-1.5" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--r-chip)" }}>
+          <ModeIcon size={14} style={{ color: "var(--accent)" }} />
           <span className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>
             {modeLabelOverride || selectionLabel(mode)}
           </span>
           <ChevronDown size={13} style={{ color: "var(--text-muted)", transform: showModes ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
         </button>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button onClick={onToggleTv} className="pressable p-2 rounded-full" style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)" }} aria-label="Big-score display">
-            <Tv size={18} />
-          </button>
-          <button onClick={onOpenSettings} className="pressable p-2 rounded-full" style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)" }} aria-label="Settings">
-            <Settings size={18} />
-          </button>
-          <button onClick={onCycleTheme} className="pressable p-2 rounded-full" style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)" }} aria-label={`Theme: ${theme}. Tap to change.`}>
+        <div className="flex items-center gap-0.5 shrink-0">
+          <IconButton label="Big-score display" onClick={onToggleTv}><Tv size={18} /></IconButton>
+          <IconButton label="Settings" onClick={onOpenSettings}><Settings size={18} /></IconButton>
+          <IconButton label={`Theme: ${theme}. Tap to change.`} onClick={onCycleTheme}>
             {theme === "auto" ? <Monitor size={18} /> : theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
-          </button>
+          </IconButton>
           {menuSlot}
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 px-4 pb-2 max-w-lg mx-auto">
-        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-          G{game.gameNumber} · {elapsed}
-        </span>
-        <span style={{ color: "var(--border)" }}>·</span>
-        <button onClick={onTogglePause} aria-label={paused ? "Resume game" : "Pause game"} aria-pressed={paused} className="pressable flex items-center justify-center gap-1 text-xs min-h-[44px] px-2" style={{ color: paused ? "var(--accent)" : "var(--text-secondary)" }}>
-          {paused ? <Play size={14} fill="currentColor" /> : <Pause size={14} />} {paused ? "Resume" : "Pause"}
-        </button>
-        <button onClick={onUndo} disabled={game.history.length === 0} className="pressable flex items-center justify-center gap-1 text-xs min-h-[44px] px-2 disabled:opacity-30" style={{ color: "var(--text-secondary)" }}>
-          <Undo2 size={14} /> Undo
-        </button>
-        <button onClick={onReset} disabled={game.score.team1 === 0 && game.score.team2 === 0} className="pressable flex items-center justify-center gap-1 text-xs min-h-[44px] px-2 disabled:opacity-30" style={{ color: "var(--text-secondary)" }}>
-          <RotateCcw size={14} /> Reset
-        </button>
-        <button onClick={onToggleLock} aria-label={game.config.scoreLocked ? "Unlock score" : "Lock score"} aria-pressed={game.config.scoreLocked} className="pressable flex items-center justify-center text-xs min-h-[44px] min-w-[44px]" style={{ color: game.config.scoreLocked ? "var(--red)" : "var(--text-secondary)" }}>
-          {game.config.scoreLocked ? <Lock size={14} /> : <LockOpen size={14} />}
-        </button>
-        <button onClick={onEditNames} aria-label="Edit team names" className="pressable flex items-center justify-center text-xs min-h-[44px] min-w-[44px]" style={{ color: "var(--text-secondary)" }}>
-          <Pencil size={14} />
-        </button>
+      {/* Row 2 - the match strip: where the game is, and the controls that change
+          it. One surface with hairline dividers, so it reads as a single
+          instrument rather than six floating words. */}
+      <div className="px-4 pb-2.5 max-w-lg mx-auto">
+        <div className="flex items-stretch overflow-hidden" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--r-ctl)" }}>
+          <span className="tnum flex items-center gap-1.5 px-3 text-xs font-medium shrink-0" style={{ color: "var(--text-secondary)" }}>
+            <span style={{ color: "var(--text-muted)" }}>G{game.gameNumber}</span>
+            {elapsed}
+          </span>
+          <StripButton label={paused ? "Resume game" : "Pause game"} pressed={paused} onClick={onTogglePause} tone={paused ? "var(--accent)" : undefined}>
+            {paused ? <Play size={14} fill="currentColor" /> : <Pause size={14} />}
+            <span className="hidden min-[360px]:inline">{paused ? "Resume" : "Pause"}</span>
+          </StripButton>
+          <StripButton label="Undo the last action" onClick={onUndo} disabled={game.history.length === 0}>
+            <Undo2 size={14} />
+            <span className="hidden min-[360px]:inline">Undo</span>
+          </StripButton>
+          <StripButton label="Reset the score" onClick={onReset} disabled={game.score.team1 === 0 && game.score.team2 === 0}>
+            <RotateCcw size={14} />
+            <span className="hidden min-[360px]:inline">Reset</span>
+          </StripButton>
+          <StripButton
+            label={game.config.scoreLocked ? "Unlock the score" : "Lock the score against stray taps"}
+            pressed={game.config.scoreLocked}
+            onClick={onToggleLock}
+            tone={game.config.scoreLocked ? "var(--red)" : undefined}
+          >
+            {game.config.scoreLocked ? <Lock size={14} /> : <LockOpen size={14} />}
+          </StripButton>
+          <StripButton label="Edit team names" onClick={onEditNames}>
+            <Pencil size={14} />
+          </StripButton>
+        </div>
       </div>
 
       {/* Mode selector dropdown */}
@@ -119,8 +166,8 @@ export default function TopBar({
                   className="pressable flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
                   style={{
                     background: active ? "var(--accent)" : "var(--bg-elevated)",
-                    color: active ? "#fff" : "var(--text-secondary)",
-                    boxShadow: active ? "0 4px 14px -4px var(--accent-glow)" : "none",
+                    color: active ? "var(--accent-ink)" : "var(--text-secondary)",
+                    
                   }}
                 >
                   <Icon size={13} /> {SKILL_LEVELS[m].label}
@@ -139,8 +186,8 @@ export default function TopBar({
                   className="pressable flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
                   style={{
                     background: active ? "var(--accent)" : "var(--bg-elevated)",
-                    color: active ? "#fff" : "var(--text-secondary)",
-                    boxShadow: active ? "0 4px 14px -4px var(--accent-glow)" : "none",
+                    color: active ? "var(--accent-ink)" : "var(--text-secondary)",
+                    
                   }}
                 >
                   <Icon size={13} /> {DECK_MODES[m].label}

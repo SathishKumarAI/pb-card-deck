@@ -109,7 +109,10 @@ export default function ScoreKeeper({
 
       {/* Score. In official mode the divider reads as the NET (court-side framing
           like the Referee app) so a coach taps "the side that won". */}
-      <div className="flex items-center gap-6 sm:gap-8">
+      <div
+        className="flex items-center justify-center gap-4 sm:gap-6 w-full px-4 py-4"
+        style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-panel)", boxShadow: "var(--elev-1)" }}
+      >
         <ScoreButton
           score={game.score.team1}
           name={game.playerNames.team1}
@@ -150,16 +153,16 @@ export default function ScoreKeeper({
         <div className="w-full max-w-sm grid grid-cols-2 gap-2">
           <button
             onClick={() => onScore(game.servingTeam)}
-            className="pressable flex flex-col items-center gap-0.5 py-3 rounded-2xl font-bold text-white"
-            style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dim))" }}
+            className="pressable flex flex-col items-center gap-0.5 py-3 font-bold"
+            style={{ background: "var(--accent)", color: "var(--accent-ink)", borderRadius: "var(--r-panel)" }}
           >
             <span className="text-sm">{servingName} won</span>
             <span className="text-[11px] font-medium opacity-90">+1 point</span>
           </button>
           <button
             onClick={onSideOut}
-            className="pressable flex flex-col items-center gap-0.5 py-3 rounded-2xl font-bold"
-            style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text)" }}
+            className="pressable flex flex-col items-center gap-0.5 py-3 font-bold"
+            style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: "var(--r-panel)" }}
           >
             <span className="text-sm">{servingName} lost</span>
             <span className="text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>{lostSub}</span>
@@ -247,19 +250,27 @@ function ScoreButton({ score, name, color, serving, serverNumber, showServer, in
         )}
         {serving && !showServer && <CircleDot size={13} style={{ color: "var(--yellow)" }} />}
       </span>
+      {/* The numeral is the scoreboard; the team colour is a marker on it, not a
+          slab behind it. Tabular figures keep the digits from shifting as the
+          score climbs. */}
       <div
-        className={`font-display relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl flex items-center justify-center text-4xl sm:text-5xl font-black text-white ${bump ? "anim-bump" : ""} ${serving ? "anim-ring" : ""}`}
+        className={`font-display tnum relative w-[4.5rem] h-[4.5rem] sm:w-24 sm:h-24 flex items-center justify-center text-[2.75rem] sm:text-5xl font-black ${bump ? "anim-bump" : ""}`}
         style={{
-          background: `linear-gradient(150deg, ${color}, color-mix(in srgb, ${color} 65%, black))`,
-          opacity: disabled ? 0.4 : 1,
-          boxShadow: serving
-            ? `0 0 0 3px var(--yellow), 0 10px 30px -8px ${color}`
-            : `0 10px 30px -10px ${color}`,
+          background: "var(--bg-elevated)",
+          color: "var(--text)",
+          borderRadius: "var(--r-panel)",
+          border: `1px solid ${serving ? "var(--yellow)" : "var(--border)"}`,
+          opacity: disabled ? 0.45 : 1,
         }}
       >
         {score}
+        <span
+          aria-hidden
+          className="absolute left-1/2 -translate-x-1/2 bottom-2.5 h-1 w-7 rounded-full"
+          style={{ background: color }}
+        />
       </div>
-      <span className="text-xs font-semibold truncate max-w-[88px]" style={{ color: "var(--text-secondary)" }}>
+      <span className="text-xs font-semibold truncate max-w-[88px]" style={{ color: serving ? "var(--text)" : "var(--text-secondary)" }}>
         {name}
       </span>
     </>

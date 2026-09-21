@@ -20,7 +20,7 @@ import HistoryPanel from "@/components/HistoryPanel";
 import DecksPanel from "@/components/DecksPanel";
 import FavoritesPanel from "@/components/FavoritesPanel";
 import FeedbackPanel from "@/components/FeedbackPanel";
-import RulesPanel from "@/components/RulesPanel";
+import HelpPanel from "@/components/HelpPanel";
 import CardBrowserPanel from "@/components/CardBrowserPanel";
 import TVScore from "@/components/TVScore";
 import AchievementsPanel from "@/components/AchievementsPanel";
@@ -32,11 +32,11 @@ import { useToast } from "@/components/Toast";
 const GITHUB_URL = process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/SathishKumarAI/pb-card-deck";
 
 const LANDING_MODES: { key: DeckMode; label: string; desc: string }[] = [
-  { key: "family", label: "Family", desc: "Fun for all ages" },
-  { key: "party", label: "Party", desc: "Laughs & dares" },
-  { key: "drill", label: "Drill", desc: "Sharpen skills" },
-  { key: "tournament", label: "Tournament", desc: "Competitive" },
-  { key: "chaos", label: "Chaos", desc: "All 1,729 cards" },
+  { key: "family", label: "Family", desc: "Clean fun for all ages" },
+  { key: "party", label: "Party", desc: "Dares and laughs" },
+  { key: "drill", label: "Drill", desc: "Sharpen one skill" },
+  { key: "tournament", label: "Tournament", desc: "Competitive twists" },
+  { key: "chaos", label: "Chaos", desc: "Nothing held back" },
 ];
 
 // Skill levels shown first on the menu, for players picking by ability.
@@ -49,6 +49,9 @@ const SKILL_ORDER: { key: SkillLevel; Icon: typeof Sprout }[] = [
 const BEGINNER_INTRO_KEY = "pb-beginner-intro-seen";
 const WELCOME_TOUR_KEY = "pb-welcome-tour-seen";
 const GAME_HINT_KEY = "pb-game-hint-seen";
+// The deck the primary "Start playing" button will use. Remembering it is what
+// lets the home screen have ONE obvious action instead of eight equal ones.
+const LAST_DECK_KEY = "pb-last-deck";
 
 // Tiny seeded PRNG so the daily challenge deck is identical for everyone on a
 // given day, with no backend (backlog F018).
@@ -75,6 +78,7 @@ export default function Home() {
   const [showTour, setShowTour] = useState(false);
   const [showGameHint, setShowGameHint] = useState(false);
   const [homeTab, setHomeTab] = useState<"cards" | "track">("cards");
+  const [lastDeck, setLastDeck] = useState<string>("beginner");
   const [customCards, setCustomCards] = useState<Card[] | null>(null);
   const [customName, setCustomName] = useState<string | null>(null);
   const [theme, setTheme] = useState<"dark" | "light" | "auto">("dark");
@@ -113,6 +117,10 @@ export default function Home() {
   useEffect(() => {
     fetch("/cards.json", { cache: "no-store" }).then((r) => r.json()).then(setAllCards);
     setFavoriteIds(listFavoriteIds());
+    try {
+      const saved = localStorage.getItem(LAST_DECK_KEY);
+      if (saved) setLastDeck(saved);
+    } catch {}
     if ("serviceWorker" in navigator) {
       if (process.env.NODE_ENV === "production") {
         navigator.serviceWorker.register("/sw.js").catch(() => {});
@@ -261,6 +269,8 @@ export default function Home() {
   const startGameHandler = useCallback((m: string) => {
     setCustomCards(null);
     setCustomName(null);
+    setLastDeck(m);
+    try { localStorage.setItem(LAST_DECK_KEY, m); } catch {}
     setDeck(shuffleArray(getDeck(allCards, m)));
     setCurrentCard(null);
     setCardHistory([]);
@@ -426,50 +436,64 @@ export default function Home() {
     return (
       <>
         <div className="mesh-bg flex flex-col" style={{ background: "var(--bg)", minHeight: "100dvh" }}>
-          {/* Header (no overlap with content) */}
-          <header className="safe-top safe-x flex items-center justify-end gap-2 pb-2">
-            <button onClick={cycleTheme} className="pressable p-2 rounded-full" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text-secondary)" }} aria-label={`Theme: ${theme}. Tap to change.`}>
-              {theme === "auto" ? <Monitor size={18} /> : theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
-            </button>
-            <AppMenu onOpenHistory={() => setShowHistory(true)} onOpenDecks={() => setShowDecks(true)} onOpenFavorites={() => setShowFavorites(true)} onOpenFeedback={() => setShowFeedback(true)} onOpenRules={() => setShowRules(true)} onOpenBrowser={() => setShowBrowser(true)} onOpenAchievements={() => setShowAchievements(true)} />
-          </header>
-
-          <main className={`flex-1 flex flex-col items-center gap-8 px-6 py-8 safe-bottom ${homeTab === "track" ? "justify-start" : "justify-center"}`}>
-          <div className="text-center anim-fade-up">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/icons/app-icon.svg"
-              alt="PB Card Deck - Pickleball Cards"
-              width={80}
-              height={80}
-              className="inline-block w-20 h-20 rounded-3xl mb-4 anim-float"
-              style={{ boxShadow: "0 12px 34px -8px var(--accent-glow)" }}
-            />
-            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
-              <h1 className="font-display text-4xl sm:text-5xl font-black tracking-tight" style={{ color: "var(--text)" }}>
-                Pickleball <span style={{ color: "var(--accent)" }}>Card Games</span>
-              </h1>
+          <div className="w-full max-w-md mx-auto flex flex-col flex-1 safe-x">
+          {/* Header: identity on the left, the three always-available controls
+              on the right. Help sits here, not in a menu - a first-timer should
+              never have to go looking for it. */}
+          <header className="safe-top flex items-center justify-between gap-3 pb-6">
+            <span className="flex items-center gap-2.5 min-w-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icons/app-icon.svg"
+                alt=""
+                width={38}
+                height={38}
+                className="w-[38px] h-[38px] shrink-0"
+                style={{ borderRadius: 11 }}
+              />
+              <span className="font-display text-lg font-extrabold tracking-tight truncate" style={{ color: "var(--text)" }}>
+                PB Card Deck
+              </span>
+            </span>
+            <span className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setShowRules(true)}
-                className="pressable inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium"
-                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-                aria-label="How to use this app"
+                className="pressable flex items-center gap-1.5 pl-2.5 pr-3 py-2 text-sm font-semibold"
+                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: "var(--r-chip)" }}
               >
-                <HelpCircle size={15} /> How to use
+                <HelpCircle size={16} style={{ color: "var(--accent)" }} /> Help
               </button>
-            </div>
-            <p className="mt-2 text-base" style={{ color: "var(--text-secondary)" }}>Draw twist cards. Shake up the game.</p>
+              <button onClick={cycleTheme} className="pressable p-2 rounded-full" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text-secondary)" }} aria-label={`Theme: ${theme}. Tap to change.`}>
+                {theme === "auto" ? <Monitor size={18} /> : theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
+              </button>
+              <AppMenu onOpenHistory={() => setShowHistory(true)} onOpenDecks={() => setShowDecks(true)} onOpenFavorites={() => setShowFavorites(true)} onOpenFeedback={() => setShowFeedback(true)} onOpenRules={() => setShowRules(true)} onOpenBrowser={() => setShowBrowser(true)} onOpenAchievements={() => setShowAchievements(true)} />
+            </span>
+          </header>
+
+          <main className="flex-1 flex flex-col gap-6 pb-8">
+          <div className="anim-fade-up">
+            <h1 className="font-display text-[2.1rem] sm:text-[2.6rem] font-black leading-[1.05] tracking-tight" style={{ color: "var(--text)" }}>
+              Draw a twist card
+              <br />
+              between points.
+            </h1>
+            <p className="mt-2.5 text-[0.95rem] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+              1,729 cards that change the next rally, and a scoreboard that
+              handles serve and side-out for you. No account, works offline.
+            </p>
           </div>
 
           {/* Top-level mode toggle: casual card play vs coach/umpire match tracking.
               Switchable any time - one tap changes the whole flow below. */}
-          <div className="w-full max-w-sm flex items-center gap-1.5 p-1 rounded-full" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-1 p-1" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--r-chip)" }}>
             {([["cards", "Play with cards", LayersIcon], ["track", "Track a match", ClipboardCheck]] as const).map(([key, label, Icon]) => (
               <button
                 key={key}
                 onClick={() => setHomeTab(key)}
                 className="pressable flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold transition-colors"
-                style={homeTab === key ? { background: "var(--accent)", color: "#fff" } : { color: "var(--text-secondary)" }}
+                style={homeTab === key
+                  ? { background: "var(--accent)", color: "var(--accent-ink)" }
+                  : { color: "var(--text-secondary)" }}
                 aria-pressed={homeTab === key}
               >
                 <Icon size={15} /> {label}
@@ -479,28 +503,26 @@ export default function Home() {
 
           {/* Resume in-progress games - multiple supported (F085) */}
           {savedGames.length > 0 && (
-            <div className="w-full max-w-sm flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
               {savedGames.length > 1 && (
-                <span className="text-xs font-semibold uppercase tracking-wider px-1" style={{ color: "var(--text-muted)" }}>
-                  Resume a game ({savedGames.length})
-                </span>
+                <span className="eyebrow px-0.5">Resume a game ({savedGames.length})</span>
               )}
               {savedGames.map((sg) => (
-                <div key={sg.id} className="anim-pop flex items-center gap-3 p-3 rounded-2xl glass" style={{ border: "1px solid var(--accent)" }}>
-                  <button onClick={() => resumeGame(sg)} className="pressable flex items-center gap-3 flex-1 min-w-0 text-left rounded-xl">
-                    <span className="flex items-center justify-center w-11 h-11 rounded-xl shrink-0 text-white" style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dim))" }}>
-                      <Play size={20} fill="currentColor" />
+                <div key={sg.id} className="anim-pop flex items-center gap-3 p-2.5" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-panel)" }}>
+                  <button onClick={() => resumeGame(sg)} className="pressable flex items-center gap-3 flex-1 min-w-0 text-left" style={{ borderRadius: "var(--r-ctl)" }}>
+                    <span className="flex items-center justify-center w-10 h-10 shrink-0" style={{ background: "var(--accent)", color: "var(--accent-ink)", borderRadius: "var(--r-ctl)" }}>
+                      <Play size={18} fill="currentColor" />
                     </span>
                     <span className="min-w-0">
                       <span className="block text-sm font-semibold" style={{ color: "var(--text)" }}>
                         {savedGames.length > 1 ? "Resume" : "Resume last game"}
                       </span>
-                      <span className="block text-xs truncate" style={{ color: "var(--text-muted)" }}>
+                      <span className="block text-xs truncate tnum" style={{ color: "var(--text-muted)" }}>
                         {sg.playerNames.team1} {sg.score.team1}-{sg.score.team2} {sg.playerNames.team2} · {sg.customName ?? selectionLabel(sg.mode)}
                       </span>
                     </span>
                   </button>
-                  <button onClick={() => discardSaved(sg.id)} className="pressable p-1.5 rounded-full shrink-0" style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }} aria-label="Discard this saved game">
+                  <button onClick={() => discardSaved(sg.id)} className="pressable p-2 rounded-full shrink-0" style={{ color: "var(--text-muted)" }} aria-label="Discard this saved game">
                     <X size={16} />
                   </button>
                 </div>
@@ -514,29 +536,29 @@ export default function Home() {
 
           {homeTab === "cards" && (
           <>
-          {/* Daily challenge - same 30-card deck for everyone each day (F018) */}
-          {allCards.length > 0 && (
-            <button
-              onClick={() => { triggerHaptic("light"); startDaily(); }}
-              className="group pressable w-full max-w-sm flex items-center gap-3 p-3.5 rounded-2xl text-left"
-              style={{ background: "linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--bg-card)), var(--bg-card))", border: "1px solid var(--accent)" }}
-            >
-              <span className="flex items-center justify-center w-11 h-11 rounded-xl shrink-0 text-white" style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dim))" }}>
-                <Sparkles size={22} />
-              </span>
+          {/* The one primary action. It plays whatever deck you played last, so
+              the common case - "same as yesterday" - is a single tap. */}
+          <button
+            onClick={() => { triggerHaptic("light"); startGameHandler(lastDeck); }}
+            disabled={!allCards.length}
+            className="pressable flex items-center justify-between gap-3 px-5 py-4 text-left disabled:opacity-50"
+            style={{ background: "var(--accent)", color: "var(--accent-ink)", borderRadius: "var(--r-panel)", boxShadow: "var(--elev-2)" }}
+          >
+            <span className="flex items-center gap-3 min-w-0">
+              <Play size={20} fill="currentColor" className="shrink-0" />
               <span className="min-w-0">
-                <span className="block text-base font-semibold" style={{ color: "var(--text)" }}>Daily challenge</span>
-                <span className="block text-xs" style={{ color: "var(--text-muted)" }}>Today&apos;s 30-card deck - same for everyone</span>
+                <span className="block text-base font-bold leading-tight">Start playing</span>
+                <span className="block text-xs opacity-75 truncate">
+                  {allCards.length ? `${selectionLabel(lastDeck)} deck · ${getDeck(allCards, lastDeck).length.toLocaleString()} cards` : "Loading cards…"}
+                </span>
               </span>
-            </button>
-          )}
+            </span>
+          </button>
 
-          {/* Skill levels first - the gentle on-ramp for newer players */}
-          <div className="w-full max-w-sm flex flex-col gap-2">
-            <div className="flex items-center gap-2 px-1">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Pick your level</span>
-              <span className="flex-1 h-px" style={{ background: "var(--border)" }} />
-            </div>
+          <div className="flex flex-col gap-2.5">
+            <span className="eyebrow px-0.5">Or choose a deck</span>
+
+            {/* By level - the on-ramp for anyone unsure what to pick */}
             <div className="grid grid-cols-3 gap-2">
               {SKILL_ORDER.map(({ key, Icon }) => {
                 const lvl = SKILL_LEVELS[key];
@@ -545,63 +567,63 @@ export default function Home() {
                   <button
                     key={key}
                     onClick={() => { triggerHaptic("light"); startGameHandler(key); }}
-                    className="group pressable glass flex flex-col items-center gap-1.5 p-3 rounded-2xl text-center"
-                    style={{ border: "1px solid var(--border)" }}
+                    className="pressable flex flex-col gap-1 p-3 text-left"
+                    style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-panel)" }}
                     aria-label={`${lvl.label} - ${lvl.description}`}
                   >
-                    <span className="flex items-center justify-center w-10 h-10 rounded-xl transition-transform duration-300 group-hover:scale-110"
-                          style={{ background: "var(--bg-elevated)", color: "var(--accent)" }}>
-                      <Icon size={20} />
-                    </span>
+                    <Icon size={17} style={{ color: "var(--accent)" }} />
                     <span className="text-sm font-semibold leading-tight" style={{ color: "var(--text)" }}>{lvl.label}</span>
-                    <span className="text-[11px] leading-tight" style={{ color: "var(--text-muted)" }}>{lvl.description}</span>
-                    {allCards.length > 0 && (
-                      <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{count} cards</span>
-                    )}
+                    <span className="text-[11px] leading-tight" style={{ color: "var(--text-muted)" }}>
+                      {allCards.length ? `${count.toLocaleString()} cards` : lvl.description}
+                    </span>
                   </button>
                 );
               })}
             </div>
-          </div>
 
-          <div className="w-full max-w-sm flex items-center gap-2 px-1 -mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Or a themed deck</span>
-            <span className="flex-1 h-px" style={{ background: "var(--border)" }} />
-          </div>
+            {/* By theme - compact, because they are a flavour choice, not a
+                difficulty one. Five fat rows here used to dominate the page. */}
+            <div className="flex flex-wrap gap-1.5">
+              {LANDING_MODES.map(({ key, label, desc }) => {
+                const Icon = MODE_ICONS[key];
+                return (
+                  <button
+                    key={key}
+                    onClick={() => { triggerHaptic("light"); startGameHandler(key); }}
+                    title={`${desc}${allCards.length ? ` · ${cardCounts[key].toLocaleString()} cards` : ""}`}
+                    className="pressable flex items-center gap-1.5 pl-2.5 pr-3 py-2 text-sm font-medium"
+                    style={{ background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: "var(--r-chip)" }}
+                  >
+                    <Icon size={15} style={{ color: "var(--accent)" }} /> {label}
+                  </button>
+                );
+              })}
+            </div>
 
-          <div className="stagger grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-sm">
-            {LANDING_MODES.map(({ key, label, desc }) => {
-              const Icon = MODE_ICONS[key];
-              return (
-                <button
-                  key={key}
-                  onClick={() => { triggerHaptic("light"); startGameHandler(key); }}
-                  className="group pressable glass flex items-center gap-4 p-4 rounded-2xl text-left"
-                  style={{ border: "1px solid var(--border)" }}
-                >
-                  <span className="flex items-center justify-center w-11 h-11 rounded-xl shrink-0 transition-transform duration-300 group-hover:scale-110"
-                        style={{ background: "var(--bg-elevated)", color: "var(--accent)" }}>
-                    <Icon size={22} />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-base font-semibold transition-colors group-hover:text-[var(--accent)]" style={{ color: "var(--text)" }}>{label}</div>
-                    <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      {desc}{allCards.length ? ` · ${cardCounts[key]} cards` : ""}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+            {/* Daily challenge - same 30-card deck for everyone each day (F018) */}
+            {allCards.length > 0 && (
+              <button
+                onClick={() => { triggerHaptic("light"); startDaily(); }}
+                className="pressable flex items-center gap-3 p-3 text-left"
+                style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-panel)" }}
+              >
+                <span className="flex items-center justify-center w-9 h-9 shrink-0" style={{ background: "var(--bg-elevated)", color: "var(--accent)", borderRadius: "var(--r-ctl)" }}>
+                  <Sparkles size={17} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold" style={{ color: "var(--text)" }}>Daily challenge</span>
+                  <span className="block text-xs" style={{ color: "var(--text-muted)" }}>30 cards, the same for everyone today</span>
+                </span>
+              </button>
+            )}
           </div>
           </>
           )}
           </main>
 
-          {/* About / community note */}
-          <footer className="safe-x safe-bottom px-6 pb-6 text-center">
-            <p className="mx-auto max-w-md text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
-              Made just for fun - free to play and for personal use only, not for making sales.
-              Got an idea or hit a bug? Feel free to{" "}
+          <footer className="safe-bottom pb-6 text-sm" style={{ color: "var(--text-muted)" }}>
+            <p className="leading-relaxed">
+              Free, for fun, and not for resale.{" "}
               <a
                 href={`${GITHUB_URL}/issues/new`}
                 target="_blank"
@@ -609,24 +631,21 @@ export default function Home() {
                 className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
                 style={{ color: "var(--accent)" }}
               >
-                <Bug size={12} /> request a feature or raise an issue
-              </a>{" "}
-              on GitHub.
-            </p>
-            <p className="mx-auto mt-3 max-w-md text-[11px] leading-relaxed" style={{ color: "var(--text-muted)" }} title="1729 = 1³+12³ = 9³+10³, the Hardy–Ramanujan taxicab number">
-              <Sparkles size={11} className="inline align-text-bottom" /> Exactly <strong>1,729</strong> cards - the Ramanujan &ldquo;taxicab&rdquo; number: the smallest number that is a sum of two cubes in two ways (1³ + 12³ = 9³ + 10³).
+                <Bug size={13} /> Report a bug or ask for a feature
+              </a>
             </p>
           </footer>
+          </div>
         </div>
 
         <HistoryPanel open={showHistory} onClose={() => setShowHistory(false)} />
         <DecksPanel open={showDecks} onClose={() => setShowDecks(false)} onPlay={startCustomDeck} />
         <FavoritesPanel open={showFavorites} onClose={() => setShowFavorites(false)} cards={favoriteCards} onRemove={(id) => setFavoriteIds(toggleFavorite(id))} />
         <FeedbackPanel open={showFeedback} onClose={() => setShowFeedback(false)} />
-        <RulesPanel open={showRules} onClose={() => setShowRules(false)} onReplayTour={replayTour} />
+        <HelpPanel open={showRules} onClose={() => setShowRules(false)} onReplayTour={replayTour} />
         <CardBrowserPanel open={showBrowser} onClose={() => setShowBrowser(false)} allCards={allCards} />
         <AchievementsPanel open={showAchievements} onClose={() => setShowAchievements(false)} />
-        <WelcomeTour open={showTour} onClose={closeTour} />
+        <WelcomeTour open={showTour} onClose={closeTour} onOpenHelp={() => { closeTour(); setShowRules(true); }} />
       </>
     );
   }
@@ -678,7 +697,7 @@ export default function Home() {
             <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
               +1 {confirmTeam === 1 ? game.playerNames.team1 : game.playerNames.team2}?
             </span>
-            <button onClick={() => applyScore(confirmTeam)} className="pressable px-4 py-1.5 rounded-full text-xs font-medium text-white" style={{ background: "var(--accent)" }}>Yes</button>
+            <button onClick={() => applyScore(confirmTeam)} className="pressable px-4 py-1.5 rounded-full text-xs font-medium" style={{ background: "var(--accent)", color: "var(--accent-ink)" }}>Yes</button>
             <button onClick={() => setConfirmTeam(null)} className="pressable px-4 py-1.5 rounded-full text-xs font-medium" style={{ background: "var(--bg-card)", color: "var(--text-secondary)" }}>No</button>
           </div>
         )}
@@ -723,7 +742,6 @@ export default function Home() {
           onDraw={drawCard}
           commentary={game.config.commentaryMode && game.mode !== "beginner"}
           large={game.mode === "beginner"}
-          onBack={() => { setGame(null); }}
           deckRemaining={deck.length}
           isFavorite={currentCard ? favoriteIds.includes(currentCard.id) : false}
           onFavorite={currentCard ? () => setFavoriteIds(toggleFavorite(currentCard.id)) : undefined}
@@ -762,8 +780,8 @@ export default function Home() {
             <button
               autoFocus
               onClick={() => setGame(resumePlay(game, Date.now()))}
-              className="pressable w-full flex items-center justify-center gap-2 px-6 py-3 text-white font-bold rounded-full shadow-lg"
-              style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dim))" }}
+              className="pressable w-full flex items-center justify-center gap-2 px-6 py-3 font-bold rounded-full"
+              style={{ background: "var(--accent)", color: "var(--accent-ink)", boxShadow: "var(--elev-2)" }}
             >
               <Play size={18} fill="currentColor" /> Resume
             </button>
@@ -798,7 +816,7 @@ export default function Home() {
                 "Tap a team's score to give them the point. First to 11 (win by 2) wins.",
               ].map((step, i) => (
                 <li key={i} className="flex items-start gap-3">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0 text-white" style={{ background: "var(--accent)" }}>{i + 1}</span>
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0" style={{ background: "var(--accent)", color: "var(--accent-ink)" }}>{i + 1}</span>
                   <span className="text-sm" style={{ color: "var(--text)" }}>{step}</span>
                 </li>
               ))}
@@ -806,8 +824,8 @@ export default function Home() {
             <button
               autoFocus
               onClick={dismissIntro}
-              className="pressable w-full px-6 py-3 text-white font-bold rounded-full shadow-lg"
-              style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dim))" }}
+              className="pressable w-full px-6 py-3 font-bold rounded-full"
+              style={{ background: "var(--accent)", color: "var(--accent-ink)", boxShadow: "var(--elev-2)" }}
             >
               Got it - let&apos;s play
             </button>
@@ -819,10 +837,10 @@ export default function Home() {
       <DecksPanel open={showDecks} onClose={() => setShowDecks(false)} onPlay={startCustomDeck} />
       <FavoritesPanel open={showFavorites} onClose={() => setShowFavorites(false)} cards={favoriteCards} onRemove={(id) => setFavoriteIds(toggleFavorite(id))} />
       <FeedbackPanel open={showFeedback} onClose={() => setShowFeedback(false)} />
-      <RulesPanel open={showRules} onClose={() => setShowRules(false)} onReplayTour={replayTour} />
+      <HelpPanel open={showRules} onClose={() => setShowRules(false)} onReplayTour={replayTour} />
         <CardBrowserPanel open={showBrowser} onClose={() => setShowBrowser(false)} allCards={allCards} />
         <AchievementsPanel open={showAchievements} onClose={() => setShowAchievements(false)} />
-        <WelcomeTour open={showTour} onClose={closeTour} />
+        <WelcomeTour open={showTour} onClose={closeTour} onOpenHelp={() => { closeTour(); setShowRules(true); }} />
     </div>
   );
 }

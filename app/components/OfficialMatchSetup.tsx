@@ -49,7 +49,7 @@ export default function OfficialMatchSetup({ onStart }: { onStart: (opts: Offici
   } as const;
 
   return (
-    <div className="w-full max-w-sm flex flex-col gap-4 anim-fade-up">
+    <div className="w-full flex flex-col gap-4 anim-fade-up">
       <div className="glass rounded-2xl p-4 flex items-start gap-3" style={{ border: "1px solid var(--accent)" }}>
         <span style={{ color: "var(--accent)" }}><ClipboardCheck size={22} /></span>
         <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
@@ -66,7 +66,7 @@ export default function OfficialMatchSetup({ onStart }: { onStart: (opts: Offici
               key={val}
               onClick={() => setGameType(val)}
               className="pressable flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold"
-              style={gameType === val ? { background: "var(--accent)", color: "#fff" } : inputStyle}
+              style={gameType === val ? { background: "var(--accent)", color: "var(--accent-ink)" } : inputStyle}
             >
               <Icon size={16} /> {label}
             </button>
@@ -116,7 +116,7 @@ export default function OfficialMatchSetup({ onStart }: { onStart: (opts: Offici
               key={label}
               onClick={() => setSideOutScoring(val)}
               className="pressable flex flex-col items-center py-2 rounded-xl text-sm font-semibold"
-              style={sideOutScoring === val ? { background: "var(--accent)", color: "#fff" } : inputStyle}
+              style={sideOutScoring === val ? { background: "var(--accent)", color: "var(--accent-ink)" } : inputStyle}
             >
               {label}
               <span className="text-[10px] font-normal opacity-80">{hint}</span>
@@ -133,7 +133,7 @@ export default function OfficialMatchSetup({ onStart }: { onStart: (opts: Offici
               key={p}
               onClick={() => setPointsToWin(p)}
               className="pressable py-2.5 rounded-xl text-sm font-semibold"
-              style={pointsToWin === p ? { background: "var(--accent)", color: "#fff" } : inputStyle}
+              style={pointsToWin === p ? { background: "var(--accent)", color: "var(--accent-ink)" } : inputStyle}
             >
               {p}
             </button>
@@ -149,7 +149,7 @@ export default function OfficialMatchSetup({ onStart }: { onStart: (opts: Offici
               key={n}
               onClick={() => setBestOf(n)}
               className="pressable py-2.5 rounded-xl text-xs font-semibold"
-              style={bestOf === n ? { background: "var(--accent)", color: "#fff" } : inputStyle}
+              style={bestOf === n ? { background: "var(--accent)", color: "var(--accent-ink)" } : inputStyle}
             >
               {label}
             </button>
@@ -175,8 +175,8 @@ export default function OfficialMatchSetup({ onStart }: { onStart: (opts: Offici
 
       <button
         onClick={start}
-        className="pressable w-full flex items-center justify-center gap-2 px-6 py-3.5 text-white font-bold rounded-full shadow-lg anim-glow"
-        style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dim))" }}
+        className="pressable w-full flex items-center justify-center gap-2 px-6 py-3.5 font-bold rounded-full"
+        style={{ background: "var(--accent)", color: "var(--accent-ink)", boxShadow: "var(--elev-2)" }}
       >
         <Trophy size={18} /> Start match
       </button>
@@ -187,7 +187,7 @@ export default function OfficialMatchSetup({ onStart }: { onStart: (opts: Offici
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold uppercase tracking-wider px-1" style={{ color: "var(--text-muted)" }}>{label}</span>
+      <span className="eyebrow px-0.5">{label}</span>
       {children}
     </div>
   );
