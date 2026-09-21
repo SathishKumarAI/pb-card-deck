@@ -136,7 +136,7 @@ export default function WelcomeTour({
             </button>
           )}
           <button
-            autoFocus
+            data-autofocus
             onClick={() => (last ? finish() : setI(i + 1))}
             className="pressable flex flex-1 items-center justify-center gap-1.5 px-6 py-3 font-bold"
             style={{ background: "var(--accent)", color: "var(--accent-ink)", borderRadius: "var(--r-chip)" }}

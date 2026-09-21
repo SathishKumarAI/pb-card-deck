@@ -779,6 +779,7 @@ export default function Home() {
             <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>{elapsed} elapsed · scoring is on hold</p>
             <button
               autoFocus
+              data-autofocus
               onClick={() => setGame(resumePlay(game, Date.now()))}
               className="pressable w-full flex items-center justify-center gap-2 px-6 py-3 font-bold rounded-full"
               style={{ background: "var(--accent)", color: "var(--accent-ink)", boxShadow: "var(--elev-2)" }}
@@ -823,6 +824,7 @@ export default function Home() {
             </ol>
             <button
               autoFocus
+              data-autofocus
               onClick={dismissIntro}
               className="pressable w-full px-6 py-3 font-bold rounded-full"
               style={{ background: "var(--accent)", color: "var(--accent-ink)", boxShadow: "var(--elev-2)" }}

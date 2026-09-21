@@ -20,7 +20,12 @@ export function useFocusTrap(
     const focusable = () =>
       Array.from(node.querySelectorAll<HTMLElement>(SELECTOR)).filter((el) => el.offsetParent !== null);
 
-    (focusable()[0] ?? node).focus?.();
+    // Focus the dialog's primary action if it marks itself, else the first
+    // focusable child. Without the opt-out, opening a dialog always ringed
+    // whatever came first in the DOM - usually "Skip" or a close button, which
+    // reads as the default answer.
+    const preferred = node.querySelector<HTMLElement>("[data-autofocus]");
+    (preferred ?? focusable()[0] ?? node).focus?.();
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
