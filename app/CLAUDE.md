@@ -21,7 +21,11 @@ vercel --prod    # deploy - run from REPO ROOT, not app/
 
 ## Structure
 ```
-app/page.tsx          - the whole game: state, draw, score, resume, panels
+app/page.tsx          - SESSION STATE ONLY: cards, deck, live game, storage, handlers.
+                        No layout lives here. It was 1,010 lines and is now ~470.
+components/HomeScreen - the landing screen (pitch, Play/Track/Tournament, decks)
+components/GameScreen - the game screen (top bar, board, card, its overlays)
+components/AppPanels  - every menu sheet, in one place (both screens render it)
 components/           - CardDisplay (3D flip + "?" explainer), ScoreKeeper, TopBar,
                         CardHistory, WinCelebration, PlayerNames, SettingsSheet, AppMenu,
                         HistoryPanel, DecksPanel, FeedbackPanel, HelpPanel, icons.tsx,
@@ -65,6 +69,21 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
   was never emitted, so a screen-reader-only line rendered as visible text.
   Check a suspicious class with `getComputedStyle`, not by reading the markup.
 - Tailwind caches its ignore list: after changing `.gitignore`, restart `npm run dev`.
+- **A per-screen column width reads as the page sliding off centre.** The event
+  tab used to get `.app-col--event` (72rem) while every other tab got
+  `.app-col--wide` (64rem), so tapping Play -> Tournament moved every pixel 64px
+  sideways (measured: column x=130 vs x=66). There is now ONE desktop width.
+- **Reserve the scrollbar.** `scrollbar-gutter: stable` on `html`. Without it
+  the whole layout shifts 4px the moment content grows past one screen, which
+  is indistinguishable from a bug in the centring.
+- **A bar and the content under it must share a width class.** `TopBar` used
+  bare `.app-col` (30rem) while the game content used `.app-col--wide` (64rem):
+  at 1440 the Back button and clock floated in mid-air over a column 544px
+  wider than they were. Same modifier on both, always.
+- **Check tap targets with the rendered box, not by eye.** The superscript "?"
+  on the home screen measured 5x14px; the footer link 23px tall; the side-out
+  control 25px. Anything a thumb must hit is >=30px in both axes - expand with
+  padding, or an absolutely-positioned `::before` when the glyph must stay small.
 
 ## Conventions
 - Game logic = pure functions in `lib/game.ts`; UI calls them and stores the returned `GameSession`.
@@ -105,6 +124,14 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
   `--accent-ink` for text on an accent fill (never `#fff` - it vibrates on mint).
   Anything that counts - scores, clocks, card totals - gets `.tnum`.
 - One primary action per screen. If a second button competes with it, cut it.
+- **Saving a finished match asks first.** `lib/historyConsent.ts` holds the
+  preference (`ask` / `always` / `never`) and `SaveMatchPrompt` is the dialog.
+  Nothing writes to match history without an answer; dismissing the dialog
+  counts as "not this time", never as consent.
+- **Help answers are POINTS, not paragraphs.** `ManualEntry.points` renders as
+  bullets and `steps` as a numbered list - use `steps` only for a real
+  sequence. `QUICK_LINKS` lives in `lib/manual.ts` beside the text it names,
+  and a test fails if a shortcut no longer matches an entry.
 - **A confirmation must render where the button is.** The reset confirm used to
   appear in the content column, ~700px below the top-bar button that opened it,
   which reads as "the button is broken". Prefer act-then-offer-undo (a toast with
@@ -122,6 +149,15 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
   rotation out by one. Winning a rally never advances the server number; only
   losing one does. Singles and casual play keep server 1 because they do not
   model two servers.
+- **The rules audited in `lib/scoring-audit.test.ts` are the rules.** Five
+  defects were found by checking the engine against the rulebook rather than
+  against itself, and each has a test named for the behaviour a player sees:
+  reset went back to *team 1, server 1* instead of to how the game started
+  (wrong team's serve, plus an extra service turn all game); rally scoring
+  never moved the serve, so the board claimed the opening team was serving
+  forever; `adjustScore` ignored `scoreLocked` while `addScore` honoured it;
+  and "game point" was announced over a receiving team that cannot score from
+  there. `GameSession.firstServingTeam` exists so reset can restore the serve.
 - **State that is correct but surprising must explain itself.** "2nd server" at
   0-0 is right, and read as a bug until the board said why. If a display needs a
   rulebook, print the sentence.

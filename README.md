@@ -103,6 +103,8 @@ Everything the app does, grouped so you can find it fast.
 ### 🎨 Feel & accessibility
 | Feature | What it does |
 |---|---|
+| **It asks before it keeps anything** | When a game ends, the app asks whether to save the result to the device, and can remember the answer. Nothing is uploaded either way - but local storage is still someone's phone. |
+| **A manual written in points** | Help answers are bullet lists, not paragraphs, because people read them standing on a court. "The scoring rules, in full" is eleven lines covering every rule the scoreboard follows. |
 | **Light by default, dark on request** | The app opens light, because it is used in daylight far more than at night. The header button cycles light → dark → auto (follow the device), and the choice sticks. |
 | **Measured colour, not eyeballed** | Every text/surface pair in both themes is checked against WCAG AA by `npm run contrast`, which runs as a test. Two light-mode pairs failed when it was first written - a button label at 3.77:1 and the serve marker at 2.84:1 - and the palette was darkened until they passed. |
 | **Native-app feel** | iOS-style glass materials (thin / regular / thick), bottom sheets with a grabber, a pickleball-court backdrop, and hover states on pointer devices only. Scales from a phone to a two-column desktop layout. |
@@ -121,12 +123,15 @@ file. Start from the change, not the code:
 | I want to change… | Open |
 |---|---|
 | Anything visual - colour, spacing, radius, glass | `app/app/globals.css` (tokens at the top) |
-| The home screen or the game screen | `app/app/page.tsx` |
+| The home screen | `app/components/HomeScreen.tsx` |
+| The game screen | `app/components/GameScreen.tsx` |
+| Session state, storage, what starts a game | `app/app/page.tsx` (no layout here) |
+| Any sheet reachable from the menu | `app/components/AppPanels.tsx` |
 | What a card looks like | `app/components/CardDisplay.tsx` |
 | Scoring rules, serve rotation, undo | `app/lib/game.ts` (pure, tested) |
 | Tournament formats, brackets, standings | `app/lib/tournament/` (see its README) |
 | Tournament screens | `app/components/tournament/` (see its README) |
-| Help text | `app/lib/manual.ts` |
+| Help text (and the three Help shortcuts) | `app/lib/manual.ts` |
 | Pickleball definitions | `app/lib/glossary.ts` |
 | Share images | `app/lib/shareImage.ts` |
 | Anything saved to the device | `app/lib/client-api.ts` |
@@ -167,7 +172,7 @@ makes possible, and what it deliberately does not do.
 | **A spectator link** | A read-only view of a running event on another phone. Needs the sync question answered first. |
 | **Rotating partners that never repeats a pairing** | Currently ranks, groups and pairs, which keeps games close but can repeat a pairing late in a small field. |
 | **More languages** | All copy lives in `lib/manual.ts`, `lib/glossary.ts` and the components; nothing is extracted for translation. |
-| **Splitting `app/page.tsx`** | It is past the 500-line ceiling this workspace sets. The tournament code was deliberately kept out of it; the game screen is the next split. |
+| **A rating system** | Match history holds the raw results per player; nothing turns them into a rating yet, which is what seeding and fair pairing would both want. |
 
 ## Repository layout
 

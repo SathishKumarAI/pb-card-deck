@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 export default function InfoLayout({ children }: { children: React.ReactNode }) {
   return (
     <main
-      className="mx-auto min-h-[100dvh] w-full max-w-2xl px-5 py-8"
+      className="mesh-bg mx-auto min-h-[100dvh] w-full max-w-2xl px-5 py-8"
       style={{
         paddingTop: "calc(env(safe-area-inset-top, 0px) + 2rem)",
         paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 2rem)",
@@ -14,7 +14,7 @@ export default function InfoLayout({ children }: { children: React.ReactNode }) 
     >
       <Link
         href="/"
-        className="mb-6 inline-flex items-center gap-2 text-sm font-medium"
+        className="pressable mb-4 inline-flex items-center gap-2 py-3 text-sm font-medium"
         style={{ color: "var(--accent)" }}
       >
         <ArrowLeft size={16} aria-hidden /> Back to the game

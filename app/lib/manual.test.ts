@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { MANUAL, allEntries, searchManual } from "./manual";
+import { MANUAL, allEntries, searchManual, QUICK_LINKS } from "./manual";
 
 describe("manual search", () => {
   it("matches every word in the query, not the phrase", () => {
@@ -30,12 +30,35 @@ describe("manual search", () => {
     expect(new Set(questions).size).toBe(questions.length);
   });
 
-  it("gives every section entries and every entry an answer", () => {
+  it("gives every section entries and every entry a real answer", () => {
     for (const section of MANUAL) {
       expect(section.entries.length).toBeGreaterThan(0);
       for (const entry of section.entries) {
-        expect(entry.a.length).toBeGreaterThan(40);
+        // The answer is the lead PLUS its points or steps. Measuring `a`
+        // alone used to stand in for "this is not a stub", but the leads are
+        // deliberately one line now and the substance sits in the list - so
+        // the check has to look at the whole answer or it just punishes the
+        // format we want.
+        const whole = [entry.a, ...(entry.points ?? []), ...(entry.steps ?? [])].join(" ");
+        expect(whole.length).toBeGreaterThan(40);
+        expect(entry.a.length).toBeGreaterThan(0);
       }
     }
+  });
+
+  it("points every quick link at a question that exists", () => {
+    const questions = new Set(allEntries().map(({ entry }) => entry.q));
+    for (const link of QUICK_LINKS) {
+      // A shortcut is matched to an entry by its exact question text. Renaming
+      // an entry without updating this list left a button that opened nothing.
+      expect(questions.has(link), `quick link has no entry: ${link}`).toBe(true);
+    }
+  });
+
+  it("finds a rule by a word that only appears in an entry's points", () => {
+    // "4.B.7" is written in exactly one point, nowhere in a question or lead.
+    // If search stopped indexing points, this would silently return nothing.
+    const hits = searchManual("4.B.7");
+    expect(hits.length).toBeGreaterThan(0);
   });
 });

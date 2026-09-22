@@ -64,6 +64,9 @@ export interface GameSession {
   score: { team1: number; team2: number };
   servingTeam: 1 | 2;
   serverNumber: 1 | 2;
+  /* Which side served the FIRST point of this game. Reset restores it.
+     Optional: games saved before this existed fall back to team 1. */
+  firstServingTeam?: 1 | 2;
   history: ScoreEvent[];
   gameNumber: number;
   gamesWon: { team1: number; team2: number };
@@ -161,6 +164,7 @@ export function createGame(
     mode,
     score: { team1: 0, team2: 0 },
     servingTeam: 1,
+    firstServingTeam: 1,
     serverNumber: initialServerNumber(config),
     history: [],
     gameNumber: 1,
@@ -214,9 +218,18 @@ export function addScore(game: GameSession, team: 1 | 2): GameSession {
 
   const winner = checkWin(scoreAfter, game.config);
 
+  /* Rally scoring: whoever wins the rally scores AND serves next. Without
+     this the serve indicator never moved off the opening team, so the board
+     claimed team 1 was serving for a whole game however the rallies went.
+     Side-out scoring is unaffected - there, a point means the server keeps
+     serving, and the receiver winning is handled as a side-out above. */
+  const rallyServe = !game.config.sideOutScoring && team !== game.servingTeam;
+
   return {
     ...game,
     score: scoreAfter,
+    servingTeam: rallyServe ? team : game.servingTeam,
+    serverNumber: rallyServe ? 1 : game.serverNumber,
     history: [...game.history, event],
     winner,
   };
@@ -225,6 +238,10 @@ export function addScore(game: GameSession, team: 1 | 2): GameSession {
 // Manual score correction (backlog F065): nudge a team's score by delta,
 // clamped at 0, recomputing the winner. Logged so it can be undone.
 export function adjustScore(game: GameSession, team: 1 | 2, delta: number): GameSession {
+  // A locked score means locked. addScore honoured the lock and this did not,
+  // so the +/- controls could still move a score someone had frozen on
+  // purpose - typically a referee protecting an agreed score.
+  if (game.config.scoreLocked) return game;
   const key = team === 1 ? "team1" : "team2";
   const next = Math.max(0, game.score[key] + delta);
   if (next === game.score[key]) return game;
@@ -330,11 +347,15 @@ export function resetScore(game: GameSession): GameSession {
     timestamp: Date.now(),
   };
 
+  /* Back to how this game STARTED, which is not the same as team 1 server 1:
+     game 2 opens with the other side serving, and official doubles opens on
+     the second server (4.B.7). Hard-coding 1/1 handed the serve to the wrong
+     team and gave them an extra service turn for the rest of the game. */
   return {
     ...game,
     score: { team1: 0, team2: 0 },
-    servingTeam: 1,
-    serverNumber: 1,
+    servingTeam: game.firstServingTeam ?? 1,
+    serverNumber: initialServerNumber(game.config),
     history: [event],
     winner: null,
   };
@@ -346,10 +367,13 @@ export function startNewGame(game: GameSession): GameSession {
   if (game.winner === 1) gamesWon.team1++;
   if (game.winner === 2) gamesWon.team2++;
 
+  const opens: 1 | 2 = game.servingTeam === 1 ? 2 : 1;
+
   return {
     ...game,
     score: { team1: 0, team2: 0 },
-    servingTeam: game.servingTeam === 1 ? 2 : 1,
+    servingTeam: opens,
+    firstServingTeam: opens,
     serverNumber: initialServerNumber(game.config),
     history: [],
     gameNumber: game.gameNumber + 1,
@@ -437,6 +461,11 @@ export function checkWin(score: { team1: number; team2: number }, config: GameCo
 export function pointStatus(game: GameSession): { team: 1 | 2; match: boolean } | null {
   if (game.winner) return null;
   for (const team of [1, 2] as const) {
+    // In side-out scoring only the serving team can score, so a receiving
+    // team on 10 is not at game point - they have to win the serve back
+    // first. Announcing it over their name contradicts the rule the very
+    // same screen is teaching.
+    if (game.config.sideOutScoring && team !== game.servingTeam) continue;
     const key = team === 1 ? "team1" : "team2";
     const probe = { ...game.score, [key]: game.score[key] + 1 };
     if (checkWin(probe, game.config) === team) {

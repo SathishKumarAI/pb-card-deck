@@ -10,16 +10,9 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Search, ChevronDown, Compass, X, CornerDownLeft } from "lucide-react";
 import { Sheet } from "./HistoryPanel";
-import { MANUAL, searchManual, type ManualEntry } from "@/lib/manual";
+import { MANUAL, QUICK_LINKS, searchManual, type ManualEntry } from "@/lib/manual";
 import GlossaryText from "./GlossaryText";
 import { GLOSSARY } from "@/lib/glossary";
-
-/** The three things people open help to do. Jumps straight to one answer. */
-const QUICK_LINKS = [
-  "Play your first game in 60 seconds",
-  "How do I record a point?",
-  "Why did we win the rally but get no point?",
-];
 
 export default function HelpPanel({
   open,
@@ -252,13 +245,29 @@ function Answer({
           <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
             <GlossaryText>{entry.a}</GlossaryText>
           </p>
+          {entry.points && (
+            <ul className="mt-3 flex flex-col gap-2">
+              {entry.points.map((point) => (
+                <li key={point} className="flex items-start gap-2.5">
+                  <span
+                    aria-hidden
+                    className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{ background: "var(--accent)" }}
+                  />
+                  <span className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
+                    <GlossaryText>{point}</GlossaryText>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
           {entry.steps && (
             <ol className="mt-3 flex flex-col gap-2">
               {entry.steps.map((step, i) => (
                 <li key={step} className="flex items-start gap-2.5">
                   <span
                     className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
-                    style={{ background: "var(--accent)", color: "#04150f" }}
+                    style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
                   >
                     {i + 1}
                   </span>
