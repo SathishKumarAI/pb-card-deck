@@ -81,6 +81,12 @@ Everything the app does, grouped so you can find it fast.
 | **Standings that hold up** | Wins, then head-to-head for a straight two-way tie, then point difference. Pool tables show the qualifying line. |
 | **Bracket view** | Rounds as columns, byes resolved, labelled Quarter-final / Semi-final / Final; scrolls sideways on a phone because the shape is the information. |
 | **Fix mistakes** | Undo any result and everything downstream is undone with it - a playoff re-seeds itself if a pool result changes. |
+| **Divisions** | Open, men's, women's or mixed. A mixed draw pairs one of each from names marked `Sam (m)` / `Priya (f)`, and says how many pairs will be same-sex if the numbers do not balance. |
+| **Live bracket tree** | Rounds as columns, matches centred between the two that feed them, connectors that turn green as results land. Tap a match to enter or edit its score. |
+| **Editable scores + change log** | Fix a wrong score any time. Every result, correction and clear is logged with the time and the old score, shown in a **Changes** tab and carried into exports. |
+| **Export** | CSV (Excel/Numbers/Sheets), Markdown, JSON or plain text - each with results, standings and the change log. |
+| **Any number of courts or pools** | Counts are typed, not picked from a fixed list. |
+| **Demo event** | One tap loads a half-played 12-team day so you can see the whole thing working before running your own. |
 | **Share** | Copy the standings and the winner as plain text into any group chat. |
 
 ### 🏓 Coach / Umpire mode - "Track a match"

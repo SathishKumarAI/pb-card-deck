@@ -126,7 +126,7 @@ export const MANUAL: ManualSection[] = [
       },
       {
         q: "We tapped the wrong thing",
-        a: "Undo in the top bar takes back the last action, as many times as you need. There is also a small minus button under each score for a straight correction, and Reset puts the game back to 0 - 0. Reset only clears the current game; your saved match history is not touched, and a one-tap Undo appears in case you hit it by mistake.",
+        a: "Undo in the top bar takes back the last action, as many times as you need, and says what it took back. That includes a side-out - if you gave the rally to the wrong side and the serve moved, Undo puts the serve back too. There is also a small minus button under each score for a straight correction, and Reset puts the game back to 0 - 0. Reset is itself undoable, and your saved match history is never touched.",
         keywords: "undo mistake wrong fix correct reset minus",
       },
       {
@@ -211,6 +211,26 @@ export const MANUAL: ManualSection[] = [
         q: "What do the courts mean?",
         a: "A court holds one match at a time. The On now tab shows exactly as many matches as you have courts, each with its number; everything else is queued under Up next and moves up automatically as results come in. Change the court count when you set the event up.",
         keywords: "courts court number on now up next queue schedule",
+      },
+      {
+        q: "Show me what an event looks like first",
+        a: "Tap Tournament, then See a demo event. It opens a half-played 12-team day: pools finished, a bracket drawn, quarter-finals done, one semi-final still to play and one score already corrected. Poke at it, enter a score, watch the tree fill in. Delete it when you are done - it is an ordinary event.",
+        keywords: "demo example sample try test see how it works",
+      },
+      {
+        q: "Can I fix a score after it is in?",
+        a: "Yes, and the change is visible to everyone afterwards. Find the match in Schedule or tap it in the bracket, then Edit score. The Changes tab lists every result and correction with the time and what the score used to be, so nobody has to take your word for it. Clear removes a result entirely, and anything that depended on it is undone with it.",
+        keywords: "edit change wrong score correct fix audit log history who changed",
+      },
+      {
+        q: "Men's, women's and mixed draws",
+        a: "Pick the division when you create the event. Mixed is the one that changes the pairing: mark names as \u201cSam (m)\u201d or \u201cPriya (f)\u201d in the list and every pair becomes one of each, strongest with strongest. If the numbers do not balance the app says how many pairs will be same-sex and runs the draw anyway. Running several draws on one day means one event per draw, which keeps their standings and brackets separate.",
+        keywords: "mixed doubles mens womens division gender category draw separate",
+      },
+      {
+        q: "Get the results out of the app",
+        a: "Export on the event screen offers four shapes: CSV opens straight in Excel, Numbers or Sheets; Markdown suits a write-up; JSON is everything exactly as stored; plain text is for pasting into a group chat. All four carry the results, the standings and the change log. Delete all data in the menu wipes the device clean.",
+        keywords: "export excel csv spreadsheet json markdown download save results delete data",
       },
       {
         q: "Can I share the standings?",

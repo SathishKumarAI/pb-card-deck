@@ -29,8 +29,9 @@ components/           - CardDisplay (3D flip + "?" explainer), ScoreKeeper, TopB
                         OfficialMatchSetup + OfficialControls (coach/umpire "Track a match"),
                         AchievementsPanel, CardBrowserPanel, FavoritesPanel, TVScore
                         (courtside display), Toast, NetworkStatus (offline indicator)
-lib/tournament/       - the event engine: formats, brackets, standings, courts.
-                        PURE, tested, no storage. See its README for the slot model.
+lib/tournament/       - the event engine: formats, brackets, standings, courts,
+                        divisions, the audit log and export. PURE, tested, no
+                        storage. See its README for the slot model.
 components/tournament/- the event screens (list, setup, dashboard, bracket).
                         Only TournamentHome touches storage. See its README.
 lib/cards.ts          - card types, deck modes, filtering, shuffle, CATEGORY_INFO
@@ -90,6 +91,16 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
   `--accent-ink` for text on an accent fill (never `#fff` - it vibrates on mint).
   Anything that counts - scores, clocks, card totals - gets `.tnum`.
 - One primary action per screen. If a second button competes with it, cut it.
+- **A confirmation must render where the button is.** The reset confirm used to
+  appear in the content column, ~700px below the top-bar button that opened it,
+  which reads as "the button is broken". Prefer act-then-offer-undo (a toast with
+  an Undo action) over a confirm strip that lands off screen.
+- **An action with no visible effect is a dead button.** Undo changed one numeral
+  silently and was reported as broken twice. Anything whose result is small or
+  off-screen says what it did.
+- **Every state transition goes on the undo stack, not just the ones that change
+  a number.** A side-out changes no score and was therefore un-undoable; the
+  engine now logs it with a serve snapshot. See `ScoreEvent.serveBefore`.
 - Mobile-first: `100dvh`, 16px inputs, `touch-action: manipulation`, safe-area insets, responsive `clamp()` card.
 
 ## Dead code (inert stubs from an abandoned auth experiment - safe to delete)

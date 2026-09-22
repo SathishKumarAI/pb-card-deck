@@ -1,5 +1,48 @@
 # Worklog
 
+## 2026-09-21 20:05 - Undo was broken for side-outs; tournament tree, edits, export, demo
+
+**Summary:** A reported "undo and reset don't work" turned out to be two engine bugs plus silence.
+Then the tournament feature grew the things a real event needs: a bracket you can read, scores you
+can fix, an audit trail, exports, divisions, and a demo.
+
+**The reported bug, root-caused:** both buttons fired - verified by clicking them through the DOM
+and watching the score change - so the problem was underneath. In side-out scoring the receiving
+side winning a rally scores nothing, it wins the serve, and `addScore` handled that by returning
+`sideOut()` with NO history entry. The single most common tap in a pickleball game was therefore
+un-undoable. `undoLast` also restored only the score, so undoing a point left the serve wherever it
+had ended up and corrupted the state. Four tests were written first and all four failed. Fixed by
+snapshotting the serve on every ScoreEvent, logging side-outs, and restoring serve + server number
+on undo. Old saved games fall back to the current serve.
+
+**The UI half:** Reset's confirmation strip rendered ~700px below the top-bar button that opened it
+on desktop, which reads as "nothing happened". Reset is now recoverable in the engine (the reset
+itself sits on the undo stack carrying what it wiped), so the strip is gone: act, then offer Undo in
+the toast. Undo also names what it took back.
+
+**Tournament additions:**
+- Bracket as a real tree: rounds as columns, each match centred between the two it feeds from, SVG
+  elbow connectors, decided lines in accent. Geometry computed from one slot constant because the
+  vertical rhythm doubles per round and connectors must hit box centres.
+- Editable scores + `Tournament.log`: every result, correction and clear, with the old score, shown
+  in a Changes tab and carried into exports.
+- Export as CSV / Markdown / JSON / text, with a test that a team name containing quotes does not
+  break the CSV.
+- Divisions (open / men's / women's / mixed); mixed pairs one of each from `(m)` / `(f)` markers and
+  still runs when the counts do not balance.
+- Counts are typed, not chips - 11 courts and 7 pools are ordinary.
+- A demo event built by playing one through the real engine: 12 teams, pools done, quarters done,
+  one semi live, one score corrected.
+
+**Help/home:** 17 new glossary terms (transition zone, centre line, kitchen line, service court,
+third shot, double bounce rule, seed, bye...), help answers now underline them like a card does, the
+home paragraph became four scannable points, and 1,729 carries a superscript explaining the
+Hardy-Ramanujan taxicab number where the question is asked.
+
+**Verification:** 119 tests (13 new), tsc clean, build clean, eslint 0 errors. Browser: undo
+restores the serve after a side-out; the demo bracket renders live and decided matches; the home
+screen now fits one desktop screen with no scrolling.
+
 ## 2026-09-21 19:30 - Tournament mode: five formats, one engine, 31 tests
 
 **Summary:** The app can now run an event, not just a game. Five formats, 4 to 50+ players,
