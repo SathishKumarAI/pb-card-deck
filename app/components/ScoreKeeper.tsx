@@ -98,7 +98,7 @@ export default function ScoreKeeper({
       {/* Serving indicator - casual side-out only (official mode shows the rich
           serving card in OfficialControls instead). Tap = manual side out. */}
       {game.config.sideOutScoring && !game.config.officialMode && (
-        <button onClick={onSideOut} aria-label="Side out - switch serving team" aria-live="polite" className="pressable flex items-center gap-1.5 text-xs px-3 py-1 rounded-full" style={{ background: "var(--bg-elevated)", color: "var(--yellow)", border: "1px solid var(--border)" }}>
+        <button onClick={onSideOut} aria-label="Side out - switch serving team" aria-live="polite" className="pressable flex items-center gap-1.5 text-xs px-3 py-2 rounded-full" style={{ background: "var(--bg-elevated)", color: "var(--yellow)", border: "1px solid var(--border)" }}>
           <CircleDot size={13} /> Serving: {game.servingTeam === 1 ? game.playerNames.team1 : game.playerNames.team2}
         </button>
       )}

@@ -14,10 +14,16 @@
 export interface ManualEntry {
   /** The question in the reader's own words - this is what is shown collapsed. */
   q: string;
-  /** The answer. One or two short paragraphs, no jargon without a definition. */
+  /** The answer. ONE short lead sentence - the detail belongs in `points`. */
   a: string;
   /** Optional numbered steps, when the answer is genuinely a sequence. */
   steps?: string[];
+  /**
+   * The answer as points. Prefer this over a second paragraph: people scan a
+   * help panel standing on a court, and a rule buried mid-paragraph is a rule
+   * nobody reads. Numbered `steps` are for a sequence; these are not ordered.
+   */
+  points?: string[];
   /** Extra words people might search for that don't appear in q or a. */
   keywords?: string;
 }
@@ -29,6 +35,17 @@ export interface ManualSection {
   blurb: string;
   entries: ManualEntry[];
 }
+
+/**
+ * The three things people open Help to do. Each string MUST be the exact `q`
+ * of an entry below - `lib/manual.test.ts` fails if one drifts, because a
+ * shortcut that matches nothing renders as a button that does nothing.
+ */
+export const QUICK_LINKS = [
+  "Play your first game in 60 seconds",
+  "The scoring rules, in full",
+  "Why did we win the rally but get no point?",
+];
 
 export const MANUAL: ManualSection[] = [
   {
@@ -117,42 +134,108 @@ export const MANUAL: ManualSection[] = [
   {
     id: "scoring",
     title: "Keeping score",
-    blurb: "Including the one rule that confuses every new pickleball player.",
+    blurb: "How every point, serve and side-out is decided. Read the first two.",
     entries: [
       {
-        q: "How do I record a point?",
-        a: "Tap the score of the team that won the rally - not the team that gets the point. That sounds odd, but it is the whole trick: in pickleball only the serving team scores, so if the receiving team wins a rally they get the serve instead of a point. Tell the app who won the rally and it works out the rest, then says in plain words what happened ('Side out - Hawks serve').",
-        keywords: "point score tap rally who won add",
+        q: "The scoring rules, in full",
+        a: "Every rule the scoreboard follows, in one list.",
+        points: [
+          "Only the SERVING team can score. This is side-out scoring, the traditional pickleball rule, and it is on by default.",
+          "You tell the app who won the RALLY, not who gets the point. It works out whether that is a point or a side out.",
+          "Serving team wins the rally: they get the point and keep serving.",
+          "Receiving team wins the rally: no point to anyone. They win the serve instead - that is a side out.",
+          "First to the target - 11 by default - wins, and must lead by 2. So 11-10 plays on. Both are changeable in Settings.",
+          "In doubles, a side gets two service turns: the first server's fault passes the serve to their partner, the second server's fault passes it to the other team.",
+          "Exception, and it surprises everyone: the side serving FIRST in a game gets only ONE service turn. The board says '2nd server' at 0-0 for that reason (USA Pickleball 4.B.7).",
+          "Winning a rally never advances the server number. Only losing one does.",
+          "A match can be one game, best of 3, or best of 5. The side that opens the serve alternates each game.",
+          "Game point is only ever shown for the team that is actually serving - a receiving team on 10 cannot score from there.",
+          "Rally scoring is the alternative: every rally is a point for whoever won it, and the rally winner serves next. Turn it on in Settings, or when you set up Track a match.",
+        ],
+        keywords: "rules scoring how it works side out serve server win by two target reference all",
+      },
+      {
+        q: "What do I actually tap?",
+        a: "One tap per rally, on the side that WON it.",
+        points: [
+          "Tap the score of whoever won the rally. Not the team you think should get a point.",
+          "The line under the score then says what happened in plain words - 'Point Hawks 5-3', or 'Side out - Hawks won the rally and serve'.",
+          "The yellow marker shows who serves now, and in a refereed match whether it is their 1st or 2nd server.",
+          "Wrong tap? Undo in the top bar takes it back and tells you what it undid - side-outs included.",
+        ],
+        keywords: "point score tap rally who won add record how",
       },
       {
         q: "Why did we win the rally but get no point?",
-        a: "Because your side was not serving. In traditional pickleball scoring - called side-out scoring - only the serving team can add to their score. Winning a rally while receiving earns you the serve, and then you can start scoring. If your group would rather every rally be worth a point, turn on Rally scoring: it is a choice when you start a Track a match game, and a toggle in Settings otherwise.",
+        a: "Because your side was not serving.",
+        points: [
+          "In side-out scoring - the traditional rule - only the serving team can add to its score.",
+          "Winning a rally while receiving earns you the SERVE. Points come after that.",
+          "So a side out is progress, not nothing: you cannot score until you hold the serve.",
+          "Want every rally to be worth a point? Turn on Rally scoring in Settings, or pick it when setting up Track a match.",
+        ],
         keywords: "side out no point serving rally scoring confused why",
       },
       {
         q: "Who is serving, and what is a second server?",
-        a: "The yellow marker sits beside the serving team. In doubles each side gets two service turns before the serve passes over: lose a rally on the first server and your partner serves, lose again and it is a side out. When you are refereeing, the board shows 1st or 2nd server so nobody has to remember.",
+        a: "The yellow marker sits beside the serving team.",
+        points: [
+          "In doubles a side gets two service turns before the serve passes over.",
+          "Lose a rally on the 1st server, and your partner serves - same team, still no point to the other side.",
+          "Lose a rally on the 2nd server, and it is a side out: the other team serves, starting at their 1st server.",
+          "When you are refereeing, the board prints 1st or 2nd server so nobody has to hold it in their head.",
+          "Singles has one server per side, so no server number is shown at all.",
+        ],
         keywords: "serve server first second doubles rotation side out who serves",
       },
       {
         q: "Why does it say 2nd server at the start of a game?",
-        a: "Because that is the rule, and it is the one that surprises everyone. The side that serves first in a game gets only ONE service turn: their first fault hands the serve straight over instead of passing it to their partner. Referees call this \u201cstarting second server\u201d, and the app shows it the same way, with a note under the board on the opening turn. Without it, the first team would get an extra service turn and every rotation after it would be out by one.",
-        keywords: "second server start game 0-0 why opening first serve one server rule confusing",
+        a: "Because that is the rule - and it is the one that surprises everyone.",
+        points: [
+          "The side serving FIRST in a game gets only one service turn.",
+          "Their first fault hands the serve straight to the other team, instead of passing it to their partner.",
+          "Referees say 'starting second server', and the app shows it the same way, with a note under the board on the opening turn.",
+          "Without it, that team would get one extra service turn per game and every rotation afterwards would be out by one.",
+          "It is USA Pickleball rule 4.B.7, and it applies in a refereed doubles match.",
+        ],
+        keywords: "second server start game 0-0 why opening first serve one server rule confusing 4.B.7",
       },
       {
-        q: "We won the rally but the serve moved to the second server",
-        a: "That is the serving side losing a rally, which is what moves their serve on - and only the serving side can score. So when you win a rally while receiving, nothing is added to your score: either their second server comes up, or, if that was already their second server, you take the serve. The message under the score names whoever won the rally so it is clear which of the two just happened.",
+        q: "We won the rally but the serve moved to their second server",
+        a: "That is correct, and it is the serving side losing a rally that moves their serve on.",
+        points: [
+          "You won the rally while receiving, so nothing is added to anyone's score.",
+          "If they were on their 1st server, their 2nd server now serves. Still their serve.",
+          "If they were already on their 2nd server, the serve comes to you - a side out.",
+          "The message under the score names whoever won the rally, so you can tell which of the two just happened.",
+        ],
         keywords: "won rally no point second server moved confusing illogical serve changed",
       },
       {
         q: "We tapped the wrong thing",
-        a: "Undo in the top bar takes back the last action, as many times as you need, and says what it took back. That includes a side-out - if you gave the rally to the wrong side and the serve moved, Undo puts the serve back too. There is also a small minus button under each score for a straight correction, and Reset puts the game back to 0 - 0. Reset is itself undoable, and your saved match history is never touched.",
-        keywords: "undo mistake wrong fix correct reset minus",
+        a: "Nothing here is one-way. Four ways back, smallest first.",
+        points: [
+          "Undo, in the top bar, takes back the last action and says what it took back. Press it as many times as you need.",
+          "Undo covers side-outs too: if the serve moved because you gave the rally to the wrong side, Undo puts the serve back where it was.",
+          "The small minus button under each score is a straight correction, for when the score is simply wrong.",
+          "Reset returns this game to 0-0, with the serve back to whoever opened the game. Reset is itself undoable.",
+          "Your saved match history is never touched by any of these.",
+          "Locking the score, from the top bar, blocks every one of these until you unlock - useful once a score is agreed.",
+        ],
+        keywords: "undo mistake wrong fix correct reset minus lock locked",
       },
       {
         q: "How does a game end?",
-        a: "First team to the points target - 11 by default - wins, but they must be at least 2 points clear. So 11-10 keeps going until someone leads by two. You can change both the target and the win-by-two rule in Settings. A match can be a single game, best of 3, or best of 5; when a team takes the series you get a match-complete screen.",
-        keywords: "win winning 11 win by 2 best of 3 5 match end game over",
+        a: "At the target, and two clear.",
+        points: [
+          "First to the points target wins. The default is 11.",
+          "They must lead by at least 2, so 11-10 keeps playing until someone is two ahead.",
+          "Both the target and the win-by-two rule are in Settings.",
+          "A match is one game, best of 3, or best of 5. Take the series and you get a match-complete screen.",
+          "The side that serves first alternates from game to game.",
+          "When a game ends you are asked whether to keep it on this device - answer once and it can remember your choice.",
+        ],
+        keywords: "win winning 11 win by 2 best of 3 5 match end game over save",
       },
       {
         q: "Can we pause, or stop for the day?",
@@ -364,7 +447,7 @@ export function searchManual(query: string) {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (words.length === 0) return allEntries();
   return allEntries().filter(({ entry }) => {
-    const hay = [entry.q, entry.a, entry.steps?.join(" ") ?? "", entry.keywords ?? ""]
+    const hay = [entry.q, entry.a, entry.steps?.join(" ") ?? "", entry.points?.join(" ") ?? "", entry.keywords ?? ""]
       .join(" ")
       .toLowerCase();
     return words.every((w) => hay.includes(w));

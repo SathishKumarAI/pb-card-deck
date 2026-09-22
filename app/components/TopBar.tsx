@@ -96,8 +96,8 @@ export default function TopBar({
   return (
     <div className="w-full sticky top-0 z-30 mat-regular" style={{ borderBottom: "1px solid var(--mat-edge)", paddingTop: "env(safe-area-inset-top)" }}>
       {/* Row 1 - where am I, and how do I leave. Nothing that changes the score. */}
-      <div className="app-col flex items-center justify-between gap-2 px-4 py-2.5">
-        <button onClick={onBack} aria-label="Back to home" className="pressable shrink-0 flex items-center gap-1 pr-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+      <div className="app-col app-col--wide flex items-center justify-between gap-2 px-4 py-2.5">
+        <button onClick={onBack} aria-label="Back to home" className="pressable shrink-0 flex items-center gap-1 pr-2 py-2.5 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
           <ArrowLeft size={17} /> Back
         </button>
 
@@ -123,7 +123,7 @@ export default function TopBar({
       {/* Row 2 - the match strip: where the game is, and the controls that change
           it. One surface with hairline dividers, so it reads as a single
           instrument rather than six floating words. */}
-      <div className="app-col px-4 pb-2.5">
+      <div className="app-col app-col--wide px-4 pb-2.5">
         <div className="flex items-stretch overflow-hidden" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--r-ctl)" }}>
           <span className="tnum flex items-center gap-1.5 px-3 text-xs font-medium shrink-0" style={{ color: "var(--text-secondary)" }}>
             <span style={{ color: "var(--text-muted)" }}>G{game.gameNumber}</span>
@@ -157,7 +157,7 @@ export default function TopBar({
 
       {/* Mode selector dropdown */}
       {showModes && (
-        <div className="app-col px-4 pb-3 anim-fade-up">
+        <div className="app-col app-col--wide px-4 pb-3 anim-fade-up">
           <div className="flex flex-wrap gap-1.5 justify-center mb-1.5">
             {(Object.keys(SKILL_LEVELS) as SkillLevel[]).map((m) => {
               const Icon = SKILL_ICONS[m];

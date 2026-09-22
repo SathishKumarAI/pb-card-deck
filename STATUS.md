@@ -1,6 +1,6 @@
 # STATUS — PB Card Deck
 
-_Last written 2026-09-22. Read this when you come back._
+_Last written 2026-09-21. Read this when you come back._
 
 ## Where things stand
 
@@ -11,7 +11,7 @@ a flag.
 | | |
 |---|---|
 | Live | https://pb-card-deck.vercel.app |
-| Tests | 144 (engine, tournaments, streaks, contrast, a11y, board rendering) |
+| Tests | 156 (engine, scoring audit, tournaments, streaks, contrast, a11y, board rendering) |
 | Gates | `npm test` · `npm run contrast` · `npm run lint` · `npm run build` |
 | Default theme | **light**; dark and auto are one tap away and persist |
 
@@ -35,9 +35,12 @@ a flag.
 Nothing is pending. Pick from the roadmap tables in `README.md` ("Where it could
 go next") or `app/README.md` — each row says why that idea is not there yet.
 
-The one piece of known debt: **`app/app/page.tsx` is past the 500-line ceiling**
-this workspace sets. Tournament code was deliberately kept out of it; the game
-screen is the next split.
+The 500-line debt is **paid**: `app/page.tsx` went from 1,010 lines to ~470 and
+now owns session state only. Layout lives in `components/HomeScreen.tsx`,
+`components/GameScreen.tsx` and `components/AppPanels.tsx`.
+
+`docs/LINKEDIN-POST.md` holds a launch post drafted but **not posted** — the
+author posts it.
 
 ## Traps that cost time here
 
@@ -64,6 +67,11 @@ screen is the next split.
    modified.
 6. **On Windows the checkout has no `node_modules/.bin`** until `npm install`
    runs inside `app/`.
+7. **Layout drift is measurable, so measure it.** Three separate causes of "the
+   page is off centre" were found by reading boxes in the browser, not markup:
+   a per-tab column width (64px jump), a missing `scrollbar-gutter` (4px jump),
+   and a top bar 544px narrower than the content beneath it. `getComputedStyle`
+   plus `getBoundingClientRect` found all three in minutes.
 7. **"Deployed" is not "live".** `main` does **not** auto-deploy to production -
    the Git integration only builds Previews. And a successful `vercel --prod`
    does not move `pb-card-deck.vercel.app`: that domain was found pinned to a

@@ -136,6 +136,11 @@ body {
    without creating a scrollport, which is what was actually wanted. */
 html {
   overflow-x: clip;
+  /* Reserve the scrollbar's width at all times. Without this the whole page
+     shifts 4px sideways the moment content grows past one screen - measured
+     switching the home tabs: the column sat at x=130 on Play and x=126 on
+     Track, which reads as the layout drifting off centre. */
+  scrollbar-gutter: stable;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -209,13 +214,14 @@ svg.lucide { flex-shrink: 0; }
    defined after the utilities, so it would keep winning. */
 @media (min-width: 1024px) {
   .app-col--wide { max-width: 64rem; }
-  /* A running event is a dashboard, not prose: it earns the extra width, and
-     on a 1440 display the alternative is 130px of empty gutter either side. */
-  .app-col--event { max-width: 72rem; }
 }
-@media (min-width: 1440px) {
-  .app-col--event { max-width: 84rem; }
-}
+
+/* There is deliberately only ONE desktop width. The event dashboard used to
+   get its own wider modifier (72rem, 84rem past 1440px), which meant tapping
+   Play -> Tournament moved every pixel on screen 64px sideways. Measured: the
+   column jumped from x=130 to x=66. A dashboard that is 8rem wider is not
+   worth a layout that appears to slide off centre; the event screens were
+   re-measured at 64rem and overflow nothing. */
 
 /* Safe-area helpers for notches / home indicators */
 .safe-top { padding-top: max(1rem, env(safe-area-inset-top)); }
@@ -576,8 +582,15 @@ textarea:focus-visible {
 .info-prose ul { padding-left: 1.25rem; list-style: disc; }
 .info-prose li { margin: 0.3rem 0; }
 .info-prose a { color: var(--accent); text-decoration: underline; }
+/* A link on its own line in a list is a navigation target, not prose: it was
+   21px tall on a phone, which is half a thumb. Padding makes it hittable
+   without changing the type. */
+.info-prose li > a:only-child { display: inline-block; padding-block: 0.6rem; }
 .info-prose code {
   font-size: 0.9em; padding: 0.1em 0.35em; border-radius: 0.35rem;
   background: var(--bg-elevated); border: 1px solid var(--border);
 }
+
+
+
 

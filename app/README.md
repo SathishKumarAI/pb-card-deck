@@ -206,6 +206,13 @@ app/
 │   ├── FavoritesPanel.tsx       # Starred cards list
 │   ├── CardBrowserPanel.tsx     # Browse / search the full deck
 │   ├── NetworkStatus.tsx        # Offline indicator
+│   ├── HomeScreen.tsx          # The landing screen (no game state of its own)
+│   ├── GameScreen.tsx          # The game screen + its overlays
+│   ├── AppPanels.tsx           # Every menu sheet, rendered by both screens
+│   ├── SaveMatchPrompt.tsx     # "Save this match?" - consent before storage
+│   ├── PauseOverlay.tsx        # Paused dialog (owns its focus trap)
+│   ├── BeginnerIntro.tsx       # First-run how-to-play
+│   ├── Why1729.tsx             # The number, explained where it is asked
 │   ├── Toast.tsx                # In-app toast (import status, etc.)
 │   ├── SharePanel.tsx           # Share sheet: shape, live canvas preview, caption
 │   ├── icons.tsx                # lucide icon maps + the drawn pickleball mark
@@ -221,7 +228,12 @@ app/
 │   ├── game.ts                  # Pure game engine (+ official mode) + active game
 │   ├── client-api.ts            # Local store: decks, history, export/import, match sheet
 │   ├── glossary.ts              # Shared pickleball glossary (Rules + in-card)
-│   ├── manual.ts                # The in-app manual: every help answer, as data
+│   ├── manual.ts                # The in-app manual: answers as POINTS + QUICK_LINKS
+│   ├── historyConsent.ts        # Save-to-device preference (ask/always/never)
+│   ├── useTheme.ts              # Theme choice, data-theme, theme-color, storage
+│   ├── usePanels.ts             # Which menu sheet is open
+│   ├── useOnce.ts               # One-time gates (tour, intro, hint)
+│   ├── useWakeLock.ts           # Keep the screen awake during a game
 │   ├── streaks.ts               # Win streaks from saved matches (pure)
 │   ├── useFocusTrap.ts          # Focus-trap hook for dialogs/sheets
 │   ├── useScrollLock.ts         # Freeze the page behind an open sheet
@@ -301,6 +313,36 @@ Everything you create - games, custom decks, match history, settings - is stored
 | Drill | Sharpen your game | 504 |
 | Tournament | Competitive twists | 545 |
 | Chaos | All 1,729 cards, anything goes | 1,729 |
+
+## Scoring, and how it was audited
+
+`lib/game.ts` is a pure engine; `lib/game.test.ts` covers it and
+`lib/scoring-audit.test.ts` holds the findings of a rulebook audit - one test
+per defect, each written before its fix and named for what a player would see.
+
+| Rule | Where |
+|---|---|
+| Only the serving team scores; a receiving win is a side out | `addScore` |
+| Rally scoring: the rally winner scores **and serves next** | `addScore` |
+| Doubles two-server rotation | `sideOut` |
+| The opening side of a game gets ONE service turn (USAP 4.B.7) | `initialServerNumber` |
+| Reset returns the game to how it **started**, serve included | `resetScore` + `firstServingTeam` |
+| Target, win-by-two, best-of-N | `checkWin`, `matchWinner` |
+| Game point only for a side that can actually score it | `pointStatus` |
+| A locked score is locked on every path | `addScore`, `adjustScore` |
+| Every transition is undoable, side-outs included | `ScoreEvent.serveBefore`, `undoLast` |
+
+The player-facing version of this table is in the app: Help → Keeping score →
+"The scoring rules, in full", written as points rather than prose.
+
+## Asking before saving
+
+A finished match used to be written to history the instant the game ended.
+`lib/historyConsent.ts` now holds a three-way preference (`ask` by default,
+`always`, `never`) and `components/SaveMatchPrompt.tsx` is the dialog. The data
+never leaves the device either way - but "stays on your phone" is still a
+promise about the phone, so the first save asks. Dismissing the dialog counts as
+*not this time*, never as consent.
 
 ## Colour & theming
 

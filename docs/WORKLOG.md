@@ -1,5 +1,80 @@
 # Worklog
 
+## 2026-09-21 — the 1,010-line page, three centring bugs, and a scoring audit
+
+Six things, in the order they were asked for.
+
+**1. `app/page.tsx` split.** 1,010 lines → 470, and what is left owns session
+state only: cards, deck, live game, storage, handlers. Layout moved out to
+`components/HomeScreen.tsx` (333), `components/GameScreen.tsx` (224) and
+`components/AppPanels.tsx` — the last one deletes a duplicate: the eight menu
+sheets were rendered verbatim in both branches of the old file. Three dialogs
+(`PauseOverlay`, `BeginnerIntro`, `Why1729`) now own their own focus trap and
+scroll lock, and four hooks came out of the effect pile: `useTheme`,
+`useWakeLock`, `useOnce`, `usePanels`.
+
+**2. The five deck chips on one desktop row.** Family · Party · Drill ·
+Tournament · Chaos laid out horizontally need ~476px and the right-hand column
+is 432px, so they wrapped. A five-column grid with the icon above the label
+fits in 82px per cell. Phones keep the wrap.
+
+**3. Three separate causes of "the page is off centre"**, all found by reading
+boxes in the browser rather than markup:
+
+| Cause | Measured | Fix |
+|---|---|---|
+| A per-tab column width | Play x=130 w=1024, Tournament x=66 w=1152 — a 64px sideways jump on a tab tap | one desktop width; `.app-col--event` deleted |
+| No scrollbar reservation | x=130 on Play, x=126 on Track — 4px drift whenever content passed one screen | `scrollbar-gutter: stable` |
+| A bar narrower than its content | `TopBar` 480px at x=476 over content 1024px at x=204 | same `.app-col--wide` on both |
+
+The event dashboard was re-measured at the narrower width first: zero overflow,
+and the event list reads better for it.
+
+**4. Page audit, desktop 1440 and mobile 390**, on `/`, `/about`, `/privacy`,
+`/terms` and the game screen. Findings: four unhittable tap targets (the
+superscript "?" at **5×14px**, the footer link at 23px, `Back` at 20px, the
+side-out control at 25px), info pages with no app backdrop, a help step badge
+printing `#04150f` on the accent fill (~1.9:1 in light mode, a hardcoded colour
+where `--accent-ink` exists), and a dev-only CSP error because React's
+development build needs `eval`. All fixed; `unsafe-eval` is dev-only and never
+reaches production.
+
+**5. Scoring audit — five real defects**, each with a test written first in
+`lib/scoring-audit.test.ts`:
+
+- **Reset ignored the rulebook.** It went back to *team 1, server 1*. In game 2
+  the other side opens, and official doubles opens on the second server — so a
+  reset handed the serve to the wrong team AND gave them an extra service turn
+  for the rest of the game. `GameSession.firstServingTeam` now records who
+  opened, and reset restores it through `initialServerNumber`.
+- **Rally scoring never moved the serve.** The rally winner scores and serves
+  next; the engine only added the point, so the board claimed the opening team
+  was serving for the whole game however the rallies went.
+- **`adjustScore` ignored `scoreLocked`** while `addScore` honoured it — the
+  +/- controls could still move a score someone had deliberately frozen.
+- **"Game point" was announced over receiving teams.** In side-out scoring they
+  cannot score from there; the banner contradicted the rule the same screen was
+  teaching.
+- 156 tests pass, up from 144, with no changes to existing expectations.
+
+**6. The manual is point-wise now.** `ManualEntry.points` renders as bullets
+(`steps` stays for real sequences only), and "Keeping score" was rewritten
+around a new canonical entry, "The scoring rules, in full" — eleven lines
+covering side-out, the two-server rotation, 4.B.7, win-by-two, game point and
+rally scoring. Renaming an entry had silently broken one of the three Help
+shortcuts, so `QUICK_LINKS` moved into `lib/manual.ts` beside the text it names
+and a test now fails if a shortcut matches nothing.
+
+**Also asked for and shipped:** a match is no longer saved to the device
+without permission. `lib/historyConsent.ts` holds an `ask` / `always` / `never`
+preference and `SaveMatchPrompt` is the dialog; dismissing it counts as "not
+this time". Verified end to end in the browser: prompt appears at 11-0, history
+stays empty until Save is pressed, and with the preference set to `never` a
+finished game writes nothing.
+
+`docs/LINKEDIN-POST.md` is a launch post drafted for the author to post. It is
+not published by anyone else.
+
 ## 2026-09-21 — the deploy was never reaching the domain
 
 Shipping the light-theme + docs work exposed a second, larger problem: the
