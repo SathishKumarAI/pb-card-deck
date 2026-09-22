@@ -1,5 +1,30 @@
 # Worklog
 
+## 2026-09-22 (later) — the empty bottom third on desktop
+
+Flagged while checking the live site, then fixed. Both the home and the game
+screen put their content in a grid that stretches to the full viewport
+(`flex-1`) while the single row stayed at the top.
+
+| Screen | Before | After |
+|---|---|---|
+| Home, 1440x900 | 0px above the content, **261px** of dead space below it | 174 above / 182 below |
+| Game, 1440x900 | content hugging the top bar, a dead third underneath | 124 above / 108 below |
+
+The fix is one class on each: `lg:content-center`. It centres the row inside
+the box the grid already occupies, and has no effect once the content is taller
+than the viewport - which is what keeps it clear of the `justify-center` trap
+this repo already documents (centring inside a scroll container overflows BOTH
+ends and puts the top out of reach). Checked at 1280x560 with the content
+overflowing: header at y=0, nothing clipped, 40px of normal page scroll.
+
+The screenshot then showed the second half of the problem: the scoreboard - the
+actual point of the screen - was a 96px tile with 48px numerals next to a twist
+card three times its size. On desktop it is now 128px with 60px numerals, and
+team names get `10rem` instead of truncating at 88px on a 1440 display. All
+four changes are `lg:`-only; measured at 390 the tile is still 72px/44px and
+the mobile audit stays clean.
+
 ## 2026-09-22 — second bug hunt: four more, found by using the app
 
 A sweep of every screen at 1440 and 390, every menu sheet, a full best-of-3,

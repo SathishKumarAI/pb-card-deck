@@ -266,7 +266,7 @@ function ScoreButton({ score, name, color, serving, serverNumber, showServer, in
           slab behind it. Tabular figures keep the digits from shifting as the
           score climbs. */}
       <div
-        className={`font-display tnum relative w-[4.5rem] h-[4.5rem] sm:w-24 sm:h-24 flex items-center justify-center text-[2.75rem] sm:text-5xl font-black ${bump ? "anim-bump" : ""}`}
+        className={`font-display tnum relative w-[4.5rem] h-[4.5rem] sm:w-24 sm:h-24 lg:w-32 lg:h-32 flex items-center justify-center text-[2.75rem] sm:text-5xl lg:text-6xl font-black ${bump ? "anim-bump" : ""}`}
         style={{
           background: "var(--bg-elevated)",
           color: "var(--text)",
@@ -283,7 +283,7 @@ function ScoreButton({ score, name, color, serving, serverNumber, showServer, in
           style={{ background: color }}
         />
       </div>
-      <span className="text-xs font-semibold truncate max-w-[88px]" style={{ color: serving ? "var(--text)" : "var(--text-secondary)" }}>
+      <span className="text-xs lg:text-sm font-semibold truncate max-w-[88px] lg:max-w-[10rem]" style={{ color: serving ? "var(--text)" : "var(--text-secondary)" }}>
         {name}
       </span>
     </>

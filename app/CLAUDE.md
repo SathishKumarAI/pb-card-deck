@@ -124,6 +124,13 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
   `--accent-ink` for text on an accent fill (never `#fff` - it vibrates on mint).
   Anything that counts - scores, clocks, card totals - gets `.tnum`.
 - One primary action per screen. If a second button competes with it, cut it.
+- **A desktop grid that fills the viewport must say where its row sits.** Both
+  the home and game grids are `flex-1`, so the box is full height while the one
+  row defaulted to the top: measured 261px of dead space above the footer at
+  1440x900. `lg:content-center` centres the row in the space it already has,
+  and does nothing when the content overflows - so it does NOT reintroduce the
+  `justify-center` trap where the top becomes unreachable. Verified at 1280x560:
+  header at y=0, nothing clipped.
 - **Every control someone types into needs an accessible name.** Nine fields
   shipped without one - the whole tournament setup form, both official-match
   name boxes, the event label, the team-name editor and the hidden import

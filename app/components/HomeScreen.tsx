@@ -110,7 +110,7 @@ export default function HomeScreen({
           className={
             tab === "event"
               ? "flex-1 pb-8 flex flex-col gap-5"
-              : "flex-1 pb-8 flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:gap-16 lg:items-start lg:pt-6"
+              : "flex-1 pb-8 flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:gap-16 lg:items-start lg:content-center lg:pt-6"
           }
         >
           {tab !== "event" && (
