@@ -27,6 +27,7 @@ import AchievementsPanel from "@/components/AchievementsPanel";
 import WelcomeTour from "@/components/WelcomeTour";
 import { MODE_ICONS } from "@/components/icons";
 import { useFocusTrap } from "@/lib/useFocusTrap";
+import { useScrollLock } from "@/lib/useScrollLock";
 import { useToast } from "@/components/Toast";
 
 const GITHUB_URL = process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/SathishKumarAI/pb-card-deck";
@@ -108,11 +109,13 @@ export default function Home() {
     setShowBeginnerIntro(false);
   }, []);
   useFocusTrap(introRef, showBeginnerIntro, dismissIntro);
+  useScrollLock(showBeginnerIntro);
   const paused = !!game && isPaused(game) && !game.winner;
   const resumeFromPause = useCallback(() => {
     setGame((g) => (g && isPaused(g) ? resumePlay(g, Date.now()) : g));
   }, []);
   useFocusTrap(pauseRef, paused, resumeFromPause);
+  useScrollLock(paused);
 
   useEffect(() => {
     fetch("/cards.json", { cache: "no-store" }).then((r) => r.json()).then(setAllCards);
@@ -436,7 +439,9 @@ export default function Home() {
     return (
       <>
         <div className="mesh-bg flex flex-col" style={{ background: "var(--bg)", minHeight: "100dvh" }}>
-          <div className="w-full max-w-md mx-auto flex flex-col flex-1 safe-x">
+          <span aria-hidden className="court-centre-line court-centre-line--top" />
+          <span aria-hidden className="court-centre-line court-centre-line--bottom" />
+          <div className="app-col app-col--wide flex flex-col flex-1 safe-x">
           {/* Header: identity on the left, the three always-available controls
               on the right. Help sits here, not in a menu - a first-timer should
               never have to go looking for it. */}
@@ -458,34 +463,59 @@ export default function Home() {
             <span className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setShowRules(true)}
-                className="pressable flex items-center gap-1.5 pl-2.5 pr-3 py-2 text-sm font-semibold"
-                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: "var(--r-chip)" }}
+                className="pressable hoverable mat-thin flex items-center gap-1.5 pl-2.5 pr-3 py-2 text-sm font-semibold"
+                style={{ border: "1px solid var(--mat-edge)", color: "var(--text)", borderRadius: "var(--r-chip)" }}
               >
                 <HelpCircle size={16} style={{ color: "var(--accent)" }} /> Help
               </button>
-              <button onClick={cycleTheme} className="pressable p-2 rounded-full" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text-secondary)" }} aria-label={`Theme: ${theme}. Tap to change.`}>
+              <button onClick={cycleTheme} className="pressable hoverable mat-thin p-2 rounded-full" style={{ border: "1px solid var(--mat-edge)", color: "var(--text-secondary)" }} aria-label={`Theme: ${theme}. Tap to change.`}>
                 {theme === "auto" ? <Monitor size={18} /> : theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
               </button>
               <AppMenu onOpenHistory={() => setShowHistory(true)} onOpenDecks={() => setShowDecks(true)} onOpenFavorites={() => setShowFavorites(true)} onOpenFeedback={() => setShowFeedback(true)} onOpenRules={() => setShowRules(true)} onOpenBrowser={() => setShowBrowser(true)} onOpenAchievements={() => setShowAchievements(true)} />
             </span>
           </header>
 
-          <main className="flex-1 flex flex-col gap-6 pb-8">
-          <div className="anim-fade-up">
-            <h1 className="font-display text-[2.1rem] sm:text-[2.6rem] font-black leading-[1.05] tracking-tight" style={{ color: "var(--text)" }}>
+          {/* Phone: one column, app-shaped. Desktop (>=1024px): the pitch sits
+              on the left and everything you can act on collects in a column on
+              the right, so a wide window gets a layout rather than a stretched
+              phone screen. */}
+          <main className="flex-1 pb-8 flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:gap-16 lg:items-start lg:pt-6">
+          <div className="anim-fade-up lg:sticky lg:top-8">
+            <h1 className="font-display text-[2.1rem] sm:text-[2.6rem] lg:text-[3.4rem] font-black leading-[1.05] tracking-tight" style={{ color: "var(--text)" }}>
               Draw a twist card
               <br />
               between points.
             </h1>
-            <p className="mt-2.5 text-[0.95rem] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+            <p className="mt-2.5 text-[0.95rem] lg:text-lg leading-relaxed lg:max-w-[34ch]" style={{ color: "var(--text-secondary)" }}>
               1,729 cards that change the next rally, and a scoreboard that
               handles serve and side-out for you. No account, works offline.
             </p>
+
+            {/* Desktop has the room for the three facts that answer "is this
+                for me?"; on a phone they would just push the buttons down. */}
+            <dl className="hidden lg:flex mt-9 gap-3">
+              {[
+                ["1,729", "unique cards"],
+                ["10", "categories"],
+                ["0", "sign-ups"],
+              ].map(([n, label]) => (
+                <div
+                  key={label}
+                  className="mat-thin flex-1 px-4 py-3"
+                  style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-panel)" }}
+                >
+                  <dt className="font-display tnum text-2xl font-black" style={{ color: "var(--text)" }}>{n}</dt>
+                  <dd className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{label}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
+
+          <div className="flex flex-col gap-6">
 
           {/* Top-level mode toggle: casual card play vs coach/umpire match tracking.
               Switchable any time - one tap changes the whole flow below. */}
-          <div className="flex items-center gap-1 p-1" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--r-chip)" }}>
+          <div className="mat-thin flex items-center gap-1 p-1" style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-chip)" }}>
             {([["cards", "Play with cards", LayersIcon], ["track", "Track a match", ClipboardCheck]] as const).map(([key, label, Icon]) => (
               <button
                 key={key}
@@ -508,7 +538,7 @@ export default function Home() {
                 <span className="eyebrow px-0.5">Resume a game ({savedGames.length})</span>
               )}
               {savedGames.map((sg) => (
-                <div key={sg.id} className="anim-pop flex items-center gap-3 p-2.5" style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-panel)" }}>
+                <div key={sg.id} className="anim-pop mat-thin hoverable flex items-center gap-3 p-2.5" style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-panel)" }}>
                   <button onClick={() => resumeGame(sg)} className="pressable flex items-center gap-3 flex-1 min-w-0 text-left" style={{ borderRadius: "var(--r-ctl)" }}>
                     <span className="flex items-center justify-center w-10 h-10 shrink-0" style={{ background: "var(--accent)", color: "var(--accent-ink)", borderRadius: "var(--r-ctl)" }}>
                       <Play size={18} fill="currentColor" />
@@ -541,8 +571,8 @@ export default function Home() {
           <button
             onClick={() => { triggerHaptic("light"); startGameHandler(lastDeck); }}
             disabled={!allCards.length}
-            className="pressable flex items-center justify-between gap-3 px-5 py-4 text-left disabled:opacity-50"
-            style={{ background: "var(--accent)", color: "var(--accent-ink)", borderRadius: "var(--r-panel)", boxShadow: "var(--elev-2)" }}
+            className="pressable cta-accent flex items-center justify-between gap-3 px-5 py-4 text-left disabled:opacity-50"
+            style={{ borderRadius: "var(--r-panel)" }}
           >
             <span className="flex items-center gap-3 min-w-0">
               <Play size={20} fill="currentColor" className="shrink-0" />
@@ -567,11 +597,11 @@ export default function Home() {
                   <button
                     key={key}
                     onClick={() => { triggerHaptic("light"); startGameHandler(key); }}
-                    className="pressable flex flex-col gap-1 p-3 text-left"
-                    style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-panel)" }}
+                    className="pressable hoverable mat-thin flex flex-col gap-1 p-3 text-left"
+                    style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-panel)" }}
                     aria-label={`${lvl.label} - ${lvl.description}`}
                   >
-                    <Icon size={17} style={{ color: "var(--accent)" }} />
+                    <Icon size={17} className="hover-pop" style={{ color: "var(--accent)" }} />
                     <span className="text-sm font-semibold leading-tight" style={{ color: "var(--text)" }}>{lvl.label}</span>
                     <span className="text-[11px] leading-tight" style={{ color: "var(--text-muted)" }}>
                       {allCards.length ? `${count.toLocaleString()} cards` : lvl.description}
@@ -591,8 +621,8 @@ export default function Home() {
                     key={key}
                     onClick={() => { triggerHaptic("light"); startGameHandler(key); }}
                     title={`${desc}${allCards.length ? ` · ${cardCounts[key].toLocaleString()} cards` : ""}`}
-                    className="pressable flex items-center gap-1.5 pl-2.5 pr-3 py-2 text-sm font-medium"
-                    style={{ background: "var(--bg-card)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: "var(--r-chip)" }}
+                    className="pressable hoverable mat-thin flex items-center gap-1.5 pl-2.5 pr-3 py-2 text-sm font-medium"
+                    style={{ border: "1px solid var(--mat-edge)", color: "var(--text)", borderRadius: "var(--r-chip)" }}
                   >
                     <Icon size={15} style={{ color: "var(--accent)" }} /> {label}
                   </button>
@@ -604,8 +634,8 @@ export default function Home() {
             {allCards.length > 0 && (
               <button
                 onClick={() => { triggerHaptic("light"); startDaily(); }}
-                className="pressable flex items-center gap-3 p-3 text-left"
-                style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-panel)" }}
+                className="pressable hoverable mat-thin flex items-center gap-3 p-3 text-left"
+                style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-panel)" }}
               >
                 <span className="flex items-center justify-center w-9 h-9 shrink-0" style={{ background: "var(--bg-elevated)", color: "var(--accent)", borderRadius: "var(--r-ctl)" }}>
                   <Sparkles size={17} />
@@ -619,6 +649,7 @@ export default function Home() {
           </div>
           </>
           )}
+          </div>
           </main>
 
           <footer className="safe-bottom pb-6 text-sm" style={{ color: "var(--text-muted)" }}>
@@ -670,10 +701,12 @@ export default function Home() {
         paused={isPaused(game)}
         onTogglePause={() => setGame(isPaused(game) ? resumePlay(game, Date.now()) : pauseGame(game, Date.now()))}
         onOpenSettings={() => setShowSettings(true)}
+        onOpenHelp={() => setShowRules(true)}
         menuSlot={<AppMenu onOpenHistory={() => setShowHistory(true)} onOpenDecks={() => setShowDecks(true)} onOpenFavorites={() => setShowFavorites(true)} onOpenFeedback={() => setShowFeedback(true)} onOpenRules={() => setShowRules(true)} onOpenBrowser={() => setShowBrowser(true)} onOpenAchievements={() => setShowAchievements(true)} />}
       />
 
-      <div className="flex-1 flex flex-col items-center gap-4 p-4 max-w-lg mx-auto w-full">
+      <div className="app-col app-col--wide flex-1 w-full p-4 flex flex-col items-center gap-4 lg:grid lg:grid-cols-2 lg:gap-10 lg:items-start lg:pt-8">
+        <div className="contents lg:flex lg:flex-col lg:items-center lg:gap-4 lg:w-full">
         {showNameEditor && (
           <PlayerNames
             names={game.playerNames}
@@ -693,7 +726,7 @@ export default function Home() {
         )}
 
         {confirmTeam && (
-          <div className="anim-pop glass flex items-center gap-3 p-3 rounded-xl" style={{ border: "1px solid var(--border)" }}>
+          <div className="anim-pop mat-regular flex items-center gap-3 p-3" style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-ctl)" }}>
             <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
               +1 {confirmTeam === 1 ? game.playerNames.team1 : game.playerNames.team2}?
             </span>
@@ -704,7 +737,7 @@ export default function Home() {
 
         {/* Confirm reset */}
         {confirmReset && (
-          <div className="anim-pop glass flex items-center gap-3 p-3 rounded-xl" style={{ border: "1px solid var(--border)" }}>
+          <div className="anim-pop mat-regular flex items-center gap-3 p-3" style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-ctl)" }}>
             <span className="text-sm" style={{ color: "var(--text-secondary)" }}>Reset score to 0 - 0?</span>
             <button
               onClick={() => { doReset(); setConfirmReset(false); }}
@@ -722,10 +755,12 @@ export default function Home() {
           {currentCard ? `Drew ${currentCard.name}. ${currentCard.effect}` : ""}
           {` Score: ${game.playerNames.team1} ${game.score.team1}, ${game.playerNames.team2} ${game.score.team2}.`}
         </div>
+        </div>
 
+        <div className="contents lg:flex lg:flex-col lg:items-center lg:gap-4 lg:w-full">
         {(() => { const cardsOn = !game.config.officialMode || game.config.cardsEnabled; return (<>
         {showGameHint && cardsOn && (
-          <div className="anim-pop glass flex items-start gap-3 p-3 rounded-2xl max-w-sm w-full" style={{ border: "1px solid var(--accent)" }}>
+          <div className="anim-pop mat-regular flex items-start gap-3 p-3 max-w-sm w-full" style={{ border: "1px solid var(--accent)", borderRadius: "var(--r-panel)" }}>
             <HelpCircle size={18} className="shrink-0 mt-0.5" style={{ color: "var(--accent)" }} />
             <span className="text-xs leading-relaxed flex-1" style={{ color: "var(--text-secondary)" }}>
               Tap the card to draw a twist, then tap a team&apos;s score to give them the point. Unsure what a card means? Tap the <strong style={{ color: "var(--text)" }}>?</strong> on it.
@@ -754,6 +789,7 @@ export default function Home() {
 
         {cardsOn && <CardHistory history={cardHistory} />}
         </>); })()}
+        </div>
       </div>
 
       <SettingsSheet
@@ -770,8 +806,8 @@ export default function Home() {
       )}
 
       {isPaused(game) && !game.winner && (
-        <div role="dialog" aria-modal="true" aria-label="Game paused" className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/70 backdrop-blur-md">
-          <div ref={pauseRef} tabIndex={-1} className="glass rounded-3xl p-8 text-center max-w-sm w-full shadow-2xl anim-pop outline-none" style={{ border: "1px solid var(--border)" }}>
+        <div role="dialog" aria-modal="true" aria-label="Game paused" className="sheet-scrim fixed inset-0 z-50 flex items-center justify-center p-6">
+          <div ref={pauseRef} tabIndex={-1} className="mat-thick p-8 text-center max-w-sm w-full anim-pop outline-none" style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-sheet)", boxShadow: "var(--elev-3)" }}>
             <div className="flex justify-center mb-4 anim-float" style={{ color: "var(--accent)" }}>
               <Pause size={64} strokeWidth={1.5} />
             </div>
@@ -803,8 +839,8 @@ export default function Home() {
       )}
 
       {showBeginnerIntro && (
-        <div role="dialog" aria-modal="true" aria-label="How to play" className="fixed inset-0 z-[70] flex items-center justify-center p-6 bg-black/70 backdrop-blur-md">
-          <div ref={introRef} tabIndex={-1} className="glass rounded-3xl p-7 max-w-sm w-full shadow-2xl anim-pop outline-none" style={{ border: "1px solid var(--accent)" }}>
+        <div role="dialog" aria-modal="true" aria-label="How to play" className="sheet-scrim fixed inset-0 z-[70] flex items-center justify-center p-6">
+          <div ref={introRef} tabIndex={-1} className="mat-thick p-7 max-w-sm w-full anim-pop outline-none" style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-sheet)", boxShadow: "var(--elev-3)" }}>
             <div className="flex justify-center mb-3" style={{ color: "var(--accent)" }}>
               <Sprout size={48} strokeWidth={1.5} />
             </div>

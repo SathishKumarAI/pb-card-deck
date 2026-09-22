@@ -2,6 +2,7 @@
 
 import { GameSession } from "@/lib/game";
 import { X } from "lucide-react";
+import { useScrollLock } from "@/lib/useScrollLock";
 
 // Big courtside / cast display (backlog F072): huge tappable scores, minimal
 // chrome, for a phone or tablet propped at the side of the court.
@@ -14,6 +15,7 @@ export default function TVScore({
   onScore: (team: 1 | 2) => void;
   onExit: () => void;
 }) {
+  useScrollLock(true);
   const locked = game.config.scoreLocked || !!game.winner;
   // Server 1/2 only rotates in official doubles - show it there so a courtside
   // viewer sees which server is up, matching the main scoreboard.

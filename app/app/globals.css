@@ -15,12 +15,28 @@
   --r-chip: 999px;
   --r-ctl: 12px;
   --r-panel: 18px;
+  --r-sheet: 26px;
   --r-hero: 26px;
 
   /* Elevation. Three steps, no ad-hoc box-shadows. */
   --elev-1: 0 1px 2px rgba(0, 0, 0, 0.18);
   --elev-2: 0 8px 22px -12px rgba(0, 0, 0, 0.5);
   --elev-3: 0 24px 54px -22px rgba(0, 0, 0, 0.65);
+
+  /* Glass materials, named after the thickness they imitate (iOS calls these
+     thin / regular / thick). A material is FOUR things, and dropping any one is
+     what makes web "glassmorphism" look like a grey box: a translucent tint, a
+     blur that also saturates what is behind it, a hairline edge, and a light
+     catching the top edge. `.glass-*` below assembles them. */
+  --mat-thin-blur: 14px;
+  --mat-regular-blur: 22px;
+  --mat-thick-blur: 34px;
+  --mat-saturate: 180%;
+
+  /* Width of the app column. Phone-sized on purpose: this is an app that
+     happens to run in a browser, not a page. Desktop gets a wider grid at
+     >=1024px instead of stretching this. */
+  --app-w: 30rem;
 }
 
 /* Dark mode (default) - softened to reduce eye strain (no pure black / pure white) */
@@ -43,6 +59,19 @@
   --mesh-2: rgba(96, 165, 250, 0.05);
   --mesh-3: rgba(203, 166, 247, 0.04);
   --glass: rgba(19, 24, 26, 0.76);
+
+  /* Glass tints + edges for this theme */
+  --mat-thin: rgba(28, 36, 38, 0.55);
+  --mat-regular: rgba(22, 29, 31, 0.72);
+  --mat-thick: rgba(16, 21, 23, 0.86);
+  --mat-edge: rgba(255, 255, 255, 0.10);
+  --mat-sheen: rgba(255, 255, 255, 0.16);
+
+  /* Court backdrop: chalk lines and the ball's glow */
+  --court-line: rgba(233, 239, 236, 0.055);
+  --court-line-strong: rgba(233, 239, 236, 0.085);
+  --court-floor: rgba(52, 211, 153, 0.05);
+  --court-ball: rgba(251, 191, 36, 0.10);
 }
 
 /* Light mode - soft mint-tinted, with visible colour depth (not flat grey) */
@@ -68,6 +97,17 @@
   --mesh-2: rgba(56, 130, 246, 0.05);
   --mesh-3: rgba(168, 85, 247, 0.04);
   --glass: rgba(255, 255, 255, 0.78);
+
+  --mat-thin: rgba(255, 255, 255, 0.62);
+  --mat-regular: rgba(255, 255, 255, 0.76);
+  --mat-thick: rgba(255, 255, 255, 0.88);
+  --mat-edge: rgba(22, 32, 28, 0.10);
+  --mat-sheen: rgba(255, 255, 255, 0.85);
+
+  --court-line: rgba(22, 32, 28, 0.06);
+  --court-line-strong: rgba(22, 32, 28, 0.10);
+  --court-floor: rgba(5, 150, 105, 0.06);
+  --court-ball: rgba(217, 119, 6, 0.10);
 }
 
 /* A soft top-down tint so light surfaces have depth instead of flat white. */
@@ -76,20 +116,46 @@
   background-attachment: fixed;
 }
 
-html, body {
-  overscroll-behavior-y: contain;
-  overflow-x: hidden;
+/* Scrolling.
+   `overflow-x: hidden` on html AND body used to make BOTH of them scroll
+   containers (it forces overflow-y to compute as auto), so the page had two
+   nested scrollers fighting each other and wheel/touch scrolls landed on
+   whichever one the pointer happened to be over. `overflow-x: clip` clips
+   without creating a scrollport, which is what was actually wanted. */
+html {
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
+  overflow-x: clip;
+  overscroll-behavior-y: contain; /* no pull-to-refresh mid-game, but scroll still chains */
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: none;
   min-height: 100dvh;
   transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* While a sheet or dialog is open the page behind it must not scroll - scrolling
+   the backdrop was moving the page under the sheet and leaving you somewhere
+   else when it closed. React sets data-locked on <html>; the scroll position is
+   held with `top` so nothing jumps. */
+html[data-locked="true"] {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Any inner scroller: keeps its own scrolling, never hands the gesture up to
+   the page when it hits an end, and keeps momentum on iOS. */
+.scroll-area {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 * {
@@ -111,6 +177,28 @@ input, textarea, select {
    overlap. lucide-react renders <svg class="lucide …">, so guard them globally. */
 svg.lucide { flex-shrink: 0; }
 
+/* ─────────────────────────────────────────────
+   App shell
+
+   The product is an app that happens to run in a browser, so the content keeps
+   a phone-shaped column at every width instead of stretching into a 1600px
+   line of text. Desktop is not "the same page, wider": at >=1024px the home
+   screen becomes two columns (see page.tsx) and the court backdrop finally has
+   room to be seen.
+   ───────────────────────────────────────────── */
+.app-col {
+  width: 100%;
+  max-width: var(--app-w);
+  margin-inline: auto;
+}
+
+/* The home screen is the one place that spreads out on a desktop. A Tailwind
+   `lg:max-w-*` cannot do this: both are single-class selectors, and .app-col is
+   defined after the utilities, so it would keep winning. */
+@media (min-width: 1024px) {
+  .app-col--wide { max-width: 64rem; }
+}
+
 /* Safe-area helpers for notches / home indicators */
 .safe-top { padding-top: max(1rem, env(safe-area-inset-top)); }
 .safe-x {
@@ -120,22 +208,66 @@ svg.lucide { flex-shrink: 0; }
 .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
 
 /* ─────────────────────────────────────────────
-   Animated mesh-gradient backdrop (subtle)
+   The backdrop: a pickleball court, seen from above.
+
+   Two fixed layers behind everything. `::before` is the light - a warm lamp
+   where the ball is and a cool wash at the far end. `::after` is the court
+   itself, drawn in chalk with plain gradients: sidelines, baseline, the
+   kitchen (non-volley zone) line, and the net band across the middle.
+
+   It is deliberately almost invisible on a phone, where the content covers it,
+   and gets room to breathe on a desktop where the app column leaves space.
    ───────────────────────────────────────────── */
 .mesh-bg { position: relative; isolation: isolate; }
+
 .mesh-bg::before {
   content: "";
   position: fixed;
   inset: -20%;
-  z-index: -1;
+  z-index: -2;
   background:
-    radial-gradient(40% 40% at 20% 20%, var(--mesh-1) 0%, transparent 60%),
-    radial-gradient(45% 45% at 80% 25%, var(--mesh-2) 0%, transparent 60%),
-    radial-gradient(50% 50% at 50% 85%, var(--mesh-3) 0%, transparent 60%);
+    radial-gradient(38% 34% at 22% 18%, var(--court-ball) 0%, transparent 62%),
+    radial-gradient(46% 42% at 82% 26%, var(--mesh-2) 0%, transparent 62%),
+    radial-gradient(60% 55% at 50% 92%, var(--court-floor) 0%, transparent 62%);
   background-size: 200% 200%;
-  animation: meshDrift 26s ease-in-out infinite alternate;
+  animation: meshDrift 32s ease-in-out infinite alternate;
   pointer-events: none;
 }
+
+.mesh-bg::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.85;
+  background:
+    /* net band across the middle */
+    linear-gradient(to bottom, transparent calc(50% - 1.5px), var(--court-line-strong) calc(50% - 1.5px), var(--court-line-strong) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+    /* kitchen lines, one either side of the net */
+    linear-gradient(to bottom, transparent calc(34% - 1px), var(--court-line) calc(34% - 1px), var(--court-line) calc(34% + 1px), transparent calc(34% + 1px)),
+    linear-gradient(to bottom, transparent calc(66% - 1px), var(--court-line) calc(66% - 1px), var(--court-line) calc(66% + 1px), transparent calc(66% + 1px)),
+    /* baselines */
+    linear-gradient(to bottom, transparent calc(8% - 1px), var(--court-line) calc(8% - 1px), var(--court-line) calc(8% + 1px), transparent calc(8% + 1px)),
+    linear-gradient(to bottom, transparent calc(92% - 1px), var(--court-line) calc(92% - 1px), var(--court-line) calc(92% + 1px), transparent calc(92% + 1px)),
+    /* sidelines */
+    linear-gradient(to right, transparent calc(8% - 1px), var(--court-line) calc(8% - 1px), var(--court-line) calc(8% + 1px), transparent calc(8% + 1px)),
+    linear-gradient(to right, transparent calc(92% - 1px), var(--court-line) calc(92% - 1px), var(--court-line) calc(92% + 1px), transparent calc(92% + 1px));
+}
+
+/* The centre service line runs from each baseline to its kitchen line and
+   stops - it does not cross the net. Two short segments, not one long line. */
+.mesh-bg .court-centre-line {
+  position: fixed;
+  left: calc(50% - 1px);
+  width: 2px;
+  z-index: -1;
+  background: var(--court-line);
+  pointer-events: none;
+}
+.mesh-bg .court-centre-line--top { top: 8%; height: 26%; }
+.mesh-bg .court-centre-line--bottom { top: 66%; height: 26%; }
+
 @keyframes meshDrift {
   0%   { background-position: 0% 0%, 100% 0%, 50% 100%; }
   100% { background-position: 40% 30%, 60% 40%, 50% 60%; }
@@ -179,6 +311,26 @@ svg.lucide { flex-shrink: 0; }
   70%  { box-shadow: 0 0 0 6px rgba(251, 191, 36, 0); }
   100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
 }
+
+/* A sheet rises from the bottom edge on a phone the way a native one does,
+   and simply fades up when it is centred on a wide screen. */
+@keyframes sheetRise {
+  from { transform: translateY(12%); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+.sheet-rise { animation: sheetRise 0.32s cubic-bezier(0.32, 0.72, 0, 1) both; }
+@media (min-width: 640px) {
+  .sheet-rise { animation: fadeUp 0.28s cubic-bezier(0.32, 0.72, 0, 1) both; border-radius: var(--r-sheet) !important; }
+}
+
+/* Scrim behind a sheet: darkens and blurs the app, like a modal on iOS. */
+.sheet-scrim {
+  background: rgba(0, 0, 0, 0.42);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+  backdrop-filter: blur(6px) saturate(120%);
+  animation: scrimIn 0.24s ease both;
+}
+@keyframes scrimIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* Utility animation classes */
 .anim-fade-up { animation: fadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -240,19 +392,86 @@ svg.lucide { flex-shrink: 0; }
 }
 .shine.shine-run::after { animation: shimmer 0.9s ease-out; }
 
-/* Glass surface */
-.glass {
+/* ─────────────────────────────────────────────
+   Glass materials
+
+   `.glass` is kept for older call sites. The three `.mat-*` classes are the
+   real system: tint + blur + saturation + hairline edge + a 1px sheen catching
+   the top edge, which is the part that makes it read as a pane of glass rather
+   than a semi-transparent div.
+   ───────────────────────────────────────────── */
+.glass,
+.mat-thin,
+.mat-regular,
+.mat-thick {
+  position: relative;
   background: var(--glass);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
-  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--mat-regular-blur)) saturate(var(--mat-saturate));
+  backdrop-filter: blur(var(--mat-regular-blur)) saturate(var(--mat-saturate));
 }
 
-/* Pressable affordance */
-.pressable { transition: transform 0.18s cubic-bezier(0.34, 1.5, 0.64, 1), box-shadow 0.2s ease; }
-@media (hover: hover) {
-  .pressable:hover { transform: translateY(-2px); }
+.mat-thin    { background: var(--mat-thin);    -webkit-backdrop-filter: blur(var(--mat-thin-blur)) saturate(var(--mat-saturate));    backdrop-filter: blur(var(--mat-thin-blur)) saturate(var(--mat-saturate)); }
+.mat-regular { background: var(--mat-regular); }
+.mat-thick   { background: var(--mat-thick);   -webkit-backdrop-filter: blur(var(--mat-thick-blur)) saturate(var(--mat-saturate));   backdrop-filter: blur(var(--mat-thick-blur)) saturate(var(--mat-saturate)); }
+
+/* The lit top edge. Inset so it follows the element's own radius. */
+.mat-thin::before,
+.mat-regular::before,
+.mat-thick::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding-top: 1px;
+  background: linear-gradient(to bottom, var(--mat-sheen), transparent 55%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* Browsers without backdrop-filter (older Firefox) would show near-transparent
+   panels with text over live content. Fall back to an opaque surface. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass, .mat-thin, .mat-regular, .mat-thick { background: var(--bg-card); }
+}
+
+/* ─────────────────────────────────────────────
+   Touch and pointer feedback
+
+   Touch gets a firm press. Pointer devices additionally get hover, which the
+   app had none of - every card, row and chip was inert under a mouse.
+   ───────────────────────────────────────────── */
+.pressable {
+  transition: transform 0.18s cubic-bezier(0.34, 1.5, 0.64, 1), box-shadow 0.2s ease,
+    background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 .pressable:active { transform: scale(0.96); }
+
+@media (hover: hover) and (pointer: fine) {
+  .pressable:hover { transform: translateY(-2px); }
+
+  /* A surface that lifts, brightens its edge and warms towards the accent. */
+  .hoverable { transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease; }
+  .hoverable:hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border)) !important;
+    box-shadow: var(--elev-2), 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+    transform: translateY(-2px);
+  }
+  /* An icon inside a hovered surface leans in slightly. */
+  .hoverable:hover .hover-pop { transform: scale(1.08); }
+  .hover-pop { transition: transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1); }
+
+  /* Plain rows (menu items, list rows) just get a tint. */
+  .hover-tint { transition: background-color 0.16s ease, color 0.16s ease; }
+  .hover-tint:hover { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+
+  /* A score tile is the most-tapped thing in the app; on a pointer device say
+     so before the click. */
+  .score-tap:hover > div { border-color: var(--accent) !important; }
+}
 
 /* Distinctive display face for headings, scores, and card text */
 .font-display { font-family: var(--font-display), var(--font-body), system-ui, sans-serif; }
@@ -261,6 +480,19 @@ svg.lucide { flex-shrink: 0; }
    climbs (1 is narrower than 8); tabular figures hold the column still. Use on
    anything that counts: scores, clocks, card counts. */
 .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+/* The primary call to action. A single class so the app's one loudest button
+   looks identical everywhere: accent fill, a lit top edge like the glass
+   panels, and a glow that deepens on hover. */
+.cta-accent {
+  background: linear-gradient(180deg, color-mix(in srgb, #fff 14%, var(--accent)), var(--accent));
+  color: var(--accent-ink);
+  border: 1px solid color-mix(in srgb, #fff 22%, var(--accent));
+  box-shadow: var(--elev-2), 0 10px 30px -14px var(--accent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .cta-accent:hover { box-shadow: var(--elev-2), 0 14px 34px -12px var(--accent); }
+}
 
 /* The one section-label treatment, so labels stop being invented per screen. */
 .eyebrow {

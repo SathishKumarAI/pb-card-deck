@@ -1,5 +1,53 @@
 # Worklog
 
+## 2026-09-21 19:10 - iOS glass, a court backdrop, real scroll behaviour, desktop layout
+
+**Summary:** Second pass on the premium work. The app now presents as an app - glass materials,
+bottom sheets, a pickleball court behind everything - and stops being a phone column stretched
+across a desktop. Three scrolling defects fixed, all reproduced in the browser first.
+
+**Scrolling, measured before and after:**
+- `overflow-x: hidden` on html AND body made *both* of them scroll containers (it forces
+  `overflow-y` to compute as `auto`), so the page had two nested scrollers and a wheel or thumb
+  landed on whichever the pointer was over. Now `overflow-x: clip`, which clips without creating
+  a scrollport.
+- Scrolling with a sheet open scrolled the PAGE behind it: `window.scrollY` moved from 0 to 300
+  with the Help sheet open. New `lib/useScrollLock.ts` pins `<html>` (`position: fixed` + saved
+  `top`, since iOS ignores `overflow: hidden` on body) and restores the offset on close. After:
+  `pageMoved: false`, sheet scrolled to 400, `html` position `fixed`.
+- Inner scrollers had no `overscroll-behavior`, so hitting the end of a list handed the gesture
+  to the page. They now use `.scroll-area`.
+
+**Changes:**
+- Glass material system: `--mat-thin/regular/thick` + the four ingredients that make glass read as
+  glass (tint, blur, saturation, hairline edge, 1px top sheen), with an opaque `@supports` fallback
+  where `backdrop-filter` is missing. Applied to the top bar, sheets, dialogs, scoreboard, deck
+  rows, chips and the home header.
+- Bottom sheets now rise from the bottom edge with a grabber handle, over a blurred scrim.
+- The backdrop is a pickleball court seen from above - sidelines, baselines, kitchen lines, net
+  band, plus the two centre service lines - drawn in CSS gradients at ~5% contrast, theme aware.
+- The deck back carries a drawn pickleball (`PickleballMark` in `components/icons.tsx`) instead of
+  a generic shuffle glyph: lucide has no ball with holes, and the glyph never said which sport.
+- Hover states, which the app had none of: `.hoverable` (lift + accent edge), `.hover-tint`
+  (rows), `.hover-pop` (icon), all inside `@media (hover: hover) and (pointer: fine)` so nothing
+  leaks onto touch. Score tiles highlight their border on hover.
+- Layout scales properly now: `.app-col` (30rem) everywhere, `.app-col--wide` + `lg:grid` on the
+  home screen (pitch + stats left, everything actionable right) and the game screen (scoreboard
+  left, card and Draw right, all above the fold at 1280x800).
+- `Help` is now in the game screen's top bar too, so the "help on every screen" claim is true.
+- Deleted the two orphan components (`GameSettings.tsx`, `DeckModeSelector.tsx`) and the stray
+  `app/app/package.json` + `package-lock.json` that caused the Tailwind ignore bug; `.gitignore` is
+  back to one line plus a warning comment.
+
+**Trap found:** Turbopack served a stale `globals.css` for one edit - `.app-col--wide` was on disk
+and absent from the served bundle, so the desktop grid silently collapsed. Confirmed by fetching
+the stylesheet and grepping it. Touching the file forced a rebuild. Check the *served* CSS, not the
+file, when a new rule "does nothing".
+
+**Verification:** `npm run build` clean, `tsc --noEmit` clean, `npm test` 75 passed, `eslint`
+0 errors / 14 pre-existing warnings. Home, game, Settings, Help, card face and Track-a-match
+checked at 390px and 1280px in both themes.
+
 ## 2026-09-21 16:40 — Premium UI pass + in-app manual, and the .gitignore line that broke Tailwind
 
 **Summary:** Rebuilt the home and game screens around one design-token scale and one primary

@@ -3,7 +3,7 @@
 import { GameSession } from "@/lib/game";
 import { DeckMode, DECK_MODES, SKILL_LEVELS, SkillLevel, isSkillLevel, selectionLabel } from "@/lib/cards";
 import { MODE_ICONS } from "./icons";
-import { ArrowLeft, Settings, Sun, Moon, Monitor, Undo2, Lock, LockOpen, Pencil, ChevronDown, RotateCcw, Pause, Play, Sprout, TrendingUp, Flame, Shuffle, Tv } from "lucide-react";
+import { ArrowLeft, Settings, Sun, Moon, Monitor, Undo2, Lock, LockOpen, Pencil, ChevronDown, RotateCcw, Pause, Play, Sprout, TrendingUp, Flame, Shuffle, Tv, HelpCircle } from "lucide-react";
 import { useState } from "react";
 
 const SKILL_ICONS: Record<SkillLevel, typeof Sprout> = {
@@ -18,7 +18,7 @@ function IconButton({ label, onClick, children }: { label: string; onClick: () =
     <button
       onClick={onClick}
       aria-label={label}
-      className="pressable flex items-center justify-center w-10 h-10 rounded-full"
+      className="pressable hover-tint flex items-center justify-center w-10 h-10 rounded-full"
       style={{ color: "var(--text-secondary)" }}
     >
       {children}
@@ -68,6 +68,7 @@ export default function TopBar({
   paused,
   onTogglePause,
   onOpenSettings,
+  onOpenHelp,
   menuSlot,
 }: {
   game: GameSession;
@@ -86,20 +87,21 @@ export default function TopBar({
   paused: boolean;
   onTogglePause: () => void;
   onOpenSettings: () => void;
+  onOpenHelp: () => void;
   menuSlot?: React.ReactNode;
 }) {
   const [showModes, setShowModes] = useState(false);
   const ModeIcon = isSkillLevel(mode) ? SKILL_ICONS[mode] : (MODE_ICONS[mode as DeckMode] ?? Shuffle);
 
   return (
-    <div className="w-full sticky top-0 z-30 glass" style={{ borderBottom: "1px solid var(--border)", paddingTop: "env(safe-area-inset-top)" }}>
+    <div className="w-full sticky top-0 z-30 mat-regular" style={{ borderBottom: "1px solid var(--mat-edge)", paddingTop: "env(safe-area-inset-top)" }}>
       {/* Row 1 - where am I, and how do I leave. Nothing that changes the score. */}
-      <div className="flex items-center justify-between gap-2 px-4 py-2.5 max-w-lg mx-auto">
+      <div className="app-col flex items-center justify-between gap-2 px-4 py-2.5">
         <button onClick={onBack} aria-label="Back to home" className="pressable shrink-0 flex items-center gap-1 pr-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
           <ArrowLeft size={17} /> Back
         </button>
 
-        <button onClick={() => setShowModes(!showModes)} aria-haspopup="true" aria-expanded={showModes} aria-label="Change deck" className="pressable min-w-0 flex items-center gap-1.5 px-3 py-1.5" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--r-chip)" }}>
+        <button onClick={() => setShowModes(!showModes)} aria-haspopup="true" aria-expanded={showModes} aria-label="Change deck" className="pressable hoverable min-w-0 flex items-center gap-1.5 px-3 py-1.5" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--r-chip)" }}>
           <ModeIcon size={14} style={{ color: "var(--accent)" }} />
           <span className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>
             {modeLabelOverride || selectionLabel(mode)}
@@ -108,6 +110,7 @@ export default function TopBar({
         </button>
 
         <div className="flex items-center gap-0.5 shrink-0">
+          <IconButton label="Help" onClick={onOpenHelp}><HelpCircle size={18} /></IconButton>
           <IconButton label="Big-score display" onClick={onToggleTv}><Tv size={18} /></IconButton>
           <IconButton label="Settings" onClick={onOpenSettings}><Settings size={18} /></IconButton>
           <IconButton label={`Theme: ${theme}. Tap to change.`} onClick={onCycleTheme}>
@@ -120,7 +123,7 @@ export default function TopBar({
       {/* Row 2 - the match strip: where the game is, and the controls that change
           it. One surface with hairline dividers, so it reads as a single
           instrument rather than six floating words. */}
-      <div className="px-4 pb-2.5 max-w-lg mx-auto">
+      <div className="app-col px-4 pb-2.5">
         <div className="flex items-stretch overflow-hidden" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--r-ctl)" }}>
           <span className="tnum flex items-center gap-1.5 px-3 text-xs font-medium shrink-0" style={{ color: "var(--text-secondary)" }}>
             <span style={{ color: "var(--text-muted)" }}>G{game.gameNumber}</span>
@@ -154,7 +157,7 @@ export default function TopBar({
 
       {/* Mode selector dropdown */}
       {showModes && (
-        <div className="px-4 pb-3 max-w-lg mx-auto anim-fade-up">
+        <div className="app-col px-4 pb-3 anim-fade-up">
           <div className="flex flex-wrap gap-1.5 justify-center mb-1.5">
             {(Object.keys(SKILL_LEVELS) as SkillLevel[]).map((m) => {
               const Icon = SKILL_ICONS[m];

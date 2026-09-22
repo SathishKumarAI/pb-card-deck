@@ -83,6 +83,7 @@ Everything the app does, grouped so you can find it fast.
 ### 🎨 Feel & accessibility
 | Feature | What it does |
 |---|---|
+| **Native-app feel** | iOS-style glass materials (thin / regular / thick), bottom sheets with a grabber, a pickleball-court backdrop, and hover states on pointer devices only. Scales from a phone to a two-column desktop layout. |
 | **Polished motion** | 3D card flip, glassy panels, win confetti - all respect `prefers-reduced-motion`. |
 | **Accessible** | Keyboard focus rings, dialog semantics + Escape on every panel, screen-reader labels, 44px tap targets, and pinch-zoom left on. |
 | **Themes & feedback** | Dark / light themes, sound effects, and haptics - all toggleable. |

@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CATEGORY_COLORS, CATEGORY_INFO, RARITY_STYLE } from "@/lib/cards";
-import { CategoryIcon } from "./icons";
+import { CategoryIcon, PickleballMark } from "./icons";
 import { Shuffle, Star, SkipForward, HelpCircle, X } from "lucide-react";
 import { useState } from "react";
 import GlossaryText from "./GlossaryText";
@@ -107,8 +107,8 @@ export default function CardDisplay({
               boxShadow: "var(--elev-3)",
             }}
           >
-            <div className="anim-float" style={{ color: "var(--accent-ink)", opacity: 0.85 }}>
-              <Shuffle size={48} strokeWidth={1.5} />
+            <div className="anim-float" style={{ color: "var(--accent-ink)", opacity: 0.9 }}>
+              <PickleballMark size={64} />
             </div>
             <div className="font-display text-2xl font-black" style={{ color: "var(--accent-ink)" }}>
               Tap to draw
@@ -200,12 +200,12 @@ export default function CardDisplay({
           role="dialog"
           aria-modal="true"
           aria-label={`What ${card.name} means`}
-          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-md"
+          className="sheet-scrim fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4"
           onClick={() => setExplainerOpen(false)}
         >
           <div
-            className="glass rounded-3xl p-6 max-w-sm w-full shadow-2xl anim-pop"
-            style={{ border: "1px solid var(--accent)" }}
+            className="mat-thick sheet-rise p-6 max-w-sm w-full"
+            style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-sheet)", boxShadow: "var(--elev-3)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3 mb-4">

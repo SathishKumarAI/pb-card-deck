@@ -60,6 +60,22 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
 - Game logic = pure functions in `lib/game.ts`; UI calls them and stores the returned `GameSession`.
 - All persistence goes through `lib/client-api.ts` (swap point if a real DB is ever added).
 - Theme via CSS vars + `data-theme` on `<html>`; animation utilities live in `globals.css`.
+- **Surfaces are glass materials, not divs with a background.** `.mat-thin`
+  (chips, rows, tiles) / `.mat-regular` (bars, inline panels) / `.mat-thick`
+  (sheets and dialogs). Each is a tint + blur + saturation + hairline
+  `--mat-edge` + a 1px top sheen; dropping any one is what makes web glass look
+  like a grey box. Never hand-roll `backdrop-filter`.
+- **Scrolling rules.** The page has exactly ONE scroll container. Never put
+  `overflow-x: hidden` on html/body (it silently makes both scrollers - use
+  `clip`). Any inner scroller gets `.scroll-area`. Any dialog or sheet calls
+  `useScrollLock`, or the page scrolls behind it.
+- **`.app-col` is the app width** (30rem) at every breakpoint; only the home and
+  game screens widen, via `.app-col--wide` + `lg:grid`. Specificity trap: a
+  Tailwind `lg:max-w-*` will NOT beat `.app-col`, both are one class and
+  `.app-col` is defined after the utilities.
+- **Hover is not optional on desktop, and must not leak to touch.** Use
+  `.hoverable` / `.hover-tint` / `.hover-pop`; they live inside
+  `@media (hover: hover) and (pointer: fine)`.
 - **Radius, elevation and ink are tokens, not eyeballed.** `--r-chip` (pills) /
   `--r-ctl` (buttons, inputs, rows) / `--r-panel` (cards, sheets) / `--r-hero`
   (the playing card only); `--elev-1..3` instead of ad-hoc `box-shadow`;

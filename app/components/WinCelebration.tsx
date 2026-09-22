@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Trophy, RotateCcw, Share2 } from "lucide-react";
 import { shareResult } from "@/lib/shareImage";
 import { useToast } from "./Toast";
+import { useScrollLock } from "@/lib/useScrollLock";
 
 export default function WinCelebration({
   winnerName,
@@ -24,6 +25,7 @@ export default function WinCelebration({
 }) {
   const [confetti, setConfetti] = useState<{ x: number; color: string; delay: number; dur: number; size: number; rect: boolean }[]>([]);
   const [sharing, setSharing] = useState(false);
+  useScrollLock(true);
   const nextBtn = useRef<HTMLButtonElement>(null);
   const toast = useToast();
 

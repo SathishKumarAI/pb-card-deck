@@ -10,6 +10,7 @@
 import { useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
 import { useFocusTrap } from "@/lib/useFocusTrap";
+import { useScrollLock } from "@/lib/useScrollLock";
 
 type Slide = {
   title: string;
@@ -85,6 +86,7 @@ export default function WelcomeTour({
   const [i, setI] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   useFocusTrap(ref, open, onClose);
+  useScrollLock(open);
 
   if (!open) return null;
 
@@ -97,13 +99,13 @@ export default function WelcomeTour({
       role="dialog"
       aria-modal="true"
       aria-label="Welcome"
-      className="fixed inset-0 z-[85] flex items-center justify-center p-6 bg-black/70 backdrop-blur-md"
+      className="sheet-scrim fixed inset-0 z-[85] flex items-center justify-center p-6"
     >
       <div
         ref={ref}
         tabIndex={-1}
-        className="glass w-full max-w-sm p-6 anim-pop outline-none"
-        style={{ border: "1px solid var(--border)", borderRadius: "var(--r-panel)", boxShadow: "var(--elev-3)" }}
+        className="mat-thick w-full max-w-sm p-6 anim-pop outline-none"
+        style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-sheet)", boxShadow: "var(--elev-3)" }}
       >
         <div className="mb-4 flex items-center justify-between">
           <span className="eyebrow">

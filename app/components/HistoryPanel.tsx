@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Trophy, Clock, History, Trash2, Download } from "lucide-react";
 import { selectionLabel } from "@/lib/cards";
+import { useScrollLock } from "@/lib/useScrollLock";
 import { listMatches, clearMatches, playerRecords, matchesToCsv, SavedMatch } from "@/lib/client-api";
 
 function formatDur(ms: number) {
@@ -122,6 +123,7 @@ function Team({ name, score, win, color, right }: { name: string; score: number;
 
 export function Sheet({ title, icon, onClose, children, action }: { title: string; icon: React.ReactNode; onClose: () => void; children: React.ReactNode; action?: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
+  useScrollLock(true);
 
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
@@ -150,17 +152,24 @@ export function Sheet({ title, icon, onClose, children, action }: { title: strin
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+    <div className="sheet-scrim fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="anim-fade-up w-full sm:max-w-md max-h-[88dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl glass p-5 outline-none"
-        style={{ border: "1px solid var(--border)", paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+        className="sheet-rise scroll-area mat-thick w-full sm:max-w-[30rem] max-h-[88dvh] p-5 outline-none"
+        style={{
+          border: "1px solid var(--mat-edge)",
+          borderRadius: "var(--r-sheet) var(--r-sheet) 0 0",
+          boxShadow: "var(--elev-3)",
+          paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* iOS grabber: says "this sheet drags/dismisses" before you touch it */}
+        <div aria-hidden className="sm:hidden mx-auto mb-3 h-1 w-9 rounded-full" style={{ background: "var(--text-muted)", opacity: 0.4 }} />
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display flex items-center gap-2 text-lg font-bold" style={{ color: "var(--text)" }}>{icon} {title}</h2>
           <div className="flex items-center gap-2">

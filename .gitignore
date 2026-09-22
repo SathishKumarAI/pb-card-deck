@@ -1,11 +1,6 @@
 .vercel
 
-# Stray npm install that once landed inside the App Router directory.
-# NOTE: ignore these two files ONLY - never the whole `app/app/` directory.
-# Tailwind v4's automatic source detection honours .gitignore, so ignoring
-# `app/app/` silently stopped it generating every class used only in
-# app/app/page.tsx (sr-only, gap-8, justify-start, z-[70] ...), which broke the
-# landing layout and exposed a screen-reader-only line on the game screen.
-app/app/package.json
-app/app/package-lock.json
-app/app/.next/
+# NOTE: never add a directory under `app/` here. Tailwind v4's automatic source
+# detection honours .gitignore, so ignoring `app/app/` silently stopped it
+# generating every class used only in app/app/page.tsx (sr-only, gap-8,
+# justify-start, z-[70] ...). See app/CLAUDE.md, "Traps".

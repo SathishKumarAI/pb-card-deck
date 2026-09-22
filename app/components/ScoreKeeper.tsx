@@ -110,8 +110,8 @@ export default function ScoreKeeper({
       {/* Score. In official mode the divider reads as the NET (court-side framing
           like the Referee app) so a coach taps "the side that won". */}
       <div
-        className="flex items-center justify-center gap-4 sm:gap-6 w-full px-4 py-4"
-        style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-panel)", boxShadow: "var(--elev-1)" }}
+        className="mat-thin flex items-center justify-center gap-4 sm:gap-6 w-full px-4 py-4"
+        style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-panel)", boxShadow: "var(--elev-1)" }}
       >
         <ScoreButton
           score={game.score.team1}
@@ -259,7 +259,8 @@ function ScoreButton({ score, name, color, serving, serverNumber, showServer, in
           background: "var(--bg-elevated)",
           color: "var(--text)",
           borderRadius: "var(--r-panel)",
-          border: `1px solid ${serving ? "var(--yellow)" : "var(--border)"}`,
+          border: `1px solid ${serving ? "var(--yellow)" : "var(--mat-edge)"}`,
+          boxShadow: serving ? "0 0 0 3px color-mix(in srgb, var(--yellow) 18%, transparent)" : "var(--elev-1)",
           opacity: disabled ? 0.45 : 1,
         }}
       >
@@ -290,7 +291,7 @@ function ScoreButton({ score, name, color, serving, serverNumber, showServer, in
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className="flex flex-col items-center gap-1 transition-all active:scale-90 disabled:opacity-40"
+      className="score-tap flex flex-col items-center gap-1 transition-all active:scale-90 disabled:opacity-40"
     >
       {inner}
     </button>
