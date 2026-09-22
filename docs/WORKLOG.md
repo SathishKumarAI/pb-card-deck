@@ -1,5 +1,29 @@
 # Worklog
 
+## 2026-09-21 — the deploy was never reaching the domain
+
+Shipping the light-theme + docs work exposed a second, larger problem: the
+public site had not been receiving deploys at all.
+
+| Found | Evidence |
+|---|---|
+| `vercel --prod` fails bare | `"Not authorized"`. The project belongs to the team `sathish-s-pickleball-cards`, not the logged-in account, so `--scope` is mandatory. |
+| A prod deploy does not move the domain | `pb-card-deck.vercel.app` served `data-theme="dark"` with `Age: 908682` while the fresh deployment served `data-theme="light"`. |
+| The domain was pinned to an ancient build | `vercel alias ls` showed it aliased to a deployment **81 days old**; today's build had been aliased to the retired `pickleball-card-games.vercel.app` instead. |
+| The runbook asserted the opposite | It said "`main` auto-deploys to production on Vercel". The Git integration creates Preview deployments and nothing else. |
+
+Fixed with `vercel alias set <deployment> pb-card-deck.vercel.app --scope ...`;
+the live domain then reported `data-theme="light"`, `theme-color #eef3f1`,
+`Age: 2`, and all of Tournament / Help / 1,729 twist cards present.
+
+`deploy-vercel.sh` now does deploy → alias → verify-the-domain and fails loudly
+if it cannot read a deployment URL back, so a deploy can no longer report
+success while the public site serves something else. The runbook's claim is
+corrected and both traps are written down there and in `STATUS.md`.
+
+**Lesson, the same one as every UI bug this week:** verify the thing the user
+touches, not the thing you operated. A green `vercel --prod` was not evidence.
+
 ## 2026-09-22 03:10 - Merged PR #5; light theme by default, measured palette, docs refresh
 
 **Summary:** PR #5 squash-merged to main (`33d6f12`) after CI, secret scan and the Vercel preview

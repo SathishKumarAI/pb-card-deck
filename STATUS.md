@@ -64,6 +64,12 @@ screen is the next split.
    modified.
 6. **On Windows the checkout has no `node_modules/.bin`** until `npm install`
    runs inside `app/`.
+7. **"Deployed" is not "live".** `main` does **not** auto-deploy to production -
+   the Git integration only builds Previews. And a successful `vercel --prod`
+   does not move `pb-card-deck.vercel.app`: that domain was found pinned to a
+   deployment **81 days old**, so months of shipped work was live nowhere. Use
+   `./deploy-vercel.sh` (it deploys with `--scope`, aliases the domain, then
+   curls the domain to check), and verify the DOMAIN, never the deployment URL.
 
 ## The rules the code now encodes
 
