@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react";
-import { Play, Check, RotateCcw, MapPin } from "lucide-react";
+import { Play, Check, RotateCcw, MapPin, Pencil, History } from "lucide-react";
 import type { Tournament, TournamentMatch } from "@/lib/tournament/types";
 
 export default function MatchCard({
@@ -26,6 +26,13 @@ export default function MatchCard({
   const [entering, setEntering] = useState(false);
   const [a, setA] = useState("");
   const [b, setB] = useState("");
+
+  /** Open the inputs pre-filled with whatever is already recorded. */
+  const startEdit = () => {
+    setA(typeof match.scoreA === "number" ? String(match.scoreA) : "");
+    setB(typeof match.scoreB === "number" ? String(match.scoreB) : "");
+    setEntering(true);
+  };
 
   const nameOf = (id?: string) => tournament.teams.find((t) => t.id === id)?.name ?? "—";
   const ready = !!match.teamA && !!match.teamB;
@@ -80,7 +87,7 @@ export default function MatchCard({
       {ready && !done && !entering && (
         <div className="flex gap-2">
           <button
-            onClick={() => setEntering(true)}
+            onClick={startEdit}
             className="pressable hover-tint flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-semibold"
             style={{ background: "var(--bg-elevated)", border: "1px solid var(--mat-edge)", borderRadius: "var(--r-ctl)", color: "var(--text)" }}
           >
@@ -98,7 +105,7 @@ export default function MatchCard({
         </div>
       )}
 
-      {ready && !done && entering && (
+      {ready && entering && (
         <div className="flex items-center gap-2">
           <ScoreInput label={nameOf(match.teamA)} value={a} onChange={setA} autoFocus />
           <span style={{ color: "var(--text-muted)" }}>–</span>
@@ -117,14 +124,32 @@ export default function MatchCard({
         </div>
       )}
 
-      {done && onClear && (
-        <button
-          onClick={onClear}
-          className="pressable hover-tint self-start flex items-center gap-1.5 px-2 py-1 text-xs font-medium"
-          style={{ color: "var(--text-muted)", borderRadius: "var(--r-chip)" }}
-        >
-          <RotateCcw size={12} /> Undo result
-        </button>
+      {done && !entering && (
+        <div className="flex items-center gap-1">
+          {/* A score people can argue about is a score people can fix. Both
+              actions write to the event log, so the change is visible later. */}
+          <button
+            onClick={startEdit}
+            className="pressable hover-tint flex items-center gap-1.5 px-2 py-1 text-xs font-medium"
+            style={{ color: "var(--text-secondary)", borderRadius: "var(--r-chip)" }}
+          >
+            <Pencil size={12} /> Edit score
+          </button>
+          {onClear && (
+            <button
+              onClick={onClear}
+              className="pressable hover-tint flex items-center gap-1.5 px-2 py-1 text-xs font-medium"
+              style={{ color: "var(--text-muted)", borderRadius: "var(--r-chip)" }}
+            >
+              <RotateCcw size={12} /> Clear
+            </button>
+          )}
+          {match.playedInApp && (
+            <span className="ml-auto flex items-center gap-1 text-[11px]" style={{ color: "var(--text-muted)" }}>
+              <History size={11} /> played in app
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

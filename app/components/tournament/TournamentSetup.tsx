@@ -11,9 +11,9 @@
  */
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, Users, Trophy, Shuffle, Sparkles, Layers, Check } from "lucide-react";
-import { FORMAT_INFO, type Format, type EntryMode } from "@/lib/tournament/types";
-import { createTournament, DEFAULT_CONFIG } from "@/lib/tournament/engine";
+import { ArrowLeft, Users, Trophy, Shuffle, Sparkles, Layers, Check, Plus, Minus } from "lucide-react";
+import { FORMAT_INFO, DIVISION_INFO, type Format, type EntryMode, type Division } from "@/lib/tournament/types";
+import { createTournament, DEFAULT_CONFIG, pairMixed } from "@/lib/tournament/engine";
 import type { Tournament } from "@/lib/tournament/types";
 
 const FORMAT_ICON: Record<Format, typeof Trophy> = {
@@ -32,25 +32,53 @@ const PAIRING_INFO: { key: Pairing; label: string; blurb: string }[] = [
   { key: "snake", label: "Balanced", blurb: "Strongest with weakest" },
 ];
 
+export interface Entrant {
+  name: string;
+  gender?: "m" | "f";
+}
+
+/** "Priya (f)" -> { name: "Priya", gender: "f" }. Anything else is just a name. */
+export function parseName(raw: string): Entrant {
+  const m = raw.match(/^(.*?)\s*[([]\s*([mMfFwW])\s*[)\]]\s*$/);
+  if (!m) return { name: raw.trim() };
+  const letter = m[2].toLowerCase();
+  return { name: m[1].trim(), gender: letter === "m" ? "m" : "f" }; // w = woman
+}
+
 /** A line is a pair if it holds a separator; otherwise it is one player. */
-function parseEntries(text: string): { players: string[]; pairs: string[][] } {
+export function parseEntries(text: string): { players: Entrant[]; pairs: Entrant[][] } {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  const pairs: string[][] = [];
-  const players: string[] = [];
+  const pairs: Entrant[][] = [];
+  const players: Entrant[] = [];
   for (const line of lines) {
     const parts = line.split(/\s*(?:&|\+|\/|,| and )\s*/i).map((p) => p.trim()).filter(Boolean);
-    if (parts.length >= 2) pairs.push(parts.slice(0, 2));
-    else players.push(parts[0]);
+    if (parts.length >= 2) pairs.push(parts.slice(0, 2).map(parseName));
+    else players.push(parseName(parts[0]));
   }
   return { players, pairs };
 }
 
-function buildTeams(players: string[], pairs: string[][], teamSize: number, pairing: Pairing) {
-  const teams = pairs.map((p) => ({ name: p.join(" + "), playerNames: p }));
+function buildTeams(
+  players: Entrant[],
+  pairs: Entrant[][],
+  teamSize: number,
+  pairing: Pairing,
+  division: Division,
+) {
+  const named = (p: Entrant[]) => ({ name: p.map((x) => x.name).join(" + "), playerNames: p.map((x) => x.name) });
+  const teams = pairs.map(named);
   const rest = [...players];
 
   if (teamSize === 1) {
-    return [...teams, ...rest.map((p) => ({ name: p, playerNames: [p] }))];
+    return [...teams, ...rest.map((p) => ({ name: p.name, playerNames: [p.name] }))];
+  }
+
+  // Mixed takes precedence over the rank strategies: a pair that is one of each
+  // is the point of the draw.
+  if (division === "mixed") {
+    const byName = new Map(rest.map((p) => [p.name, p] as const));
+    const paired = pairMixed(rest.map((p) => p.name), (name) => byName.get(name)?.gender);
+    return [...teams, ...paired.map((names) => ({ name: names.join(" + "), playerNames: names }))];
   }
 
   if (pairing === "random") {
@@ -66,15 +94,14 @@ function buildTeams(players: string[], pairs: string[][], teamSize: number, pair
     while (rest.length > 1) {
       const a = rest.shift()!;
       const b = rest.pop()!;
-      out.push({ name: `${a} + ${b}`, playerNames: [a, b] });
+      out.push(named([a, b]));
     }
-    if (rest.length) out.push({ name: rest[0], playerNames: [rest[0]] });
+    if (rest.length) out.push(named([rest[0]]));
     return [...teams, ...out];
   }
 
   for (let i = 0; i < rest.length; i += 2) {
-    const pair = rest.slice(i, i + 2);
-    teams.push({ name: pair.join(" + "), playerNames: pair });
+    teams.push(named(rest.slice(i, i + 2)));
   }
   return teams;
 }
@@ -88,6 +115,7 @@ export default function TournamentSetup({
 }) {
   const [name, setName] = useState("");
   const [format, setFormat] = useState<Format>("pools-bracket");
+  const [division, setDivision] = useState<Division>("open");
   const [teamSize, setTeamSize] = useState(2);
   const [pairing, setPairing] = useState<Pairing>("sequential");
   const [text, setText] = useState("");
@@ -101,17 +129,22 @@ export default function TournamentSetup({
   const entryMode: EntryMode = format === "rotating" ? "rotating" : "teams";
   const parsed = useMemo(() => parseEntries(text), [text]);
   const teams = useMemo(
-    () => (entryMode === "rotating" ? [] : buildTeams(parsed.players, parsed.pairs, teamSize, pairing)),
-    [parsed, teamSize, pairing, entryMode],
+    () => (entryMode === "rotating" ? [] : buildTeams(parsed.players, parsed.pairs, teamSize, pairing, division)),
+    [parsed, teamSize, pairing, entryMode, division],
   );
-  const playerCount = parsed.players.length + parsed.pairs.flat().length;
+
+  const allEntrants = useMemo(() => [...parsed.players, ...parsed.pairs.flat()], [parsed]);
+  const playerCount = allEntrants.length;
+  const menCount = allEntrants.filter((p) => p.gender === "m").length;
+  const womenCount = allEntrants.filter((p) => p.gender === "f").length;
+  /** Mixed only: how many pairs cannot be one of each. */
+  const unbalanced = division === "mixed" ? Math.floor(Math.abs(menCount - womenCount) / 2) : 0;
   const enough = entryMode === "rotating" ? playerCount >= 4 : teams.length >= FORMAT_INFO[format].minTeams;
 
   const create = () => {
-    const players =
-      entryMode === "rotating"
-        ? [...parsed.players, ...parsed.pairs.flat()].map((n) => ({ name: n }))
-        : teams.flatMap((t) => t.playerNames).map((n) => ({ name: n }));
+    const genderOf = new Map(allEntrants.map((p) => [p.name, p.gender] as const));
+    const names =
+      entryMode === "rotating" ? allEntrants.map((p) => p.name) : teams.flatMap((t) => t.playerNames);
 
     onCreate(
       createTournament({
@@ -119,10 +152,11 @@ export default function TournamentSetup({
         format,
         entryMode,
         teamSize: entryMode === "rotating" ? 2 : teamSize,
-        players,
+        players: names.map((n) => ({ name: n, gender: genderOf.get(n) })),
         teams,
         config: {
           ...DEFAULT_CONFIG,
+          division,
           courts,
           pointsToWin,
           poolCount,
@@ -135,12 +169,12 @@ export default function TournamentSetup({
   };
 
   return (
-    <div className="flex flex-col gap-6 pb-10">
-      <button onClick={onCancel} className="pressable self-start flex items-center gap-1.5 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+    <div className="flex flex-col gap-6 pb-10 lg:grid lg:grid-cols-2 lg:gap-x-10 lg:items-start">
+      <button onClick={onCancel} className="pressable self-start flex items-center gap-1.5 text-sm font-medium lg:col-span-2" style={{ color: "var(--text-secondary)" }}>
         <ArrowLeft size={16} /> Back
       </button>
 
-      <div>
+      <div className="lg:col-span-2">
         <h1 className="font-display text-3xl font-black leading-tight" style={{ color: "var(--text)" }}>
           New tournament
         </h1>
@@ -159,8 +193,8 @@ export default function TournamentSetup({
         />
       </Field>
 
-      <Field label="Format">
-        <div className="grid gap-2 sm:grid-cols-2">
+      <Field label="Format" className="lg:col-span-2">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {(Object.keys(FORMAT_INFO) as Format[]).map((f) => {
             const Icon = FORMAT_ICON[f];
             const active = format === f;
@@ -185,6 +219,14 @@ export default function TournamentSetup({
             );
           })}
         </div>
+      </Field>
+
+      <Field label="Division" hint={DIVISION_INFO[division].blurb}>
+        <Segmented
+          options={(Object.keys(DIVISION_INFO) as Division[]).map((d) => ({ value: d, label: DIVISION_INFO[d].label }))}
+          value={division}
+          onChange={setDivision}
+        />
       </Field>
 
       {entryMode === "teams" && (
@@ -221,15 +263,28 @@ export default function TournamentSetup({
         <p className="mt-2 text-xs tnum" style={{ color: playerCount ? "var(--accent)" : "var(--text-muted)" }}>
           {playerCount} player{playerCount === 1 ? "" : "s"}
           {entryMode === "teams" && ` · ${teams.length} team${teams.length === 1 ? "" : "s"}`}
+          {division === "mixed" && (menCount + womenCount > 0) && ` · ${menCount} m, ${womenCount} f`}
           {!enough && playerCount > 0 && (
             <span style={{ color: "var(--yellow)" }}>
               {" "}· need at least {entryMode === "rotating" ? 4 : FORMAT_INFO[format].minTeams}
             </span>
           )}
         </p>
+        {division === "mixed" && unbalanced > 0 && (
+          <p className="text-xs leading-relaxed" style={{ color: "var(--yellow)" }}>
+            {menCount} marked m and {womenCount} marked f, so {unbalanced} pair{unbalanced === 1 ? "" : "s"} will be
+            same-sex. The draw still runs.
+          </p>
+        )}
+        {division === "mixed" && menCount + womenCount === 0 && playerCount > 0 && (
+          <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
+            Nobody is marked yet. Add <strong style={{ color: "var(--text)" }}>(m)</strong> or{" "}
+            <strong style={{ color: "var(--text)" }}>(f)</strong> after a name and pairs become one of each.
+          </p>
+        )}
       </Field>
 
-      {entryMode === "teams" && teamSize === 2 && parsed.players.length > 1 && (
+      {entryMode === "teams" && teamSize === 2 && division !== "mixed" && parsed.players.length > 1 && (
         <Field label="Pair the unpaired names">
           <div className="flex flex-wrap gap-1.5">
             {PAIRING_INFO.map((p) => (
@@ -253,7 +308,7 @@ export default function TournamentSetup({
       )}
 
       {teams.length > 0 && (
-        <Field label="Teams" hint="Seeded in this order. The list is the draw.">
+        <Field label="Teams" hint="Seeded in this order. The list is the draw." className="lg:row-span-2">
           <ol className="flex flex-col gap-1 max-h-56 overflow-y-auto scroll-area pr-1">
             {teams.map((t, i) => (
               <li
@@ -269,36 +324,40 @@ export default function TournamentSetup({
         </Field>
       )}
 
-      <Field label="Courts" hint="How many games can run at once.">
-        <Segmented options={[1, 2, 3, 4, 6, 8].map((n) => ({ value: n, label: String(n) }))} value={courts} onChange={setCourts} />
-      </Field>
-
-      <Field label="Points to win">
-        <Segmented options={[11, 15, 21].map((n) => ({ value: n, label: String(n) }))} value={pointsToWin} onChange={setPointsToWin} />
-      </Field>
-
-      {format === "pools-bracket" && (
-        <>
-          <Field label="Pools">
-            <Segmented options={[2, 3, 4, 6, 8].map((n) => ({ value: n, label: String(n) }))} value={poolCount} onChange={setPoolCount} />
-          </Field>
-          <Field label="Advance from each pool">
-            <Segmented options={[1, 2, 4].map((n) => ({ value: n, label: String(n) }))} value={advancePerPool} onChange={setAdvancePerPool} />
-          </Field>
-        </>
-      )}
-
-      {format === "rotating" && (
-        <Field label="Rounds" hint="You can add more while you play.">
-          <Segmented options={[3, 5, 7, 10].map((n) => ({ value: n, label: String(n) }))} value={rounds} onChange={setRounds} />
+      {/* Counts are typed, not picked from a fixed list: a club with 11 courts
+          or 7 pools is not an edge case, it is Tuesday. */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2">
+        <Field label="Courts" hint="Games that can run at once.">
+          <NumberField value={courts} onChange={setCourts} min={1} max={64} suggestions={[1, 2, 4, 6, 8]} />
         </Field>
-      )}
+
+        <Field label="Points to win">
+          <NumberField value={pointsToWin} onChange={setPointsToWin} min={1} max={99} suggestions={[11, 15, 21]} />
+        </Field>
+
+        {format === "pools-bracket" && (
+          <>
+            <Field label="Pools" hint={teams.length ? `${Math.ceil(teams.length / Math.max(1, poolCount))} teams per pool` : undefined}>
+              <NumberField value={poolCount} onChange={setPoolCount} min={2} max={Math.max(2, teams.length || 32)} suggestions={[2, 4, 6, 8]} />
+            </Field>
+            <Field label="Advance from each pool" hint={`${advancePerPool * poolCount} teams in the bracket`}>
+              <NumberField value={advancePerPool} onChange={setAdvancePerPool} min={1} max={8} suggestions={[1, 2, 4]} />
+            </Field>
+          </>
+        )}
+
+        {format === "rotating" && (
+          <Field label="Rounds" hint="You can add more while you play.">
+            <NumberField value={rounds} onChange={setRounds} min={1} max={40} suggestions={[3, 5, 8, 12]} />
+          </Field>
+        )}
+      </div>
 
       <button
         onClick={() => setCardsEnabled(!cardsEnabled)}
         role="switch"
         aria-checked={cardsEnabled}
-        className="mat-thin hoverable pressable flex items-center justify-between gap-3 p-3.5"
+        className="mat-thin hoverable pressable flex items-center justify-between gap-3 p-3.5 lg:col-span-2"
         style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-panel)" }}
       >
         <span className="flex items-center gap-2.5 min-w-0 text-left">
@@ -316,7 +375,7 @@ export default function TournamentSetup({
       <button
         onClick={create}
         disabled={!enough}
-        className="cta-accent pressable flex items-center justify-center gap-2 px-6 py-4 font-bold disabled:opacity-40"
+        className="cta-accent pressable flex items-center justify-center gap-2 px-6 py-4 font-bold disabled:opacity-40 lg:col-span-2"
         style={{ borderRadius: "var(--r-panel)" }}
       >
         <Check size={18} /> Create schedule
@@ -325,14 +384,95 @@ export default function TournamentSetup({
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  className = "",
+  children,
+}: {
+  label: string;
+  hint?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className={`flex flex-col gap-2 ${className}`}>
       <div>
         <span className="eyebrow">{label}</span>
         {hint && <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{hint}</p>}
       </div>
       {children}
+    </div>
+  );
+}
+
+/**
+ * A count you type, with a stepper and a few one-tap common values. Replaces
+ * fixed chip rows: 8 courts and 7 pools are ordinary at a real club, and a
+ * picker that tops out at 4 is a wall.
+ */
+function NumberField({
+  value,
+  onChange,
+  min,
+  max,
+  suggestions = [],
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  min: number;
+  max: number;
+  suggestions?: number[];
+}) {
+  const clamp = (n: number) => Math.min(max, Math.max(min, n));
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div
+        className="mat-thin flex items-center"
+        style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-ctl)" }}
+      >
+        <button
+          onClick={() => onChange(clamp(value - 1))}
+          disabled={value <= min}
+          aria-label="One fewer"
+          className="pressable flex items-center justify-center w-10 h-11 text-lg disabled:opacity-30"
+          style={{ color: "var(--text-secondary)" }}
+        >
+          <Minus size={16} />
+        </button>
+        <input
+          type="number"
+          inputMode="numeric"
+          value={value}
+          min={min}
+          max={max}
+          onChange={(e) => {
+            const n = parseInt(e.target.value, 10);
+            if (!Number.isNaN(n)) onChange(clamp(n));
+          }}
+          className="tnum w-14 bg-transparent text-center text-base font-bold outline-none"
+          style={{ color: "var(--text)" }}
+        />
+        <button
+          onClick={() => onChange(clamp(value + 1))}
+          disabled={value >= max}
+          aria-label="One more"
+          className="pressable flex items-center justify-center w-10 h-11 text-lg disabled:opacity-30"
+          style={{ color: "var(--text-secondary)" }}
+        >
+          <Plus size={16} />
+        </button>
+      </div>
+      {suggestions.filter((n) => n !== value && n >= min && n <= max).map((n) => (
+        <button
+          key={n}
+          onClick={() => onChange(n)}
+          className="pressable hover-tint tnum px-2.5 py-1.5 text-xs font-semibold"
+          style={{ background: "var(--bg-elevated)", color: "var(--text-muted)", borderRadius: "var(--r-chip)" }}
+        >
+          {n}
+        </button>
+      ))}
     </div>
   );
 }

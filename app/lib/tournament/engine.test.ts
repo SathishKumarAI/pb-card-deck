@@ -8,6 +8,7 @@ import {
   addRotatingRound,
   splitIntoPools,
   progress,
+  pairMixed,
 } from "./engine";
 import { standings, poolStandings, playerStandings } from "./standings";
 import { bracketSize, seedOrder } from "./elimination";
@@ -413,5 +414,63 @@ describe("court assignment", () => {
     t = recordResult(t, first.id, 11, 4);
     expect(t.matches.find((m) => m.id === first.id)!.court).toBeUndefined();
     expect(t.matches.filter((m) => m.court)).toHaveLength(2);
+  });
+});
+
+/* ── divisions, mixed pairing and the audit log ──────────────────── */
+
+describe("mixed doubles", () => {
+  it("pairs one of each, in rank order", () => {
+    const g: Record<string, "m" | "f"> = { a: "m", b: "f", c: "m", d: "f" };
+    expect(pairMixed(["a", "b", "c", "d"], (id) => g[id])).toEqual([
+      ["a", "b"],
+      ["c", "d"],
+    ]);
+  });
+
+  it("still runs when the counts do not balance", () => {
+    // 3 men, 1 woman: one mixed pair, then the leftovers pair off.
+    const g: Record<string, "m" | "f"> = { a: "m", b: "m", c: "m", d: "f" };
+    const pairs = pairMixed(["a", "b", "c", "d"], (id) => g[id]);
+    expect(pairs).toHaveLength(2);
+    expect(pairs[0]).toEqual(["a", "d"]);
+    expect(pairs[1]).toEqual(["b", "c"]); // same-sex, but nobody is left out
+  });
+
+  it("ignores unmarked names rather than guessing", () => {
+    const pairs = pairMixed(["a", "b", "c", "d"], () => undefined);
+    expect(pairs).toEqual([
+      ["a", "b"],
+      ["c", "d"],
+    ]);
+  });
+});
+
+describe("the event log", () => {
+  it("records creation, results, corrections and clears", () => {
+    let t = build("round-robin", 4);
+    expect(t.log?.[0].kind).toBe("created");
+
+    const m = playableMatches(t)[0];
+    t = recordResult(t, m.id, 11, 5);
+    const result = t.log!.filter((l) => l.kind === "result");
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toContain("11-5");
+
+    // typing over an existing score is an EDIT, and says what it used to be
+    t = recordResult(t, m.id, 11, 7);
+    const edit = t.log!.filter((l) => l.kind === "edit");
+    expect(edit).toHaveLength(1);
+    expect(edit[0].text).toContain("was 11-5");
+
+    t = clearResult(t, m.id);
+    expect(t.log!.filter((l) => l.kind === "undo")).toHaveLength(1);
+  });
+
+  it("keeps the log in order, oldest first", () => {
+    let t = build("round-robin", 4);
+    for (const m of playableMatches(t).slice(0, 3)) t = recordResult(t, m.id, 11, 4);
+    const times = t.log!.map((l) => l.at);
+    expect([...times].sort((a, b) => a - b)).toEqual(times);
   });
 });

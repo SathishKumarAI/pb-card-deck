@@ -132,6 +132,60 @@ describe("undoLast", () => {
     const g = rallyGame();
     expect(undoLast(g)).toBe(g);
   });
+
+  // The two failures people actually hit, and report as "undo is broken".
+  it("takes back a side-out, the most common mis-tap in side-out scoring", () => {
+    const g = createGame("test"); // team 1 serving, side-out scoring on
+    const afterSideOut = addScore(g, 2); // receiving team won the rally: no point
+    expect(afterSideOut.score).toEqual({ team1: 0, team2: 0 });
+    expect(afterSideOut.servingTeam).toBe(2);
+
+    const undone = undoLast(afterSideOut);
+    expect(undone.servingTeam).toBe(1);
+    expect(undone.score).toEqual({ team1: 0, team2: 0 });
+  });
+
+  it("puts the serve back where it was, not just the score", () => {
+    let g = createGame("test");
+    g = addScore(g, 1);      // 1-0, team 1 still serving
+    g = addScore(g, 2);      // side out to team 2
+    g = addScore(g, 2);      // 1-1, team 2 serving
+    expect(g.score).toEqual({ team1: 1, team2: 1 });
+    expect(g.servingTeam).toBe(2);
+
+    const undone = undoLast(g);
+    expect(undone.score).toEqual({ team1: 1, team2: 0 });
+    expect(undone.servingTeam).toBe(2); // that point did not change the serve
+
+    const twice = undoLast(undone);
+    expect(twice.servingTeam).toBe(1);  // undoing the side-out gives it back
+    expect(twice.score).toEqual({ team1: 1, team2: 0 });
+  });
+
+  it("restores the second server in official doubles", () => {
+    let g = createGame("test", undefined, { officialMode: true, gameType: "doubles" });
+    g = addScore(g, 2);   // serving side lost: server 1 -> server 2, same team
+    expect(g.serverNumber).toBe(2);
+    expect(g.servingTeam).toBe(1);
+    const undone = undoLast(g);
+    expect(undone.serverNumber).toBe(1);
+    expect(undone.servingTeam).toBe(1);
+  });
+
+  it("can take back a reset", () => {
+    let g = createGame("test");
+    g = addScore(g, 1);
+    g = addScore(g, 1);
+    g = addScore(g, 2); // side out
+    const before = { score: g.score, servingTeam: g.servingTeam };
+
+    const cleared = resetScore(g);
+    expect(cleared.score).toEqual({ team1: 0, team2: 0 });
+
+    const restored = undoLast(cleared);
+    expect(restored.score).toEqual(before.score);
+    expect(restored.servingTeam).toBe(before.servingTeam);
+  });
 });
 
 describe("adjustScore (manual correction)", () => {
@@ -160,13 +214,18 @@ describe("adjustScore (manual correction)", () => {
 });
 
 describe("resetScore", () => {
-  it("zeros score, serving, and history", () => {
+  it("zeros the score and the serve, and leaves the reset itself undoable", () => {
     let g = addScore(rallyGame(), 1);
     g = sideOut(g);
     const r = resetScore(g);
     expect(r.score).toEqual({ team1: 0, team2: 0 });
     expect(r.servingTeam).toBe(1);
-    expect(r.history).toHaveLength(0);
+    // The undo stack holds exactly the reset - the old points are gone from
+    // play but recoverable, which is what makes Reset safe to offer with no
+    // confirmation dialog.
+    expect(r.history).toHaveLength(1);
+    expect(r.history[0].type).toBe("reset");
+    expect(r.history[0].scoreBefore).toEqual({ team1: 1, team2: 0 });
   });
 });
 

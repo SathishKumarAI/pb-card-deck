@@ -7,10 +7,11 @@
  */
 
 import { useEffect, useState } from "react";
-import { Plus, Trophy, Trash2, CalendarDays } from "lucide-react";
+import { Plus, Trophy, Trash2, CalendarDays, PlayCircle, Sparkles } from "lucide-react";
 import type { Tournament, TournamentMatch } from "@/lib/tournament/types";
 import { FORMAT_INFO } from "@/lib/tournament/types";
 import { progress, assignCourts } from "@/lib/tournament/engine";
+import { buildDemoTournament, isDemo } from "@/lib/tournament/demo";
 import { listTournaments, saveTournament, deleteTournament } from "@/lib/client-api";
 import TournamentSetup from "./TournamentSetup";
 import TournamentScreen from "./TournamentScreen";
@@ -82,6 +83,31 @@ export default function TournamentHome({
         </span>
       </button>
 
+      {/* A worked example beats a blank screen: this opens a half-played day
+          with pools, a drawn bracket and a corrected score already in it. */}
+      <button
+        onClick={() => {
+          const demo = buildDemoTournament();
+          saveTournament(demo);
+          onActiveChange(demo);
+        }}
+        className="pressable hoverable mat-thin flex items-center gap-3 p-3.5 text-left"
+        style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-panel)" }}
+      >
+        <span
+          className="flex items-center justify-center w-10 h-10 shrink-0"
+          style={{ background: "var(--bg-elevated)", color: "var(--accent)", borderRadius: "var(--r-ctl)" }}
+        >
+          <PlayCircle size={18} />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold" style={{ color: "var(--text)" }}>See a demo event</span>
+          <span className="block text-xs" style={{ color: "var(--text-muted)" }}>
+            8 teams mid-tournament - pools, a live bracket, and a corrected score
+          </span>
+        </span>
+      </button>
+
       {events.length === 0 ? (
         <div
           className="mat-thin flex flex-col items-center gap-2 px-6 py-10 text-center"
@@ -117,7 +143,17 @@ export default function TournamentHome({
                     {t.status === "complete" ? <Trophy size={18} /> : <CalendarDays size={18} />}
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{t.name}</span>
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <span className="block text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{t.name}</span>
+                      {isDemo(t) && (
+                        <span
+                          className="flex items-center gap-1 shrink-0 px-1.5 py-0.5 text-[10px] font-bold"
+                          style={{ background: "var(--bg-elevated)", color: "var(--text-muted)", borderRadius: "var(--r-chip)" }}
+                        >
+                          <Sparkles size={9} /> DEMO
+                        </span>
+                      )}
+                    </span>
                     <span className="block text-xs truncate tnum" style={{ color: "var(--text-muted)" }}>
                       {FORMAT_INFO[t.format].label} · {played}/{total} played
                       {champion ? ` · won by ${champion.name}` : ""}

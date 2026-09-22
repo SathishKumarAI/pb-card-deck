@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, DeckMode, DECK_MODES, getFilteredCards, getDeck, shuffleArray, SKILL_LEVELS, SkillLevel, selectionLabel } from "@/lib/cards";
-import { GameSession, GameConfig, createGame, addScore, adjustScore, sideOut, undoLast, resetScore, startNewGame, newMatch, matchWinner, seriesTally, isPaused, pauseGame, resumePlay, elapsedMs, saveGame, listSavedGames, clearSavedGame, formatTime, serverLabel, recordTimeout, recordFault, logCount } from "@/lib/game";
+import { GameSession, GameConfig, createGame, addScore, adjustScore, sideOut, undoLast, lastActionLabel, resetScore, startNewGame, newMatch, matchWinner, seriesTally, isPaused, pauseGame, resumePlay, elapsedMs, saveGame, listSavedGames, clearSavedGame, formatTime, serverLabel, recordTimeout, recordFault, logCount } from "@/lib/game";
 import { playScoreSound, playUndoSound, playCardFlipSound, playWinSound, playResetSound, triggerHaptic } from "@/lib/sounds";
 import { addMatch, deckToCards, CustomDeck, listFavoriteIds, toggleFavorite, bumpStat, matchSheet, getTournament, saveTournament } from "@/lib/client-api";
 import type { Tournament, TournamentMatch } from "@/lib/tournament/types";
 import { recordResult as recordTournamentResult } from "@/lib/tournament/engine";
 import TournamentHome from "@/components/tournament/TournamentHome";
-import { Sun, Moon, Monitor, Play, Pause, X, Bug, HelpCircle, Sparkles, Sprout, TrendingUp, Flame, Layers as LayersIcon, ClipboardCheck, Trophy } from "lucide-react";
+import { Sun, Moon, Monitor, Play, Pause, X, Bug, HelpCircle, Sparkles, Sprout, TrendingUp, Flame, Layers as LayersIcon, ClipboardCheck, Trophy, Check } from "lucide-react";
 import OfficialMatchSetup, { OfficialMatchOptions } from "@/components/OfficialMatchSetup";
 import OfficialControls from "@/components/OfficialControls";
 import TopBar from "@/components/TopBar";
@@ -83,6 +83,7 @@ export default function Home() {
   const [showGameHint, setShowGameHint] = useState(false);
   const [homeTab, setHomeTab] = useState<"cards" | "track" | "event">("cards");
   const [activeTournament, setActiveTournament] = useState<Tournament | null>(null);
+  const [showWhy1729, setShowWhy1729] = useState(false);
   const [lastDeck, setLastDeck] = useState<string>("beginner");
   const [customCards, setCustomCards] = useState<Card[] | null>(null);
   const [customName, setCustomName] = useState<string | null>(null);
@@ -102,7 +103,6 @@ export default function Home() {
   const [showAchievements, setShowAchievements] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
   const [confirmTeam, setConfirmTeam] = useState<1 | 2 | null>(null);
-  const [confirmReset, setConfirmReset] = useState(false);
   const savedMatchRef = useRef<string | null>(null);
   const toast = useToast();
   const introRef = useRef<HTMLDivElement>(null);
@@ -460,17 +460,30 @@ export default function Home() {
     setGame({ ...game, config: { ...game.config, [key]: value } as GameConfig });
   };
 
-  // Reset = clean slate for THIS game (score, undo stack, on-screen card/draws).
-  // Saved Match history is intentionally left untouched.
-  const doReset = () => {
+  /* Undo, out loud. Taking a point back changed one small numeral and said
+     nothing, which is why it read as a dead button - and taking back a side-out
+     changed nothing visible at all. */
+  const doUndo = useCallback(() => {
+    if (!game || game.history.length === 0) return;
+    const what = lastActionLabel(game, game.playerNames);
+    setGame(undoLast(game));
+    if (game.config.soundEnabled) playUndoSound();
+    triggerHaptic("light");
+    toast(what ? `Undid ${what}` : "Undid the last action");
+  }, [game, toast]);
+
+  /* Reset is now recoverable in the engine (the reset itself sits on the undo
+     stack), so it no longer needs a confirmation strip rendered far below the
+     button that triggered it. Act, then offer the way back. */
+  const doReset = useCallback(() => {
     if (!game) return;
-    const prev = game; // snapshot so the reset can be undone (F219)
     setGame(resetScore(game));
     setCurrentCard(null);
     setCardHistory([]);
     if (game.config.soundEnabled) playResetSound();
-    toast("Score reset", { label: "Undo", onClick: () => setGame(prev) });
-  };
+    triggerHaptic("light");
+    toast("Score reset", { label: "Undo", onClick: () => setGame((g) => (g ? undoLast(g) : g)) });
+  }, [game, toast]);
 
   const cardCounts = Object.fromEntries(
     (Object.keys(DECK_MODES) as DeckMode[]).map((m) => [m, getFilteredCards(allCards, m).length])
@@ -539,10 +552,32 @@ export default function Home() {
               <br />
               between points.
             </h1>
-            <p className="mt-2.5 text-[0.95rem] lg:text-lg leading-relaxed lg:max-w-[34ch]" style={{ color: "var(--text-secondary)" }}>
-              1,729 cards that change the next rally, and a scoreboard that
-              handles serve and side-out for you. No account, works offline.
-            </p>
+            {/* Four points beat a paragraph here: people scan a home screen,
+                they do not read it. */}
+            <ul className="mt-4 flex flex-col gap-2 lg:max-w-[38ch]">
+              {[
+                <>
+                  <strong style={{ color: "var(--text)" }}>1,729 twist cards</strong>
+                  <button
+                    onClick={() => setShowWhy1729(true)}
+                    aria-label="Why 1,729 cards?"
+                    className="pressable align-super ml-0.5 text-[10px] font-bold"
+                    style={{ color: "var(--accent)" }}
+                  >
+                    ?
+                  </button>{" "}
+                  that change the next rally
+                </>,
+                <>A scoreboard that handles <strong style={{ color: "var(--text)" }}>serve and side-out</strong> for you</>,
+                <>Run a <strong style={{ color: "var(--text)" }}>tournament</strong> for 4 people or 50</>,
+                <>No account, works offline, stays on your phone</>,
+              ].map((line, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-[0.95rem] lg:text-base leading-snug" style={{ color: "var(--text-secondary)" }}>
+                  <Check size={16} className="shrink-0 mt-0.5" style={{ color: "var(--accent)" }} />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
 
             {/* Desktop has the room for the three facts that answer "is this
                 for me?"; on a phone they would just push the buttons down. */}
@@ -741,6 +776,45 @@ export default function Home() {
         <CardBrowserPanel open={showBrowser} onClose={() => setShowBrowser(false)} allCards={allCards} />
         <AchievementsPanel open={showAchievements} onClose={() => setShowAchievements(false)} />
         <WelcomeTour open={showTour} onClose={closeTour} onOpenHelp={() => { closeTour(); setShowRules(true); }} />
+
+        {/* Why 1,729 - the question the number begs, answered where it is asked
+            rather than buried in the manual. */}
+        {showWhy1729 && (
+          <div
+            className="sheet-scrim fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4"
+            onClick={() => setShowWhy1729(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Why 1,729 cards"
+          >
+            <div
+              className="mat-thick sheet-rise w-full max-w-sm p-6"
+              style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-sheet)", boxShadow: "var(--elev-3)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <h2 className="font-display text-xl font-black" style={{ color: "var(--text)" }}>
+                  Why exactly 1,729?
+                </h2>
+                <button onClick={() => setShowWhy1729(false)} aria-label="Close" className="pressable p-1.5 rounded-full shrink-0" style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}>
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                1,729 is the Hardy–Ramanujan &ldquo;taxicab&rdquo; number: the smallest number that can be written as
+                the sum of two cubes in two different ways.
+              </p>
+              <p className="tnum my-4 text-center text-base font-semibold" style={{ color: "var(--accent)" }}>
+                1³ + 12³ = 9³ + 10³ = 1,729
+              </p>
+              <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                The story goes that Ramanujan, visited in hospital by Hardy, who remarked his taxi number 1729 seemed
+                rather dull, replied that it was quite the opposite. It made a better target for the deck than a round
+                1,700.
+              </p>
+            </div>
+          </div>
+        )}
       </>
     );
   }
@@ -760,8 +834,8 @@ export default function Home() {
         onModeChange={handleModeChange}
         onEditNames={() => setShowNameEditor(!showNameEditor)}
         onToggleLock={() => setGame({ ...game, config: { ...game.config, scoreLocked: !game.config.scoreLocked } })}
-        onUndo={() => { setGame(undoLast(game)); if (game.config.soundEnabled) playUndoSound(); }}
-        onReset={() => setConfirmReset(true)}
+        onUndo={() => { doUndo(); }}
+        onReset={() => doReset()}
         paused={isPaused(game)}
         onTogglePause={() => setGame(isPaused(game) ? resumePlay(game, Date.now()) : pauseGame(game, Date.now()))}
         onOpenSettings={() => setShowSettings(true)}
@@ -796,21 +870,6 @@ export default function Home() {
             </span>
             <button onClick={() => applyScore(confirmTeam)} className="pressable px-4 py-1.5 rounded-full text-xs font-medium" style={{ background: "var(--accent)", color: "var(--accent-ink)" }}>Yes</button>
             <button onClick={() => setConfirmTeam(null)} className="pressable px-4 py-1.5 rounded-full text-xs font-medium" style={{ background: "var(--bg-card)", color: "var(--text-secondary)" }}>No</button>
-          </div>
-        )}
-
-        {/* Confirm reset */}
-        {confirmReset && (
-          <div className="anim-pop mat-regular flex items-center gap-3 p-3" style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-ctl)" }}>
-            <span className="text-sm" style={{ color: "var(--text-secondary)" }}>Reset score to 0 - 0?</span>
-            <button
-              onClick={() => { doReset(); setConfirmReset(false); }}
-              className="pressable px-4 py-1.5 rounded-full text-xs font-medium text-white"
-              style={{ background: "var(--red)" }}
-            >
-              Reset
-            </button>
-            <button onClick={() => setConfirmReset(false)} className="pressable px-4 py-1.5 rounded-full text-xs font-medium" style={{ background: "var(--bg-card)", color: "var(--text-secondary)" }}>Cancel</button>
           </div>
         )}
 

@@ -25,6 +25,9 @@ export interface Player {
   name: string;
   /** Sitting out a round in rotating play, or withdrawn. */
   active?: boolean;
+  /** Only set when someone marked it in the entry list ("Sam (m)"). Used by
+   *  mixed doubles to put one of each in a pair; absent everywhere else. */
+  gender?: "m" | "f";
 }
 
 export interface Team {
@@ -44,6 +47,30 @@ export type Slot =
 
 /** Which part of the event a match belongs to. */
 export type Bracket = "rr" | "pool" | "winners" | "losers" | "final";
+
+/**
+ * Which draw this event is. A club day usually runs several of these one after
+ * another, so a division belongs to the EVENT, not to a team - you create one
+ * event per draw and they sit together in the list.
+ */
+export type Division = "open" | "mens" | "womens" | "mixed";
+
+export const DIVISION_INFO: Record<Division, { label: string; short: string; blurb: string }> = {
+  open: { label: "Open", short: "Open", blurb: "Anyone with anyone." },
+  mens: { label: "Men's", short: "M", blurb: "Men's draw." },
+  womens: { label: "Women's", short: "W", blurb: "Women's draw." },
+  mixed: { label: "Mixed", short: "X", blurb: "Every pair is one of each - mark names (m) / (f) and the app pairs them." },
+};
+
+/** One line of the event's audit trail. */
+export interface EventLogEntry {
+  at: number;
+  kind: "created" | "result" | "edit" | "undo" | "round" | "note";
+  /** The match it concerns, when it concerns one. */
+  matchId?: string;
+  /** Plain-language line, already formatted for reading. */
+  text: string;
+}
 
 export interface TournamentMatch {
   id: string;
@@ -71,6 +98,8 @@ export interface TournamentMatch {
 }
 
 export interface TournamentConfig {
+  /** Which draw this is. Absent on events created before divisions existed. */
+  division?: Division;
   pointsToWin: number;
   winByTwo: boolean;
   /** Games needed to take a match. 1 for a single game. */
@@ -101,6 +130,12 @@ export interface Tournament {
   status: "setup" | "running" | "complete";
   /** Set when the event has a winner. */
   championTeamId?: string;
+  /**
+   * Every result, correction and undo, oldest first. Stored WITH the event and
+   * exported with it, so the next person to pick up the tablet can see that a
+   * score was changed and when.
+   */
+  log?: EventLogEntry[];
 }
 
 /** A row of the standings table. Computed, never stored. */

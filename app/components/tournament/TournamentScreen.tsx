@@ -10,10 +10,11 @@
 
 import { useMemo, useState } from "react";
 import {
-  ArrowLeft, ListChecks, Table2, GitBranch, Users, Trophy, Plus, Share2, Check,
+  ArrowLeft, ListChecks, Table2, GitBranch, Users, Trophy, Plus, Share2, Check, History, Download, X,
 } from "lucide-react";
 import type { Tournament, TournamentMatch } from "@/lib/tournament/types";
-import { FORMAT_INFO } from "@/lib/tournament/types";
+import { FORMAT_INFO, DIVISION_INFO } from "@/lib/tournament/types";
+import { EXPORT_INFO, exportTournament, exportFilename, type ExportFormat } from "@/lib/tournament/export";
 import {
   playableMatches, recordResult, clearResult, liveMatches, progress, addRotatingRound,
 } from "@/lib/tournament/engine";
@@ -23,7 +24,7 @@ import BracketView from "./BracketView";
 import MatchCard from "./MatchCard";
 import { useToast } from "../Toast";
 
-type Tab = "now" | "schedule" | "table" | "bracket" | "teams";
+type Tab = "now" | "schedule" | "table" | "bracket" | "teams" | "log";
 
 export default function TournamentScreen({
   tournament,
@@ -38,6 +39,8 @@ export default function TournamentScreen({
   onPlayMatch: (m: TournamentMatch) => void;
 }) {
   const [tab, setTab] = useState<Tab>("now");
+  const [picked, setPicked] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const toast = useToast();
 
   const t = tournament;
@@ -66,7 +69,20 @@ export default function TournamentScreen({
     { key: "table", label: isRotating ? "Players" : "Standings", icon: Trophy, show: true },
     { key: "bracket", label: "Bracket", icon: GitBranch, show: hasBracket || t.format === "pools-bracket" },
     { key: "teams", label: isRotating ? "Players" : "Teams", icon: Users, show: !isRotating },
+    { key: "log", label: "Changes", icon: History, show: (t.log?.length ?? 0) > 0 },
   ];
+
+  const download = (format: ExportFormat) => {
+    const blob = new Blob([exportTournament(t, format)], { type: EXPORT_INFO[format].mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = exportFilename(t, format);
+    a.click();
+    URL.revokeObjectURL(url);
+    setExporting(false);
+    toast(`Saved as ${EXPORT_INFO[format].label}`);
+  };
 
   const shareText = () => {
     const lines = [`${t.name} - ${FORMAT_INFO[t.format].label}`, ""];
@@ -96,17 +112,28 @@ export default function TournamentScreen({
             {t.name}
           </h1>
           <p className="text-xs mt-1 tnum" style={{ color: "var(--text-muted)" }}>
-            {FORMAT_INFO[t.format].label} · {isRotating ? `${t.players.length} players` : `${t.teams.length} teams`} ·{" "}
-            {played}/{total} matches
+            {FORMAT_INFO[t.format].label}
+            {t.config.division && t.config.division !== "open" ? ` · ${DIVISION_INFO[t.config.division].label}` : ""}
+            {" · "}
+            {isRotating ? `${t.players.length} players` : `${t.teams.length} teams`} · {played}/{total} matches
           </p>
         </div>
-        <button
-          onClick={share}
-          className="pressable hoverable mat-thin flex items-center gap-1.5 px-3 py-2 text-sm font-semibold shrink-0"
-          style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-chip)", color: "var(--text)" }}
-        >
-          <Share2 size={15} /> <span className="hidden sm:inline">Share</span>
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => setExporting(true)}
+            className="pressable hoverable mat-thin flex items-center gap-1.5 px-3 py-2 text-sm font-semibold"
+            style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-chip)", color: "var(--text)" }}
+          >
+            <Download size={15} /> <span className="hidden sm:inline">Export</span>
+          </button>
+          <button
+            onClick={share}
+            className="pressable hoverable mat-thin flex items-center gap-1.5 px-3 py-2 text-sm font-semibold"
+            style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-chip)", color: "var(--text)" }}
+          >
+            <Share2 size={15} /> <span className="hidden sm:inline">Share</span>
+          </button>
+        </div>
       </div>
 
       {/* Progress rail */}
@@ -213,7 +240,93 @@ export default function TournamentScreen({
       )}
 
       {/* ── Bracket ── */}
-      {tab === "bracket" && <BracketView tournament={t} />}
+      {tab === "bracket" && (
+        <div className="flex flex-col gap-3">
+          <BracketView tournament={t} onPick={(m) => setPicked(m.id)} />
+          {picked && (() => {
+            const m = t.matches.find((x) => x.id === picked);
+            if (!m) return null;
+            return (
+              <div className="anim-pop max-w-md">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="eyebrow">Selected match</span>
+                  <button onClick={() => setPicked(null)} aria-label="Close" className="pressable p-1 rounded-full" style={{ color: "var(--text-muted)" }}>
+                    <X size={15} />
+                  </button>
+                </div>
+                <MatchCard
+                  tournament={t}
+                  match={m}
+                  onRecord={(a, b) => record(m, a, b)}
+                  onPlay={() => onPlayMatch(m)}
+                  onClear={() => undo(m)}
+                />
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Changes: the audit trail, newest first */}
+      {tab === "log" && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+            Every result and correction. Saved with the event and included in an export, so the next person can see
+            what was changed and when.
+          </p>
+          <ol className="flex flex-col gap-1.5">
+            {[...(t.log ?? [])].reverse().map((entry, i) => (
+              <li
+                key={`${entry.at}-${i}`}
+                className="mat-thin flex items-start gap-3 px-3 py-2.5"
+                style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-ctl)" }}
+              >
+                <span className="tnum text-[11px] shrink-0 pt-0.5" style={{ color: "var(--text-muted)" }}>
+                  {new Date(entry.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+                <span
+                  className="text-sm min-w-0"
+                  style={{ color: entry.kind === "edit" || entry.kind === "undo" ? "var(--yellow)" : "var(--text)" }}
+                >
+                  {entry.text}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* Export */}
+      {exporting && (
+        <div className="sheet-scrim fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4" onClick={() => setExporting(false)}>
+          <div
+            className="mat-thick sheet-rise w-full max-w-sm p-5"
+            style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-sheet)", boxShadow: "var(--elev-3)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="font-display text-lg font-bold mb-1" style={{ color: "var(--text)" }}>Export {t.name}</h2>
+            <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
+              Results, standings and the change log, in whichever shape you need.
+            </p>
+            <div className="flex flex-col gap-2">
+              {(Object.keys(EXPORT_INFO) as ExportFormat[]).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => download(f)}
+                  className="pressable hoverable mat-thin flex items-center gap-3 p-3 text-left"
+                  style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-ctl)" }}
+                >
+                  <Download size={16} className="shrink-0" style={{ color: "var(--accent)" }} />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold" style={{ color: "var(--text)" }}>{EXPORT_INFO[f].label}</span>
+                    <span className="block text-xs" style={{ color: "var(--text-muted)" }}>{EXPORT_INFO[f].blurb}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Teams ── */}
       {tab === "teams" && (

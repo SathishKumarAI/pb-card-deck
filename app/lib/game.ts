@@ -1,9 +1,21 @@
 export interface ScoreEvent {
   team: 1 | 2;
-  type: "score" | "undo" | "reset";
+  type: "score" | "sideout" | "adjust" | "undo" | "reset";
   scoreBefore: { team1: number; team2: number };
   scoreAfter: { team1: number; team2: number };
+  /* Who was serving before this event, and which server they were on. Undo
+     without this restores the score but leaves the serve where it ended up,
+     which silently corrupts a side-out game - and a side-out itself could not
+     be undone at all, because it changed no score and logged no event. Older
+     saved games have no serve fields; undoLast falls back to the current
+     serve for those. */
+  serveBefore?: { team: 1 | 2; server: 1 | 2 };
   timestamp: number;
+}
+
+/** The serve half of a session, snapshotted for the undo stack. */
+function serveOf(game: GameSession): { team: 1 | 2; server: 1 | 2 } {
+  return { team: game.servingTeam, server: game.serverNumber };
 }
 
 export type GameType = "singles" | "doubles" | "mixed-doubles";
@@ -147,15 +159,34 @@ export function createGame(
 export function addScore(game: GameSession, team: 1 | 2): GameSession {
   if (game.config.scoreLocked || game.winner) return game;
 
+  // The receiving side winning a rally scores nothing - it wins the serve. That
+  // is the most common tap in a side-out game, so it goes on the undo stack
+  // like any other action.
   if (game.config.sideOutScoring && team !== game.servingTeam) {
-    return sideOut(game);
+    const after = sideOut(game);
+    const event: ScoreEvent = {
+      team,
+      type: "sideout",
+      scoreBefore: { ...game.score },
+      scoreAfter: { ...game.score },
+      serveBefore: serveOf(game),
+      timestamp: Date.now(),
+    };
+    return { ...after, history: [...game.history, event] };
   }
 
   const key = team === 1 ? "team1" : "team2";
   const scoreBefore = { ...game.score };
   const scoreAfter = { ...game.score, [key]: game.score[key] + 1 };
 
-  const event: ScoreEvent = { team, type: "score", scoreBefore, scoreAfter, timestamp: Date.now() };
+  const event: ScoreEvent = {
+    team,
+    type: "score",
+    scoreBefore,
+    scoreAfter,
+    serveBefore: serveOf(game),
+    timestamp: Date.now(),
+  };
 
   const winner = checkWin(scoreAfter, game.config);
 
@@ -175,7 +206,14 @@ export function adjustScore(game: GameSession, team: 1 | 2, delta: number): Game
   if (next === game.score[key]) return game;
   const scoreBefore = { ...game.score };
   const scoreAfter = { ...game.score, [key]: next };
-  const event: ScoreEvent = { team, type: "score", scoreBefore, scoreAfter, timestamp: Date.now() };
+  const event: ScoreEvent = {
+    team,
+    type: "adjust",
+    scoreBefore,
+    scoreAfter,
+    serveBefore: serveOf(game),
+    timestamp: Date.now(),
+  };
   return { ...game, score: scoreAfter, history: [...game.history, event], winner: checkWin(scoreAfter, game.config) };
 }
 
@@ -228,24 +266,52 @@ export function undoLast(game: GameSession): GameSession {
   if (game.history.length === 0) return game;
 
   const lastEvent = game.history[game.history.length - 1];
+  const serve = lastEvent.serveBefore;
 
   return {
     ...game,
     score: lastEvent.scoreBefore,
+    servingTeam: serve?.team ?? game.servingTeam,
+    serverNumber: serve?.server ?? game.serverNumber,
     history: game.history.slice(0, -1),
     winner: null,
   };
 }
 
+/** What the last undoable action was, for telling the user what they took back. */
+export function lastActionLabel(game: GameSession, names: { team1: string; team2: string }): string | null {
+  const last = game.history[game.history.length - 1];
+  if (!last) return null;
+  const who = last.team === 1 ? names.team1 : names.team2;
+  switch (last.type) {
+    case "score": return `point to ${who}`;
+    case "sideout": return "side out";
+    case "adjust": return `correction to ${who}`;
+    case "reset": return "reset";
+    default: return "last action";
+  }
+}
+
 export function resetScore(game: GameSession): GameSession {
-  // Clean slate for the current game: zero the score and clear the undo stack.
-  // (Saved Match history in localStorage is separate and is NOT touched here.)
+  // Clean slate for the current game, but NOT an unrecoverable one: the reset
+  // itself goes on the undo stack carrying the score and serve it wiped, so a
+  // mis-tapped Reset is one Undo away. (Saved Match history in localStorage is
+  // separate and is NOT touched here.)
+  const event: ScoreEvent = {
+    team: game.servingTeam,
+    type: "reset",
+    scoreBefore: { ...game.score },
+    scoreAfter: { team1: 0, team2: 0 },
+    serveBefore: serveOf(game),
+    timestamp: Date.now(),
+  };
+
   return {
     ...game,
     score: { team1: 0, team2: 0 },
     servingTeam: 1,
     serverNumber: 1,
-    history: [],
+    history: [event],
     winner: null,
   };
 }

@@ -11,6 +11,7 @@ import { useMemo, useState } from "react";
 import { BookOpen, Search, ChevronDown, Compass, X, CornerDownLeft } from "lucide-react";
 import { Sheet } from "./HistoryPanel";
 import { MANUAL, searchManual, type ManualEntry } from "@/lib/manual";
+import GlossaryText from "./GlossaryText";
 import { GLOSSARY } from "@/lib/glossary";
 
 /** The three things people open help to do. Jumps straight to one answer. */
@@ -246,8 +247,10 @@ function Answer({
 
       {isOpen && (
         <div id={`${id}-body`} className="px-3.5 pb-3.5">
+          {/* Answers underline pickleball terms exactly like a card does, so
+              "transition zone" explains itself wherever it appears. */}
           <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-            {entry.a}
+            <GlossaryText>{entry.a}</GlossaryText>
           </p>
           {entry.steps && (
             <ol className="mt-3 flex flex-col gap-2">
@@ -260,7 +263,7 @@ function Answer({
                     {i + 1}
                   </span>
                   <span className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
-                    {step}
+                    <GlossaryText>{step}</GlossaryText>
                   </span>
                 </li>
               ))}

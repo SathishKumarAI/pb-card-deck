@@ -11,6 +11,7 @@
 
 import type {
   EntryMode,
+  EventLogEntry,
   Format,
   Player,
   Slot,
@@ -23,10 +24,26 @@ import type {
 import { roundRobinMatches, roundRobinRoundCount } from "./roundRobin";
 import { doubleElimMatches, singleElimMatches, bracketSize } from "./elimination";
 import { standings, poolStandings } from "./standings";
+import { FORMAT_INFO } from "./types";
 
 const uid = (prefix: string) => `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
 
 /* ─────────────────────────── creation ─────────────────────────── */
+
+/* ─────────────────────────── the log ─────────────────────────── */
+
+/** Append one line to the event's audit trail. Oldest first, capped. */
+export function logEvent(t: Tournament, entry: Omit<EventLogEntry, "at">): Tournament {
+  const line: EventLogEntry = { at: Date.now(), ...entry };
+  return { ...t, log: [...(t.log ?? []), line].slice(-400) };
+}
+
+/** "Sam + Priya 11-9 Alex + Jo" - the phrase used all over the log. */
+export function describeResult(t: Tournament, m: TournamentMatch, a: number, b: number): string {
+  const name = (id?: string) => t.teams.find((x) => x.id === id)?.name ?? "?";
+  const where = m.label ?? (m.pool ? `Pool ${m.pool}` : `Round ${m.round}`);
+  return `${where}: ${name(m.teamA)} ${a}-${b} ${name(m.teamB)}`;
+}
 
 export interface CreateInput {
   name: string;
@@ -34,7 +51,7 @@ export interface CreateInput {
   entryMode: EntryMode;
   teamSize: number;
   /** Fixed-team events pass teams; rotating events pass players only. */
-  players: { name: string }[];
+  players: { name: string; gender?: "m" | "f" }[];
   teams?: { name: string; playerNames: string[] }[];
   config: Partial<TournamentConfig>;
 }
@@ -52,7 +69,12 @@ export const DEFAULT_CONFIG: TournamentConfig = {
 
 export function createTournament(input: CreateInput): Tournament {
   const config = { ...DEFAULT_CONFIG, ...input.config };
-  const players: Player[] = input.players.map((p) => ({ id: uid("p"), name: p.name.trim(), active: true }));
+  const players: Player[] = input.players.map((p) => ({
+    id: uid("p"),
+    name: p.name.trim(),
+    active: true,
+    ...(p.gender ? { gender: p.gender } : {}),
+  }));
 
   const byName = new Map(players.map((p) => [p.name, p.id] as const));
   const teams: Team[] =
@@ -80,7 +102,34 @@ export function createTournament(input: CreateInput): Tournament {
   };
 
   tournament.matches = buildMatches(tournament);
-  return resolveSlots(tournament);
+  const built = resolveSlots(tournament);
+  return logEvent(built, {
+    kind: "created",
+    text: `Created: ${FORMAT_INFO[built.format].label}, ${
+      built.entryMode === "rotating" ? `${built.players.length} players` : `${built.teams.length} teams`
+    }, ${built.config.courts} court${built.config.courts === 1 ? "" : "s"}`,
+  });
+}
+
+/**
+ * Pair a flat list for mixed doubles: one marked "m" with one marked "f", in
+ * rank order, so the strongest man plays with the strongest woman. Anyone
+ * unmarked, or left over when the counts do not balance, pairs off normally -
+ * a draw with 18 men and 14 women still runs, it just has four same-sex pairs.
+ */
+export function pairMixed(ids: string[], genderOf: (id: string) => "m" | "f" | undefined): string[][] {
+  const men = ids.filter((id) => genderOf(id) === "m");
+  const women = ids.filter((id) => genderOf(id) === "f");
+  const rest = ids.filter((id) => !genderOf(id));
+
+  const pairs: string[][] = [];
+  while (men.length && women.length) pairs.push([men.shift()!, women.shift()!]);
+
+  const leftovers = [...men, ...women, ...rest];
+  for (let i = 0; i < leftovers.length; i += 2) {
+    pairs.push(leftovers.slice(i, i + 2));
+  }
+  return pairs.filter((p) => p.length === 2);
 }
 
 /** The schedule for a freshly created event. */
@@ -208,13 +257,20 @@ export function rotatingRound(t: Tournament, round: number): TournamentMatch[] {
     .slice(0, spare);
   const active = playable.filter((id) => !sitting.includes(id));
 
+  const mixed = t.config.division === "mixed";
+  const genderOf = (id: string) => t.players.find((p) => p.id === id)?.gender;
+
   const matches: TournamentMatch[] = [];
   for (let i = 0; i < active.length; i += 4) {
     const quad = active.slice(i, i + 4);
     if (quad.length < 4) break;
-    const [p1, p2, p3, p4] = quad;
-    const teamA = mintPair(t, [p1, p4], round);
-    const teamB = mintPair(t, [p2, p3], round);
+    // Ranked fours keep games close: 1st plays with 4th against 2nd and 3rd.
+    // A mixed draw pairs one of each inside the four instead, which matters
+    // more than the rank spread.
+    const [pa, pb] = mixed ? pairMixed(quad, genderOf) : [[quad[0], quad[3]], [quad[1], quad[2]]];
+    if (!pa || !pb) break;
+    const teamA = mintPair(t, pa, round);
+    const teamB = mintPair(t, pb, round);
     matches.push({
       id: `rot-r${round}-m${i / 4 + 1}`,
       bracket: "rr",
@@ -266,7 +322,7 @@ export function addRotatingRound(t: Tournament): Tournament {
   const next = (played.length ? Math.max(...played) : 0) + 1;
   const copy: Tournament = { ...t, teams: [...t.teams], matches: [...t.matches] };
   copy.matches = [...copy.matches, ...rotatingRound(copy, next)];
-  return assignCourts(copy);
+  return logEvent(assignCourts(copy), { kind: "round", text: `Round ${next} added` });
 }
 
 /* ─────────────────────── advancing play ─────────────────────── */
@@ -401,6 +457,9 @@ export function recordResult(
   scoreB: number,
   opts: { playedInApp?: boolean } = {},
 ): Tournament {
+  const before = t.matches.find((m) => m.id === matchId);
+  const wasPlayed = !!before?.winner;
+
   const matches = t.matches.map((m) => {
     if (m.id !== matchId || !m.teamA || !m.teamB) return m;
     return {
@@ -412,7 +471,24 @@ export function recordResult(
       completedAt: Date.now(),
     };
   });
-  return resolveSlots({ ...t, matches });
+
+  let next = resolveSlots({ ...t, matches });
+  if (before) {
+    // A score typed over an existing one is a CORRECTION, and says so, with
+    // what it used to be - that is the line other people need to see.
+    next = wasPlayed
+      ? logEvent(next, {
+          kind: "edit",
+          matchId,
+          text: `${describeResult(t, before, scoreA, scoreB)} (was ${before.scoreA}-${before.scoreB})`,
+        })
+      : logEvent(next, {
+          kind: "result",
+          matchId,
+          text: describeResult(t, before, scoreA, scoreB) + (opts.playedInApp ? " · played in app" : ""),
+        });
+  }
+  return next;
 }
 
 /** Undo a result, and everything downstream of it. */
@@ -442,7 +518,15 @@ export function clearResult(t: Tournament, matchId: string): Tournament {
     };
   });
 
-  return resolveSlots({ ...t, matches });
+  const cleared = resolveSlots({ ...t, matches });
+  const was = t.matches.find((m) => m.id === matchId);
+  return was?.winner
+    ? logEvent(cleared, {
+        kind: "undo",
+        matchId,
+        text: `Cleared ${describeResult(t, was, was.scoreA ?? 0, was.scoreB ?? 0)}`,
+      })
+    : cleared;
 }
 
 /**

@@ -10,6 +10,91 @@ export interface GlossaryTerm {
 
 export const GLOSSARY: GlossaryTerm[] = [
   {
+    term: "Transition zone",
+    aliases: ["transition zone", "transition area", "no-man's land", "no man's land"],
+    def: "The strip of court between the baseline and the kitchen line. You move THROUGH it rather than stand in it - a ball landing at your feet here is the hardest one to answer.",
+  },
+  {
+    term: "Centre line",
+    aliases: ["centre line", "center line", "centreline", "centerline"],
+    def: "The line running from the baseline to the kitchen that splits each side into two service courts. Your serve must land in the service court diagonally opposite.",
+  },
+  {
+    term: "Kitchen line",
+    aliases: ["kitchen line", "non-volley line", "nvz line"],
+    def: "The line 7 feet from the net marking the front of the kitchen. Standing on it counts as being IN the kitchen, so you cannot volley with a foot touching it.",
+  },
+  {
+    term: "Sideline",
+    aliases: ["sideline", "sidelines"],
+    def: "The long line down each edge of the court. A ball touching any line except the kitchen line on a serve is in.",
+  },
+  {
+    term: "Service court",
+    aliases: ["service court", "service box"],
+    def: "One of the two boxes on each side, made by the centre line and the kitchen line. The serve must land in the one diagonally across from the server.",
+  },
+  {
+    term: "Third shot",
+    aliases: ["third shot", "third-shot", "third shot drive"],
+    def: "The serving team's shot after the return - the one that decides whether they get to the net. Usually a soft drop into the kitchen, sometimes a hard drive.",
+  },
+  {
+    term: "Drive",
+    aliases: ["drive", "drives", "driving"],
+    def: "A hard, flat shot hit with pace, usually from the back of the court. The opposite of a drop.",
+  },
+  {
+    term: "Reset",
+    aliases: ["reset shot", "resetting"],
+    def: "A soft shot that takes the speed out of a fast exchange and drops the ball into the kitchen, so you can get back to a neutral rally.",
+  },
+  {
+    term: "Ace",
+    aliases: ["ace", "aces"],
+    def: "A serve the receiver never touches. Rare in pickleball, because the serve must be hit underhand.",
+  },
+  {
+    term: "Fault",
+    aliases: ["fault", "faults"],
+    def: "Anything that ends the rally against you: the ball into the net, out of bounds, a volley from the kitchen, or a double bounce.",
+  },
+  {
+    term: "Double bounce rule",
+    aliases: ["double bounce", "two bounce rule", "double-bounce rule"],
+    def: "The serve must bounce once, and the return must bounce once, before anyone may volley. It is what stops the serving team rushing the net immediately.",
+  },
+  {
+    term: "Dead ball",
+    aliases: ["dead ball"],
+    def: "A ball no longer in play, because the rally ended on a fault, a let, or a call.",
+  },
+  {
+    term: "Paddle",
+    aliases: ["paddle", "paddles"],
+    def: "What you hit with. Solid-faced and about twice the size of a table-tennis bat - no strings.",
+  },
+  {
+    term: "Second server",
+    aliases: ["second server", "server 2", "2nd server"],
+    def: "In doubles, each side gets two servers before the serve passes over. When the first server's rally is lost, their partner serves; when the second loses, it is a side-out.",
+  },
+  {
+    term: "Pool",
+    aliases: ["pool", "pools", "pool play"],
+    def: "A small group that plays a round robin among itself. The top finishers go through to the knockout bracket.",
+  },
+  {
+    term: "Seed",
+    aliases: ["seed", "seeded", "seeding"],
+    def: "A team's rank going into a draw. Seeding spreads the strong teams out so they meet late rather than in round one.",
+  },
+  {
+    term: "Bye",
+    aliases: ["bye", "byes"],
+    def: "A free pass into the next round, given when a draw has fewer teams than slots. The top seeds get them.",
+  },
+  {
     term: "Dink",
     aliases: ["dink", "dinks", "dinking"],
     def: "A soft shot hit from near the net that arcs over and drops into the opponent's kitchen, too low to attack.",
