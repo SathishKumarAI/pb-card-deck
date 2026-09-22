@@ -19,7 +19,7 @@ import {
 } from "@/lib/game";
 import { playUndoSound, playCardFlipSound, playResetSound, triggerHaptic } from "@/lib/sounds";
 import { addMatch, deckToCards, CustomDeck, listFavoriteIds, toggleFavorite, bumpStat, matchSheet, getTournament, saveTournament } from "@/lib/client-api";
-import { getSavePref, setSavePref } from "@/lib/historyConsent";
+import { getSavePref, setSavePref, shouldAskToSave } from "@/lib/historyConsent";
 import type { Tournament, TournamentMatch } from "@/lib/tournament/types";
 import { recordResult as recordTournamentResult } from "@/lib/tournament/engine";
 import { OfficialMatchOptions } from "@/components/OfficialMatchSetup";
@@ -77,6 +77,9 @@ export default function Home() {
   const intro = useOnce(BEGINNER_INTRO_KEY, beginnerStarted);
   const toast = useToast();
   const handledMatchRef = useRef<string | null>(null);
+  /* The save answer already given for THIS match (session id), so a best of 3
+     asks once instead of once per game. Cleared when a new match starts. */
+  const matchAnswerRef = useRef<{ id: string; save: boolean } | null>(null);
 
   useEffect(() => {
     fetch("/cards.json", { cache: "no-store" }).then((r) => r.json()).then(setAllCards);
@@ -112,17 +115,20 @@ export default function Home() {
 
   useEffect(() => { if (game) saveGame(game); }, [game]);
 
-  /* A finished match reaches the device's history exactly once, and only with
-     permission. "always" saves, "never" skips, "ask" raises the prompt. */
+  /* A finished game reaches the device's history exactly once, and only with
+     permission. The answer covers the whole match: a best of 3 finishes three
+     games, and three dialogs for one match is nobody's idea of consent. */
   useEffect(() => {
     if (!game?.winner) return;
     const key = game.id + ":" + game.gameNumber;
     if (handledMatchRef.current === key) return;
     handledMatchRef.current = key;
-    const pref = getSavePref();
-    if (pref === "always") { addMatch(game); return; }
-    if (pref === "never") return;
-    setPendingSave(game);
+    const answered = matchAnswerRef.current?.id === game.id
+      ? matchAnswerRef.current.save
+      : undefined;
+    const { ask, save } = shouldAskToSave(getSavePref(), answered);
+    if (ask) setPendingSave(game);
+    else if (save) addMatch(game);
   }, [game?.winner, game?.gameNumber, game?.id]);
 
   const answerSave = useCallback((save: boolean, remember: boolean) => {
@@ -130,6 +136,7 @@ export default function Home() {
     setPendingSave(null);
     if (remember) setSavePref(save ? "always" : "never");
     if (!g) return;
+    matchAnswerRef.current = { id: g.id, save };
     if (save) { addMatch(g); toast("Match saved to this device"); }
     else toast("Match not saved");
   }, [pendingSave, toast]);

@@ -216,6 +216,7 @@ export default function TournamentSetup({
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
+          aria-label="Event name"
           placeholder="Saturday Social"
           className="w-full px-3.5 py-3 outline-none"
           style={{ background: "var(--bg-elevated)", border: "1px solid var(--mat-edge)", borderRadius: "var(--r-ctl)", color: "var(--text)" }}
@@ -275,27 +276,27 @@ export default function TournamentSetup({
           or 7 pools is not an edge case, it is Tuesday. */}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Courts" hint="Games that can run at once.">
-          <NumberField value={courts} onChange={setCourts} min={1} max={64} suggestions={[2, 4, 8]} />
+          <NumberField label="Courts" value={courts} onChange={setCourts} min={1} max={64} suggestions={[2, 4, 8]} />
         </Field>
 
         <Field label="Points to win">
-          <NumberField value={pointsToWin} onChange={setPointsToWin} min={1} max={99} suggestions={[11, 15, 21]} />
+          <NumberField label="Points to win" value={pointsToWin} onChange={setPointsToWin} min={1} max={99} suggestions={[11, 15, 21]} />
         </Field>
 
         {format === "pools-bracket" && (
           <>
             <Field label="Pools" hint={teams.length ? `${Math.ceil(teams.length / Math.max(1, poolCount))} teams per pool` : undefined}>
-              <NumberField value={poolCount} onChange={setPoolCount} min={2} max={Math.max(2, teams.length || 32)} suggestions={[2, 4, 8]} />
+              <NumberField label="Pools" value={poolCount} onChange={setPoolCount} min={2} max={Math.max(2, teams.length || 32)} suggestions={[2, 4, 8]} />
             </Field>
             <Field label="Advance from each pool" hint={`${advancePerPool * poolCount} teams in the bracket`}>
-              <NumberField value={advancePerPool} onChange={setAdvancePerPool} min={1} max={8} suggestions={[1, 2, 4]} />
+              <NumberField label="Advance from each pool" value={advancePerPool} onChange={setAdvancePerPool} min={1} max={8} suggestions={[1, 2, 4]} />
             </Field>
           </>
         )}
 
         {format === "rotating" && (
           <Field label="Rounds" hint="You can add more while you play.">
-            <NumberField value={rounds} onChange={setRounds} min={1} max={40} suggestions={[3, 5, 8]} />
+            <NumberField label="Rounds" value={rounds} onChange={setRounds} min={1} max={40} suggestions={[3, 5, 8]} />
           </Field>
         )}
       </div>
@@ -317,6 +318,7 @@ export default function TournamentSetup({
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
+          aria-label={teamSize === 1 ? "Player names, one per line" : "Player or pair names, one per line"}
           rows={7}
           placeholder={"Sam\nPriya\nAlex & Jo\nRavi\nMei"}
           className="w-full px-3.5 py-3 outline-none resize-y"
@@ -348,7 +350,7 @@ export default function TournamentSetup({
             <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
               No names yet?
             </span>
-            <NumberField value={quickCount} onChange={setQuickCount} min={2} max={64} />
+            <NumberField label="How many to fill in" value={quickCount} onChange={setQuickCount} min={2} max={64} />
             <button
               onClick={quickFill}
               className="pressable hoverable flex items-center gap-1.5 px-3 py-2 text-xs font-bold"
@@ -492,12 +494,17 @@ function NumberField({
   onChange,
   min,
   max,
+  label,
   suggestions = [],
 }: {
   value: number;
   onChange: (n: number) => void;
   min: number;
   max: number;
+  /* The visible Field label, repeated onto the input. The label sits in a
+     sibling <span>, so without this a screen reader reads the spinner as an
+     unnamed number box - measured on every count field in this form. */
+  label: string;
   suggestions?: number[];
 }) {
   const clamp = (n: number) => Math.min(max, Math.max(min, n));
@@ -519,6 +526,7 @@ function NumberField({
         <input
           type="number"
           inputMode="numeric"
+          aria-label={label}
           value={value}
           min={min}
           max={max}

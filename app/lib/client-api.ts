@@ -1,4 +1,4 @@
-import { GameSession } from "./game";
+import { GameSession, elapsedMs } from "./game";
 import { Card, CATEGORIES } from "./cards";
 import type { Tournament } from "./tournament/types";
 
@@ -92,7 +92,9 @@ export function addMatch(g: GameSession) {
     score_team2: g.score.team2,
     winner: g.winner,
     game_number: g.gameNumber,
-    duration_ms: Date.now() - g.startTime,
+    // Played time, not wall clock: a game paused for the length of a coffee
+    // break used to record the break as play.
+    duration_ms: elapsedMs(g, Date.now()),
     results: g.gameResults,
     created_at: Date.now(),
     ...(g.config.officialMode
@@ -138,7 +140,7 @@ export function matchSheet(g: GameSession): string {
     lines.push(`Faults:    ${g.playerNames.team1} ${fa.team1}, ${g.playerNames.team2} ${fa.team2}`);
   }
   lines.push("");
-  lines.push(`Duration: ${Math.round((Date.now() - g.startTime) / 60000)} min`);
+  lines.push(`Duration: ${Math.round(elapsedMs(g, Date.now()) / 60000)} min`);
   return lines.join("\n");
 }
 export function clearMatches() {

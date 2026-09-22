@@ -80,6 +80,7 @@ export default function OfficialMatchSetup({ onStart }: { onStart: (opts: Offici
           <input
             value={team1}
             onChange={(e) => setTeam1(e.target.value)}
+            aria-label={gameType === "singles" ? "Player 1 name" : "Team 1 name"}
             placeholder={gameType === "singles" ? "Player 1" : "Team 1"}
             maxLength={40}
             className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
@@ -88,6 +89,7 @@ export default function OfficialMatchSetup({ onStart }: { onStart: (opts: Offici
           <input
             value={team2}
             onChange={(e) => setTeam2(e.target.value)}
+            aria-label={gameType === "singles" ? "Player 2 name" : "Team 2 name"}
             placeholder={gameType === "singles" ? "Player 2" : "Team 2"}
             maxLength={40}
             className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
@@ -101,6 +103,7 @@ export default function OfficialMatchSetup({ onStart }: { onStart: (opts: Offici
         <input
           value={eventLabel}
           onChange={(e) => setEventLabel(e.target.value)}
+          aria-label="Event or round (optional)"
           placeholder="e.g. Club Ladder - QF"
           maxLength={60}
           className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"

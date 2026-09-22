@@ -124,10 +124,21 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
   `--accent-ink` for text on an accent fill (never `#fff` - it vibrates on mint).
   Anything that counts - scores, clocks, card totals - gets `.tnum`.
 - One primary action per screen. If a second button competes with it, cut it.
+- **Every control someone types into needs an accessible name.** Nine fields
+  shipped without one - the whole tournament setup form, both official-match
+  name boxes, the event label, the team-name editor and the hidden import
+  picker - because the visible label sits in a sibling `<span>`, which names
+  nothing. `lib/a11y.test.tsx` now fails if a field in those forms has no
+  accessible name; `NumberField` takes a `label` prop for exactly this.
+- **Durations come from `elapsedMs`, never `Date.now() - startTime`.** The
+  second form bills a pause as play: a game paused for a coffee break recorded
+  the break. Both `addMatch` and `matchSheet` had it.
 - **Saving a finished match asks first.** `lib/historyConsent.ts` holds the
   preference (`ask` / `always` / `never`) and `SaveMatchPrompt` is the dialog.
   Nothing writes to match history without an answer; dismissing the dialog
-  counts as "not this time", never as consent.
+  counts as "not this time", never as consent. The answer covers the whole
+  MATCH, not one game - `shouldAskToSave` is the decision, and a best of 3
+  used to raise three dialogs for a single match.
 - **Help answers are POINTS, not paragraphs.** `ManualEntry.points` renders as
   bullets and `steps` as a numbered list - use `steps` only for a real
   sequence. `QUICK_LINKS` lives in `lib/manual.ts` beside the text it names,
