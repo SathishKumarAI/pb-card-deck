@@ -11,7 +11,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, Users, Trophy, Shuffle, Sparkles, Layers, Check, Plus, Minus } from "lucide-react";
+import { ArrowLeft, Users, Trophy, Shuffle, Sparkles, Layers, Check, Plus, Minus, Hash } from "lucide-react";
 import { FORMAT_INFO, DIVISION_INFO, type Format, type EntryMode, type Division } from "@/lib/tournament/types";
 import { createTournament, DEFAULT_CONFIG, pairMixed } from "@/lib/tournament/engine";
 import type { Tournament } from "@/lib/tournament/types";
@@ -125,6 +125,8 @@ export default function TournamentSetup({
   const [advancePerPool, setAdvancePerPool] = useState(2);
   const [rounds, setRounds] = useState(5);
   const [cardsEnabled, setCardsEnabled] = useState(false);
+  /** For the numbered quick-fill: how many entries to invent. */
+  const [quickCount, setQuickCount] = useState(8);
 
   const entryMode: EntryMode = format === "rotating" ? "rotating" : "teams";
   const parsed = useMemo(() => parseEntries(text), [text]);
@@ -140,6 +142,27 @@ export default function TournamentSetup({
   /** Mixed only: how many pairs cannot be one of each. */
   const unbalanced = division === "mixed" ? Math.floor(Math.abs(menCount - womenCount) / 2) : 0;
   const enough = entryMode === "rotating" ? playerCount >= 4 : teams.length >= FORMAT_INFO[format].minTeams;
+
+  /**
+   * Nobody should have to collect 24 names before the app will do anything.
+   * Writes numbered entries into the same box, so they stay visible and
+   * editable - rename them as people arrive, or never.
+   *
+   * The count means what the label says: in a doubles draw it is the number of
+   * TEAMS, so each line is a numbered pair. Writing 8 single names there would
+   * have silently produced 4 teams.
+   */
+  const quickFill = () => {
+    const lines =
+      entryMode === "teams" && teamSize === 2
+        ? Array.from({ length: quickCount }, (_, i) => `Player ${i * 2 + 1} & Player ${i * 2 + 2}`)
+        : Array.from({ length: quickCount }, (_, i) => `Player ${i + 1}`);
+    setText(lines.join("\n"));
+  };
+
+  /** What the quick-fill button will actually make. */
+  const quickNoun =
+    entryMode === "teams" ? (quickCount === 1 ? "team" : "teams") : quickCount === 1 ? "player" : "players";
 
   const create = () => {
     const genderOf = new Map(allEntrants.map((p) => [p.name, p.gender] as const));
@@ -169,19 +192,25 @@ export default function TournamentSetup({
   };
 
   return (
-    <div className="flex flex-col gap-6 pb-10 lg:grid lg:grid-cols-2 lg:gap-x-10 lg:items-start">
-      <button onClick={onCancel} className="pressable self-start flex items-center gap-1.5 text-sm font-medium lg:col-span-2" style={{ color: "var(--text-secondary)" }}>
+    <div className="flex flex-col gap-5 pb-10">
+      <button onClick={onCancel} className="pressable self-start flex items-center gap-1.5 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
         <ArrowLeft size={16} /> Back
       </button>
 
-      <div className="lg:col-span-2">
-        <h1 className="font-display text-3xl font-black leading-tight" style={{ color: "var(--text)" }}>
+      <div className="-mt-1">
+        <h1 className="font-display text-2xl font-black leading-tight" style={{ color: "var(--text)" }}>
           New tournament
         </h1>
-        <p className="mt-1.5 text-sm" style={{ color: "var(--text-secondary)" }}>
+        <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
           Names in, format chosen, schedule out. Everything stays on this device.
         </p>
       </div>
+
+      {/* Two explicit columns: settings on the left, who is playing on the
+          right. Letting fields flow into a 2-col grid left one side empty for
+          300px at a time, because the fields are wildly different heights. */}
+      <div className="grid gap-5 lg:grid-cols-2 lg:gap-x-10 lg:items-start">
+      <div className="flex flex-col gap-5 min-w-0">
 
       <Field label="Event name">
         <input
@@ -193,8 +222,16 @@ export default function TournamentSetup({
         />
       </Field>
 
-      <Field label="Format" className="lg:col-span-2">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <Field label="Division" hint={DIVISION_INFO[division].blurb}>
+        <Segmented
+          options={(Object.keys(DIVISION_INFO) as Division[]).map((d) => ({ value: d, label: DIVISION_INFO[d].label }))}
+          value={division}
+          onChange={setDivision}
+        />
+      </Field>
+
+      <Field label="Format">
+        <div className="grid gap-2 sm:grid-cols-2">
           {(Object.keys(FORMAT_INFO) as Format[]).map((f) => {
             const Icon = FORMAT_ICON[f];
             const active = format === f;
@@ -221,14 +258,6 @@ export default function TournamentSetup({
         </div>
       </Field>
 
-      <Field label="Division" hint={DIVISION_INFO[division].blurb}>
-        <Segmented
-          options={(Object.keys(DIVISION_INFO) as Division[]).map((d) => ({ value: d, label: DIVISION_INFO[d].label }))}
-          value={division}
-          onChange={setDivision}
-        />
-      </Field>
-
       {entryMode === "teams" && (
         <Field label="Playing as">
           <Segmented
@@ -241,6 +270,39 @@ export default function TournamentSetup({
           />
         </Field>
       )}
+
+      {/* Counts are typed, not picked from a fixed list: a club with 11 courts
+          or 7 pools is not an edge case, it is Tuesday. */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Courts" hint="Games that can run at once.">
+          <NumberField value={courts} onChange={setCourts} min={1} max={64} suggestions={[2, 4, 8]} />
+        </Field>
+
+        <Field label="Points to win">
+          <NumberField value={pointsToWin} onChange={setPointsToWin} min={1} max={99} suggestions={[11, 15, 21]} />
+        </Field>
+
+        {format === "pools-bracket" && (
+          <>
+            <Field label="Pools" hint={teams.length ? `${Math.ceil(teams.length / Math.max(1, poolCount))} teams per pool` : undefined}>
+              <NumberField value={poolCount} onChange={setPoolCount} min={2} max={Math.max(2, teams.length || 32)} suggestions={[2, 4, 8]} />
+            </Field>
+            <Field label="Advance from each pool" hint={`${advancePerPool * poolCount} teams in the bracket`}>
+              <NumberField value={advancePerPool} onChange={setAdvancePerPool} min={1} max={8} suggestions={[1, 2, 4]} />
+            </Field>
+          </>
+        )}
+
+        {format === "rotating" && (
+          <Field label="Rounds" hint="You can add more while you play.">
+            <NumberField value={rounds} onChange={setRounds} min={1} max={40} suggestions={[3, 5, 8]} />
+          </Field>
+        )}
+      </div>
+      </div>
+
+      {/* Right column: who is playing */}
+      <div className="flex flex-col gap-5 min-w-0">
 
       <Field
         label={entryMode === "rotating" ? "Players" : teamSize === 1 ? "Players" : "Players or pairs"}
@@ -276,6 +338,32 @@ export default function TournamentSetup({
             same-sex. The draw still runs.
           </p>
         )}
+        {/* Quick fill: numbered entries, so a draw can be built before the
+            names are known. Placed under the box because it writes INTO it. */}
+        {playerCount === 0 && (
+          <div
+            className="mat-thin flex flex-wrap items-center gap-2 p-2.5"
+            style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-ctl)" }}
+          >
+            <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
+              No names yet?
+            </span>
+            <NumberField value={quickCount} onChange={setQuickCount} min={2} max={64} />
+            <button
+              onClick={quickFill}
+              className="pressable hoverable flex items-center gap-1.5 px-3 py-2 text-xs font-bold"
+              style={{ background: "var(--accent)", color: "var(--accent-ink)", borderRadius: "var(--r-chip)" }}
+            >
+              <Hash size={13} /> Use {quickCount} numbered {quickNoun}
+            </button>
+            <span className="text-xs w-full" style={{ color: "var(--text-muted)" }}>
+              {entryMode === "teams" && teamSize === 2
+                ? `Makes ${quickCount} pairs (${quickCount * 2} players). Rename them any time - the list is just text.`
+                : "Rename them any time - the list above is just text."}
+            </span>
+          </div>
+        )}
+
         {division === "mixed" && menCount + womenCount === 0 && playerCount > 0 && (
           <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
             Nobody is marked yet. Add <strong style={{ color: "var(--text)" }}>(m)</strong> or{" "}
@@ -308,8 +396,8 @@ export default function TournamentSetup({
       )}
 
       {teams.length > 0 && (
-        <Field label="Teams" hint="Seeded in this order. The list is the draw." className="lg:row-span-2">
-          <ol className="flex flex-col gap-1 max-h-56 overflow-y-auto scroll-area pr-1">
+        <Field label="Teams" hint="Seeded in this order. The list is the draw.">
+          <ol className="flex flex-col gap-1 max-h-72 overflow-y-auto scroll-area pr-1">
             {teams.map((t, i) => (
               <li
                 key={`${t.name}-${i}`}
@@ -324,40 +412,15 @@ export default function TournamentSetup({
         </Field>
       )}
 
-      {/* Counts are typed, not picked from a fixed list: a club with 11 courts
-          or 7 pools is not an edge case, it is Tuesday. */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2">
-        <Field label="Courts" hint="Games that can run at once.">
-          <NumberField value={courts} onChange={setCourts} min={1} max={64} suggestions={[1, 2, 4, 6, 8]} />
-        </Field>
 
-        <Field label="Points to win">
-          <NumberField value={pointsToWin} onChange={setPointsToWin} min={1} max={99} suggestions={[11, 15, 21]} />
-        </Field>
-
-        {format === "pools-bracket" && (
-          <>
-            <Field label="Pools" hint={teams.length ? `${Math.ceil(teams.length / Math.max(1, poolCount))} teams per pool` : undefined}>
-              <NumberField value={poolCount} onChange={setPoolCount} min={2} max={Math.max(2, teams.length || 32)} suggestions={[2, 4, 6, 8]} />
-            </Field>
-            <Field label="Advance from each pool" hint={`${advancePerPool * poolCount} teams in the bracket`}>
-              <NumberField value={advancePerPool} onChange={setAdvancePerPool} min={1} max={8} suggestions={[1, 2, 4]} />
-            </Field>
-          </>
-        )}
-
-        {format === "rotating" && (
-          <Field label="Rounds" hint="You can add more while you play.">
-            <NumberField value={rounds} onChange={setRounds} min={1} max={40} suggestions={[3, 5, 8, 12]} />
-          </Field>
-        )}
+      </div>
       </div>
 
       <button
         onClick={() => setCardsEnabled(!cardsEnabled)}
         role="switch"
         aria-checked={cardsEnabled}
-        className="mat-thin hoverable pressable flex items-center justify-between gap-3 p-3.5 lg:col-span-2"
+        className="mat-thin hoverable pressable flex items-center justify-between gap-3 p-3.5"
         style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-panel)" }}
       >
         <span className="flex items-center gap-2.5 min-w-0 text-left">
@@ -372,14 +435,27 @@ export default function TournamentSetup({
         </span>
       </button>
 
-      <button
-        onClick={create}
-        disabled={!enough}
-        className="cta-accent pressable flex items-center justify-center gap-2 px-6 py-4 font-bold disabled:opacity-40 lg:col-span-2"
-        style={{ borderRadius: "var(--r-panel)" }}
-      >
-        <Check size={18} /> Create schedule
-      </button>
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={create}
+          disabled={!enough}
+          className="cta-accent pressable flex items-center justify-center gap-2 px-6 py-4 font-bold disabled:opacity-40"
+          style={{ borderRadius: "var(--r-panel)" }}
+        >
+          <Check size={18} /> Create schedule
+        </button>
+        {!enough && (
+          <p className="text-xs text-center" style={{ color: "var(--text-muted)" }}>
+            {playerCount === 0
+              ? "Paste a list above, or use numbered entries to start now and rename later."
+              : `Add ${
+                  entryMode === "rotating"
+                    ? Math.max(0, 4 - playerCount) + " more player(s)"
+                    : Math.max(0, FORMAT_INFO[format].minTeams - teams.length) + " more team(s)"
+                } for this format.`}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

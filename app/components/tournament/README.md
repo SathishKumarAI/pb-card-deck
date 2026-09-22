@@ -33,4 +33,20 @@ the game and never grows a second app inside it.
 - **The bracket scrolls sideways on a phone** and does not restack, because the
   shape is the information.
 - **An open event takes the full width**, including on desktop where the home
-  screen is otherwise two columns — a dashboard is not a sidebar.
+  screen is otherwise two columns — a dashboard is not a sidebar. It uses
+  `.app-col--event` (72rem, 84rem past 1440px), not the reading column.
+- **Standings are a permanent rail on desktop, not a tab.** People glance at
+  them between every match, and the 20rem beside the match list was empty on
+  every other tab anyway. The tab still exists on mobile (`mobileOnly`).
+- **The header is one row.** It was a 280px stack that pushed the actual work
+  below the fold: back, title, meta, champion chip, progress and the actions
+  all share it now.
+- **"On now" fills its space with `Just finished`** when few matches are live.
+  Between rounds the tab was a single card in an empty field; the last six
+  results are what a desk actually wants to see there.
+- **The setup form is two explicit columns** (settings | who is playing), not
+  fields flowing into a 2-col grid — the fields differ so much in height that
+  flow left one side empty 300px at a time.
+- **Counts quick-fill is honest about what it makes.** "Use 8 numbered teams"
+  writes 8 numbered PAIRS in a doubles draw; writing 8 single names there
+  silently produced 4 teams.

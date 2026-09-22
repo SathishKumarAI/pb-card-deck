@@ -14,12 +14,20 @@ export default function StandingsTable({
   /** Rows above this line qualify; draws a rule under the last one. */
   qualifyingCount,
   highlightId,
+  /** Sidebar variant: rank, name, W-L and difference only. */
+  compact = false,
+  /** Cap the rows shown, with a count of the rest. */
+  limit,
 }: {
   rows: StandingRow[];
   title?: string;
   qualifyingCount?: number;
   highlightId?: string;
+  compact?: boolean;
+  limit?: number;
 }) {
+  const shown = limit ? rows.slice(0, limit) : rows;
+
   if (rows.length === 0) {
     return (
       <p className="text-sm py-6 text-center" style={{ color: "var(--text-muted)" }}>
@@ -35,17 +43,17 @@ export default function StandingsTable({
         <table className="w-full text-sm">
           <thead>
             <tr style={{ color: "var(--text-muted)" }}>
-              <th className="text-left font-semibold px-3 py-2 text-xs w-8">#</th>
-              <th className="text-left font-semibold px-1 py-2 text-xs">Team</th>
-              <th className="text-right font-semibold px-2 py-2 text-xs">W</th>
-              <th className="text-right font-semibold px-2 py-2 text-xs">L</th>
-              <th className="text-right font-semibold px-2 py-2 text-xs hidden sm:table-cell">PF</th>
-              <th className="text-right font-semibold px-2 py-2 text-xs hidden sm:table-cell">PA</th>
-              <th className="text-right font-semibold px-3 py-2 text-xs">+/−</th>
+              <th className="text-left font-semibold px-2.5 py-1.5 text-[11px] w-7">#</th>
+              <th className="text-left font-semibold px-1 py-1.5 text-[11px]">Team</th>
+              <th className="text-right font-semibold px-2 py-1.5 text-[11px]">{compact ? "W-L" : "W"}</th>
+              {!compact && <th className="text-right font-semibold px-2 py-1.5 text-[11px]">L</th>}
+              {!compact && <th className="text-right font-semibold px-2 py-1.5 text-[11px] hidden sm:table-cell">PF</th>}
+              {!compact && <th className="text-right font-semibold px-2 py-1.5 text-[11px] hidden sm:table-cell">PA</th>}
+              <th className="text-right font-semibold px-2.5 py-1.5 text-[11px]">+/−</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => {
+            {shown.map((row, i) => {
               const qualifies = qualifyingCount != null && i < qualifyingCount;
               return (
                 <tr
@@ -58,18 +66,20 @@ export default function StandingsTable({
                       row.teamId === highlightId ? "color-mix(in srgb, var(--accent) 12%, transparent)" : undefined,
                   }}
                 >
-                  <td className="tnum px-3 py-2.5 text-xs" style={{ color: qualifies ? "var(--accent)" : "var(--text-muted)" }}>
+                  <td className="tnum px-2.5 py-2 text-xs" style={{ color: qualifies ? "var(--accent)" : "var(--text-muted)" }}>
                     {row.rank}
                   </td>
-                  <td className="px-1 py-2.5 font-medium truncate max-w-[10rem]" style={{ color: "var(--text)" }}>
+                  <td className="px-1 py-2 font-medium truncate max-w-[10rem]" style={{ color: "var(--text)" }}>
                     {row.name}
                   </td>
-                  <td className="tnum px-2 py-2.5 text-right font-semibold" style={{ color: "var(--text)" }}>{row.wins}</td>
-                  <td className="tnum px-2 py-2.5 text-right" style={{ color: "var(--text-secondary)" }}>{row.losses}</td>
-                  <td className="tnum px-2 py-2.5 text-right hidden sm:table-cell" style={{ color: "var(--text-secondary)" }}>{row.pointsFor}</td>
-                  <td className="tnum px-2 py-2.5 text-right hidden sm:table-cell" style={{ color: "var(--text-secondary)" }}>{row.pointsAgainst}</td>
+                  <td className="tnum px-2 py-2 text-right font-semibold whitespace-nowrap" style={{ color: "var(--text)" }}>
+                    {compact ? `${row.wins}-${row.losses}` : row.wins}
+                  </td>
+                  {!compact && <td className="tnum px-2 py-2 text-right" style={{ color: "var(--text-secondary)" }}>{row.losses}</td>}
+                  {!compact && <td className="tnum px-2 py-2 text-right hidden sm:table-cell" style={{ color: "var(--text-secondary)" }}>{row.pointsFor}</td>}
+                  {!compact && <td className="tnum px-2 py-2 text-right hidden sm:table-cell" style={{ color: "var(--text-secondary)" }}>{row.pointsAgainst}</td>}
                   <td
-                    className="tnum px-3 py-2.5 text-right font-semibold"
+                    className="tnum px-2.5 py-2 text-right font-semibold"
                     style={{ color: row.diff > 0 ? "var(--accent)" : row.diff < 0 ? "var(--text-muted)" : "var(--text-secondary)" }}
                   >
                     {row.diff > 0 ? `+${row.diff}` : row.diff}
@@ -79,6 +89,11 @@ export default function StandingsTable({
             })}
           </tbody>
         </table>
+        {limit && rows.length > limit && (
+          <p className="px-2.5 py-2 text-[11px]" style={{ color: "var(--text-muted)", borderTop: "1px solid var(--mat-edge)" }}>
+            +{rows.length - limit} more
+          </p>
+        )}
       </div>
     </div>
   );

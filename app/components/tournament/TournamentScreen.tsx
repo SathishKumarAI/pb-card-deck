@@ -52,7 +52,18 @@ export default function TournamentScreen({
   const onCourt = playable.filter((m) => m.court);
   const upNext = playable.filter((m) => !m.court).slice(0, 6);
   const { played, total } = progress(t);
+  /** Last few decided matches - what fills the "On now" tab between rounds. */
+  const recent = useMemo(
+    () =>
+      liveMatches(t)
+        .filter((m) => m.winner && m.completedAt)
+        .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
+        .slice(0, 6),
+    [t],
+  );
   const champion = t.teams.find((x) => x.id === t.championTeamId);
+
+  const nameOf = (id?: string) => t.teams.find((x) => x.id === id)?.name ?? "—";
 
   const record = (m: TournamentMatch, a: number, b: number) => {
     onChange(recordResult(t, m.id, a, b));
@@ -63,10 +74,10 @@ export default function TournamentScreen({
     toast("Result cleared");
   };
 
-  const tabs: { key: Tab; label: string; icon: typeof ListChecks; show: boolean }[] = [
+  const tabs: { key: Tab; label: string; icon: typeof ListChecks; show: boolean; mobileOnly?: boolean }[] = [
     { key: "now", label: "On now", icon: ListChecks, show: true },
     { key: "schedule", label: "Schedule", icon: Table2, show: true },
-    { key: "table", label: isRotating ? "Players" : "Standings", icon: Trophy, show: true },
+    { key: "table", label: isRotating ? "Players" : "Standings", icon: Trophy, show: true, mobileOnly: true },
     { key: "bracket", label: "Bracket", icon: GitBranch, show: hasBracket || t.format === "pools-bracket" },
     { key: "teams", label: isRotating ? "Players" : "Teams", icon: Users, show: !isRotating },
     { key: "log", label: "Changes", icon: History, show: (t.log?.length ?? 0) > 0 },
@@ -101,23 +112,48 @@ export default function TournamentScreen({
   };
 
   return (
-    <div className="flex flex-col gap-5 pb-12">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <button onClick={onExit} className="pressable flex items-center gap-1.5 text-sm font-medium mb-2" style={{ color: "var(--text-secondary)" }}>
-            <ArrowLeft size={16} /> All events
-          </button>
-          <h1 className="font-display text-2xl sm:text-3xl font-black leading-tight truncate" style={{ color: "var(--text)" }}>
+    <div className="flex flex-col gap-4 pb-12">
+      {/* Header: identity, progress and actions on ONE row. It used to be a
+          280px stack that pushed the actual work below the fold. */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <button onClick={onExit} aria-label="All events" className="pressable hover-tint flex items-center gap-1.5 text-sm font-medium shrink-0" style={{ color: "var(--text-secondary)" }}>
+          <ArrowLeft size={16} /> <span className="hidden sm:inline">All events</span>
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-xl sm:text-2xl font-black leading-tight truncate" style={{ color: "var(--text)" }}>
             {t.name}
           </h1>
-          <p className="text-xs mt-1 tnum" style={{ color: "var(--text-muted)" }}>
+          <p className="text-[11px] tnum truncate" style={{ color: "var(--text-muted)" }}>
             {FORMAT_INFO[t.format].label}
             {t.config.division && t.config.division !== "open" ? ` · ${DIVISION_INFO[t.config.division].label}` : ""}
             {" · "}
-            {isRotating ? `${t.players.length} players` : `${t.teams.length} teams`} · {played}/{total} matches
+            {isRotating ? `${t.players.length} players` : `${t.teams.length} teams`} · {t.config.courts} court
+            {t.config.courts === 1 ? "" : "s"}
           </p>
         </div>
+
+        {champion && (
+          <span
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-bold shrink-0 max-w-[14rem]"
+            style={{ background: "color-mix(in srgb, var(--yellow) 14%, transparent)", border: "1px solid var(--yellow)", borderRadius: "var(--r-chip)", color: "var(--text)" }}
+          >
+            <Trophy size={14} style={{ color: "var(--yellow)" }} />
+            <span className="truncate">{champion.name}</span>
+          </span>
+        )}
+
+        {/* Progress, as a number and a rail, in the space the header row has
+            going spare. */}
+        <span className="hidden md:flex items-center gap-2 shrink-0">
+          <span className="tnum text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>
+            {played}/{total}
+          </span>
+          <span className="h-1.5 w-24 overflow-hidden" style={{ background: "var(--bg-elevated)", borderRadius: 999 }}>
+            <span className="block h-full transition-all duration-500" style={{ width: `${total ? (played / total) * 100 : 0}%`, background: "var(--accent)" }} />
+          </span>
+        </span>
+
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => setExporting(true)}
@@ -136,41 +172,31 @@ export default function TournamentScreen({
         </div>
       </div>
 
-      {/* Progress rail */}
-      <div className="h-1.5 w-full overflow-hidden" style={{ background: "var(--bg-elevated)", borderRadius: 999 }}>
+      {/* Progress, on a phone where the header row has no room for it */}
+      <div className="md:hidden h-1.5 w-full overflow-hidden" style={{ background: "var(--bg-elevated)", borderRadius: 999 }}>
         <div
           className="h-full transition-all duration-500"
           style={{ width: `${total ? (played / total) * 100 : 0}%`, background: "var(--accent)" }}
         />
       </div>
 
-      {champion && (
-        <div
-          className="anim-pop flex items-center gap-3 p-4"
-          style={{ border: "1px solid var(--yellow)", borderRadius: "var(--r-panel)", background: "color-mix(in srgb, var(--yellow) 10%, transparent)" }}
-        >
-          <Trophy size={26} style={{ color: "var(--yellow)" }} />
-          <div className="min-w-0">
-            <div className="eyebrow">Champion</div>
-            <div className="font-display text-xl font-black truncate" style={{ color: "var(--text)" }}>{champion.name}</div>
-          </div>
-        </div>
-      )}
-
       {/* Tabs */}
       <div className="mat-thin flex gap-1 p-1 overflow-x-auto scroll-area" style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-chip)" }}>
-        {tabs.filter((x) => x.show).map(({ key, label, icon: Icon }) => (
+        {tabs.filter((x) => x.show).map(({ key, label, icon: Icon, mobileOnly }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
             aria-pressed={tab === key}
-            className="pressable flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors"
+            className={`pressable flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${mobileOnly ? "lg:hidden" : ""}`}
             style={tab === key ? { background: "var(--accent)", color: "var(--accent-ink)" } : { color: "var(--text-secondary)" }}
           >
             <Icon size={15} /> {label}
           </button>
         ))}
       </div>
+
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6 lg:items-start">
+      <div className="flex flex-col gap-4">
 
       {/* ── On now ── */}
       {tab === "now" && (
@@ -184,7 +210,7 @@ export default function TournamentScreen({
           {onCourt.length > 0 && (
             <section className="flex flex-col gap-2">
               <span className="eyebrow px-0.5">On court now</span>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(17rem, 1fr))" }}>
                 {onCourt.map((m) => (
                   <MatchCard
                     key={m.id}
@@ -201,9 +227,35 @@ export default function TournamentScreen({
           {upNext.length > 0 && (
             <section className="flex flex-col gap-2">
               <span className="eyebrow px-0.5">Up next</span>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(17rem, 1fr))" }}>
                 {upNext.map((m) => (
                   <MatchCard key={m.id} tournament={t} match={m} onRecord={(a, b) => record(m, a, b)} onPlay={() => onPlayMatch(m)} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {recent.length > 0 && (
+            <section className="flex flex-col gap-2">
+              <span className="eyebrow px-0.5">Just finished</span>
+              <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(15rem, 1fr))" }}>
+                {recent.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => { setTab("schedule"); }}
+                    className="mat-thin hoverable pressable flex items-center gap-2 px-2.5 py-2 text-left"
+                    style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-ctl)" }}
+                  >
+                    <span className="text-[11px] shrink-0" style={{ color: "var(--text-muted)" }}>
+                      {m.label ?? (m.pool ? m.pool : `R${m.round}`)}
+                    </span>
+                    <span className="text-xs truncate min-w-0 flex-1" style={{ color: "var(--text-secondary)" }}>
+                      {nameOf(m.winner)} beat {nameOf(m.winner === m.teamA ? m.teamB : m.teamA)}
+                    </span>
+                    <span className="tnum text-xs font-semibold shrink-0" style={{ color: "var(--text)" }}>
+                      {Math.max(m.scoreA ?? 0, m.scoreB ?? 0)}-{Math.min(m.scoreA ?? 0, m.scoreB ?? 0)}
+                    </span>
+                  </button>
                 ))}
               </div>
             </section>
@@ -274,7 +326,7 @@ export default function TournamentScreen({
             Every result and correction. Saved with the event and included in an export, so the next person can see
             what was changed and when.
           </p>
-          <ol className="flex flex-col gap-1.5">
+          <ol className="grid gap-1.5 lg:grid-cols-2">
             {[...(t.log ?? [])].reverse().map((entry, i) => (
               <li
                 key={`${entry.at}-${i}`}
@@ -295,6 +347,45 @@ export default function TournamentScreen({
           </ol>
         </div>
       )}
+
+      </div>
+
+      {/* The rail. Standings are the thing people glance at between every
+          match, so on a desktop they stop being a tab and become permanent -
+          which also fills the 20rem that was empty on every other tab. */}
+      <aside className="hidden lg:flex flex-col gap-4 lg:sticky lg:top-4">
+        {isRotating ? (
+          <StandingsTable rows={playerStandings(t)} title="Leaders" compact limit={10} />
+        ) : hasPools ? (
+          poolStandings(t).map(({ pool, rows }) => (
+            <StandingsTable key={pool} rows={rows} title={`Pool ${pool}`} qualifyingCount={t.config.advancePerPool} compact />
+          ))
+        ) : (
+          <StandingsTable rows={standings(t)} title="Standings" compact limit={12} />
+        )}
+
+        {onCourt.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <span className="eyebrow px-0.5">Courts</span>
+            {onCourt.map((m) => (
+              <div
+                key={m.id}
+                className="mat-thin flex items-center gap-2 px-2.5 py-2"
+                style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-ctl)" }}
+              >
+                <span className="tnum flex items-center justify-center w-6 h-6 shrink-0 text-[11px] font-bold"
+                      style={{ background: "var(--accent)", color: "var(--accent-ink)", borderRadius: 8 }}>
+                  {m.court}
+                </span>
+                <span className="text-xs truncate min-w-0" style={{ color: "var(--text-secondary)" }}>
+                  {nameOf(m.teamA)} v {nameOf(m.teamB)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </aside>
+      </div>
 
       {/* Export */}
       {exporting && (
@@ -330,7 +421,7 @@ export default function TournamentScreen({
 
       {/* ── Teams ── */}
       {tab === "teams" && (
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {t.teams.map((team) => {
             const row = standings(t).find((r) => r.teamId === team.id);
             return (
@@ -394,7 +485,7 @@ function Schedule({
                 {doneCount}/{inRound.length}
               </span>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(17rem, 1fr))" }}>
               {inRound.map((m) => (
                 <MatchCard
                   key={m.id}

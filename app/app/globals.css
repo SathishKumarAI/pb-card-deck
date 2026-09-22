@@ -197,6 +197,12 @@ svg.lucide { flex-shrink: 0; }
    defined after the utilities, so it would keep winning. */
 @media (min-width: 1024px) {
   .app-col--wide { max-width: 64rem; }
+  /* A running event is a dashboard, not prose: it earns the extra width, and
+     on a 1440 display the alternative is 130px of empty gutter either side. */
+  .app-col--event { max-width: 72rem; }
+}
+@media (min-width: 1440px) {
+  .app-col--event { max-width: 84rem; }
 }
 
 /* Safe-area helpers for notches / home indicators */
@@ -562,3 +568,4 @@ textarea:focus-visible {
   font-size: 0.9em; padding: 0.1em 0.35em; border-radius: 0.35rem;
   background: var(--bg-elevated); border: 1px solid var(--border);
 }
+

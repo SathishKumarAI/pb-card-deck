@@ -500,7 +500,7 @@ export default function Home() {
         <div className="mesh-bg flex flex-col" style={{ background: "var(--bg)", minHeight: "100dvh" }}>
           <span aria-hidden className="court-centre-line court-centre-line--top" />
           <span aria-hidden className="court-centre-line court-centre-line--bottom" />
-          <div className="app-col app-col--wide flex flex-col flex-1 safe-x">
+          <div className={`app-col ${homeTab === "event" ? "app-col--event" : "app-col--wide"} flex flex-col flex-1 safe-x`}>
           {/* Header: identity on the left, the three always-available controls
               on the right. Help sits here, not in a menu - a first-timer should
               never have to go looking for it. */}
