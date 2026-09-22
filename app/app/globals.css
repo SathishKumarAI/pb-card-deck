@@ -39,8 +39,12 @@
   --app-w: 30rem;
 }
 
-/* Dark mode (default) - softened to reduce eye strain (no pure black / pure white) */
-:root, [data-theme="dark"] {
+/* Dark mode - softened to reduce eye strain (no pure black / pure white).
+   Light is the DEFAULT (see `:root, [data-theme="light"]` below): the app is
+   used outdoors in daylight far more often than at night, and a first-time
+   visitor should not be handed a dark interface before they have chosen one.
+   The theme button cycles light -> dark -> auto and the choice persists. */
+[data-theme="dark"] {
   --bg: #0b0e0f;
   --bg-card: #13181a;
   --bg-elevated: #1a2123;
@@ -74,8 +78,8 @@
   --court-ball: rgba(251, 191, 36, 0.10);
 }
 
-/* Light mode - soft mint-tinted, with visible colour depth (not flat grey) */
-[data-theme="light"] {
+/* Light mode (default) - soft mint-tinted, with visible colour depth (not flat grey) */
+:root, [data-theme="light"] {
   --bg: #eef3f1;
   --bg-card: #ffffff;
   --bg-elevated: #e2ebe7;
@@ -83,13 +87,17 @@
   --text: #16201c;
   --text-secondary: #566b63;
   --text-muted: #71837b;
-  --accent: #059669;
-  --accent-dim: #047857;
+  /* Measured, not picked by eye - `node scripts/contrast-audit.mjs` prints
+     every pair. The first light palette failed twice: white on #059669 came to
+     3.77:1 (AA wants 4.5 for a button label) and the #d97706 serve marker sat
+     at 2.84:1 on the page. Darkening both fixed it without changing the hue. */
+  --accent: #047857;      /* white on this: 5.48:1 */
+  --accent-dim: #065f46;
   --accent-ink: #ffffff;
-  --accent-glow: rgba(5, 150, 105, 0.22);
-  --blue: #2563eb;
-  --red: #e11d48;
-  --yellow: #d97706;
+  --accent-glow: rgba(4, 120, 87, 0.22);
+  --blue: #1d4ed8;        /* 5.98:1 on the page */
+  --red: #c81e4a;         /* 5.01:1 */
+  --yellow: #b45309;      /* 4.48:1, up from 2.84 */
   /* Light mode sits behind dark text, so the mesh has to stay near-invisible -
      at the old alphas the blue and violet lobes turned the middle of the page
      grey-purple. */
@@ -110,10 +118,14 @@
   --court-ball: rgba(217, 119, 6, 0.10);
 }
 
-/* A soft top-down tint so light surfaces have depth instead of flat white. */
-[data-theme="light"] body {
+/* A soft top-down tint so light surfaces have depth instead of flat white.
+   Default, because light is the default theme; dark takes it back off. */
+body {
   background: radial-gradient(135% 85% at 50% -15%, #f1f8f4 0%, var(--bg) 55%);
   background-attachment: fixed;
+}
+[data-theme="dark"] body {
+  background: var(--bg);
 }
 
 /* Scrolling.

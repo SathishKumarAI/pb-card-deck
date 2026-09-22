@@ -16,6 +16,10 @@ Made just for fun and personal use only - not for making sales.
 - <a href="ONBOARDING.md" target="_blank" rel="noopener noreferrer">Onboarding</a> — set up, run, architecture, common tasks
 - <a href="../CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a> — branches, CI gates, PR checklist
 
+**Module docs (change → file tables)**
+- <a href="../app/lib/tournament/README.md" target="_blank" rel="noopener noreferrer">lib/tournament</a> — the event engine: formats, brackets, standings, the slot model
+- <a href="../app/components/tournament/README.md" target="_blank" rel="noopener noreferrer">components/tournament</a> — the event screens and the decisions behind them
+
 **How the game works**
 - <a href="DOUBLES-SCORING.md" target="_blank" rel="noopener noreferrer">Doubles scoring &amp; serving</a> — rules model, which button to press, the why
 - <a href="SCORING-UX-RESEARCH.md" target="_blank" rel="noopener noreferrer">Scoring-UX research</a> — how top apps keep score for beginners; our decisions

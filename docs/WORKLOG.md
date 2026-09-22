@@ -1,5 +1,48 @@
 # Worklog
 
+## 2026-09-22 03:10 - Merged PR #5; light theme by default, measured palette, docs refresh
+
+**Summary:** PR #5 squash-merged to main (`33d6f12`) after CI, secret scan and the Vercel preview
+went green. Then the colour work the merge made worth doing: light is now the default theme, and
+the palette is checked by a script instead of an eye.
+
+**Colour audit.** `app/scripts/contrast-audit.mjs` reads the tokens straight out of globals.css and
+prints a WCAG table for both themes - 16 text/surface pairs, 4.5:1 for body text, 3:1 for large text
+and markers - exiting non-zero below threshold. `lib/contrast.test.ts` runs it, so a palette edit
+that breaks contrast fails CI rather than someone's eyes in sunlight.
+
+Two genuine failures in light mode, both of the kind a dark-first palette hides:
+- white on `--accent` `#059669` = **3.77:1** (a button label needs 4.5)
+- `--yellow` `#d97706` serve marker on the page = **2.84:1** (needs 3.0)
+
+Darkened without changing hue: accent `#047857` (white on it 5.48), yellow `#b45309` (4.48), plus
+blue `#1d4ed8` and red `#c81e4a` for headroom. All 16 pairs now pass in both themes.
+
+Also caught: the audit script's first version searched the raw CSS for a selector and matched it
+inside a *comment* that mentioned it, so both themes reported identical, suspiciously good numbers.
+It now matches a selector only where it opens a rule at the start of a line - a reminder that a
+measuring tool needs checking as carefully as the thing it measures.
+
+**Light by default.** `:root` now carries the light palette and `[data-theme="dark"]` overrides it;
+`layout.tsx` ships `data-theme="light"`, the theme-color meta matches `--bg` per theme, and the
+header button cycles light -> dark -> auto with the choice persisted.
+
+**Docs refresh.** README gains a "Making a change" change-to-file table, the commands, the two rules
+this repo learned the hard way, and a "Where it could go next" table with the reason each idea is
+still absent. app/README gains sections on tournaments (the slot model), sharing, and colour, plus
+an honest roadmap; its project-structure listing now shows `lib/tournament/`,
+`components/tournament/`, `lib/streaks.ts`, `lib/manual.ts`, `useScrollLock`, `SharePanel` and
+`scripts/`. CONTRIBUTING gains the gate commands. docs/index links the two module READMEs.
+app/CLAUDE.md records the light-default and measured-colour rules.
+
+**Housekeeping:** `core.fileMode=false` locally, which stops Windows reporting phantom 755->644 diffs
+on the shell scripts - the noise that appeared in every `git status` this session. Restored the
+91-line `CLAUDE.md` (plane-agent-rules v2) that was sitting untracked over main's older 46-line copy.
+
+**Verification:** 144 tests pass, tsc clean, build clean, eslint 0 errors, `npm run contrast` green,
+light default confirmed in the browser (`data-theme=light`, `--accent #047857`, theme-color
+`#eef3f1`).
+
 ## 2026-09-21 22:05 - Share cards: streaks, wins and champions, sized for Instagram and WhatsApp
 
 **Summary:** A win, a streak or a tournament result can now be posted as a picture. Three canvas
