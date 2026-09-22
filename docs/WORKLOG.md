@@ -1,5 +1,43 @@
 # Worklog
 
+## 2026-09-21 19:30 - Tournament mode: five formats, one engine, 31 tests
+
+**Summary:** The app can now run an event, not just a game. Five formats, 4 to 50+ players,
+schedule and standings and bracket generated, results entered at a desk or played through the
+existing scorekeeper.
+
+**The design decision everything rests on:** a match holds two SLOTS, not two teams. A slot says
+where its team comes from - a seed, the winner of another match, the loser of another match, or a
+bye. Every format is then the same object with different wiring, and one function, `resolveSlots`,
+walks the list filling in whatever is knowable. That single pass advances a bracket, awards a bye
+nobody plays, builds the playoff when pools finish, and decides a double-elimination reset is
+unnecessary. Adding a format means writing wiring, not writing advance logic.
+
+**Formats:** round robin (circle method), pools then playoff bracket (snake-seeded pools,
+cross-seeded knockout), single elimination (standard seeding, byes padded to a power of two),
+double elimination (winners + losers brackets, minor/major losers rounds, grand final plus reset),
+and rotating partners, where players enter alone, are ranked by record, grouped in fours and paired
+1-with-4 against 2-with-3, and the score follows the person rather than the pair.
+
+**Two bugs the tests and the browser caught:**
+- Head-to-head was applied to any tie. With three teams in a cycle (A beat B, B beat C, C beat A)
+  that makes an inconsistent comparator, so the standings order depended on input order. Now
+  head-to-head only decides a straight two-way tie; three or more level falls through to point
+  difference.
+- Court assignment numbered matches per round, modulo the court count - and every pool has its own
+  round 1, so a 4-pool event put three simultaneous matches on court 1. A court holds one match:
+  the first N playable matches get numbers, the rest queue.
+
+**Also:** `GameSession.tournamentRef` links a scorekeeper game back to the match that scheduled it
+(team 1 is always team A, which is what makes the write-back safe). Backups are version 2 and carry
+tournaments; a v1 backup imports without touching events on the device. The in-app manual gained a
+"Running a tournament" section, and both new directories have change-to-file READMEs.
+
+**Verification:** 106 tests pass (31 new), `tsc --noEmit` clean, `npm run build` clean, eslint 0
+errors. Browser-checked end to end: a 25-team pools event from a 50-name paste, played a match
+through the scorekeeper, watched progress go 0/66 -> 1/66, the court free up, and the pool table
+update. Checked at 390px and 1280px.
+
 ## 2026-09-21 19:10 - iOS glass, a court backdrop, real scroll behaviour, desktop layout
 
 **Summary:** Second pass on the premium work. The app now presents as an app - glass materials,

@@ -29,6 +29,10 @@ components/           - CardDisplay (3D flip + "?" explainer), ScoreKeeper, TopB
                         OfficialMatchSetup + OfficialControls (coach/umpire "Track a match"),
                         AchievementsPanel, CardBrowserPanel, FavoritesPanel, TVScore
                         (courtside display), Toast, NetworkStatus (offline indicator)
+lib/tournament/       - the event engine: formats, brackets, standings, courts.
+                        PURE, tested, no storage. See its README for the slot model.
+components/tournament/- the event screens (list, setup, dashboard, bracket).
+                        Only TournamentHome touches storage. See its README.
 lib/cards.ts          - card types, deck modes, filtering, shuffle, CATEGORY_INFO
 lib/glossary.ts       - shared pickleball glossary (Help panel + in-card highlighter)
 lib/manual.ts         - the in-app manual: every help answer as plain data (no JSX), searched
@@ -58,7 +62,11 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
 
 ## Conventions
 - Game logic = pure functions in `lib/game.ts`; UI calls them and stores the returned `GameSession`.
-- All persistence goes through `lib/client-api.ts` (swap point if a real DB is ever added).
+- All persistence goes through `lib/client-api.ts` (swap point if a real DB is ever added),
+  tournaments included - the engine never reads or writes storage itself.
+- A tournament match played on the scorekeeper carries `GameSession.tournamentRef`,
+  and team 1 is ALWAYS the match's team A. That is what lets the final score be
+  written straight back; swap the sides and results land on the wrong team.
 - Theme via CSS vars + `data-theme` on `<html>`; animation utilities live in `globals.css`.
 - **Surfaces are glass materials, not divs with a background.** `.mat-thin`
   (chips, rows, tiles) / `.mat-regular` (bars, inline panels) / `.mat-thick`

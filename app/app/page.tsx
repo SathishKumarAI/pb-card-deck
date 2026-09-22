@@ -4,8 +4,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, DeckMode, DECK_MODES, getFilteredCards, getDeck, shuffleArray, SKILL_LEVELS, SkillLevel, selectionLabel } from "@/lib/cards";
 import { GameSession, GameConfig, createGame, addScore, adjustScore, sideOut, undoLast, resetScore, startNewGame, newMatch, matchWinner, seriesTally, isPaused, pauseGame, resumePlay, elapsedMs, saveGame, listSavedGames, clearSavedGame, formatTime, serverLabel, recordTimeout, recordFault, logCount } from "@/lib/game";
 import { playScoreSound, playUndoSound, playCardFlipSound, playWinSound, playResetSound, triggerHaptic } from "@/lib/sounds";
-import { addMatch, deckToCards, CustomDeck, listFavoriteIds, toggleFavorite, bumpStat, matchSheet } from "@/lib/client-api";
-import { Sun, Moon, Monitor, Play, Pause, X, Bug, HelpCircle, Sparkles, Sprout, TrendingUp, Flame, Layers as LayersIcon, ClipboardCheck } from "lucide-react";
+import { addMatch, deckToCards, CustomDeck, listFavoriteIds, toggleFavorite, bumpStat, matchSheet, getTournament, saveTournament } from "@/lib/client-api";
+import type { Tournament, TournamentMatch } from "@/lib/tournament/types";
+import { recordResult as recordTournamentResult } from "@/lib/tournament/engine";
+import TournamentHome from "@/components/tournament/TournamentHome";
+import { Sun, Moon, Monitor, Play, Pause, X, Bug, HelpCircle, Sparkles, Sprout, TrendingUp, Flame, Layers as LayersIcon, ClipboardCheck, Trophy } from "lucide-react";
 import OfficialMatchSetup, { OfficialMatchOptions } from "@/components/OfficialMatchSetup";
 import OfficialControls from "@/components/OfficialControls";
 import TopBar from "@/components/TopBar";
@@ -78,7 +81,8 @@ export default function Home() {
   const [showBeginnerIntro, setShowBeginnerIntro] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const [showGameHint, setShowGameHint] = useState(false);
-  const [homeTab, setHomeTab] = useState<"cards" | "track">("cards");
+  const [homeTab, setHomeTab] = useState<"cards" | "track" | "event">("cards");
+  const [activeTournament, setActiveTournament] = useState<Tournament | null>(null);
   const [lastDeck, setLastDeck] = useState<string>("beginner");
   const [customCards, setCustomCards] = useState<Card[] | null>(null);
   const [customName, setCustomName] = useState<string | null>(null);
@@ -311,6 +315,48 @@ export default function Home() {
     });
   }, [allCards]);
 
+  /* A tournament match played on the scorekeeper. Team 1 is always the match's
+     team A, which is what lets the result be written straight back. */
+  const startTournamentMatch = useCallback((t: Tournament, m: TournamentMatch) => {
+    const nameOf = (id?: string) => t.teams.find((x) => x.id === id)?.name ?? "Team";
+    const label = m.label ?? (m.pool ? `Pool ${m.pool}` : `Round ${m.round}`);
+    setCustomCards(null);
+    setCustomName(`${t.name} · ${label}`);
+    setDeck(shuffleArray(getDeck(allCards, "chaos")));
+    setCurrentCard(null);
+    setCardHistory([]);
+    setMode("chaos");
+    setGame({
+      ...createGame("chaos", { team1: nameOf(m.teamA), team2: nameOf(m.teamB) }, {
+        officialMode: true,
+        gameType: t.teamSize === 1 ? "singles" : "doubles",
+        pointsToWin: t.config.pointsToWin,
+        winByTwo: t.config.winByTwo,
+        bestOf: t.config.bestOf,
+        eventLabel: `${t.name} - ${label}`,
+        cardsEnabled: !!t.config.cardsEnabled,
+        sideOutScoring: true,
+      }),
+      customName: `${t.name} · ${label}`,
+      tournamentRef: { tournamentId: t.id, matchId: m.id },
+    });
+    triggerHaptic("light");
+  }, [allCards]);
+
+  /* Write a finished tournament match back to its event, exactly once. */
+  useEffect(() => {
+    const ref = game?.tournamentRef;
+    if (!game?.winner || !ref) return;
+    const stored = getTournament(ref.tournamentId);
+    const match = stored?.matches.find((m) => m.id === ref.matchId);
+    if (!stored || !match || match.winner) return;
+    const updated = recordTournamentResult(stored, ref.matchId, game.score.team1, game.score.team2, {
+      playedInApp: true,
+    });
+    saveTournament(updated);
+    setActiveTournament((cur) => (cur?.id === updated.id ? updated : cur));
+  }, [game?.winner, game?.tournamentRef, game?.score.team1, game?.score.team2]);
+
   // Download the current match's sheet as a .txt file (coach/umpire export).
   const downloadMatchSheet = useCallback(() => {
     if (!game) return;
@@ -479,7 +525,14 @@ export default function Home() {
               on the left and everything you can act on collects in a column on
               the right, so a wide window gets a layout rather than a stretched
               phone screen. */}
-          <main className="flex-1 pb-8 flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:gap-16 lg:items-start lg:pt-6">
+          <main
+            className={
+              homeTab === "event"
+                ? "flex-1 pb-8 flex flex-col gap-5"
+                : "flex-1 pb-8 flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:gap-16 lg:items-start lg:pt-6"
+            }
+          >
+          {homeTab !== "event" && (
           <div className="anim-fade-up lg:sticky lg:top-8">
             <h1 className="font-display text-[2.1rem] sm:text-[2.6rem] lg:text-[3.4rem] font-black leading-[1.05] tracking-tight" style={{ color: "var(--text)" }}>
               Draw a twist card
@@ -510,13 +563,15 @@ export default function Home() {
               ))}
             </dl>
           </div>
+          )}
 
-          <div className="flex flex-col gap-6">
+          <div className={homeTab === "event" ? "flex flex-col gap-5" : "flex flex-col gap-6"}>
 
           {/* Top-level mode toggle: casual card play vs coach/umpire match tracking.
               Switchable any time - one tap changes the whole flow below. */}
+          {!activeTournament && (
           <div className="mat-thin flex items-center gap-1 p-1" style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-chip)" }}>
-            {([["cards", "Play with cards", LayersIcon], ["track", "Track a match", ClipboardCheck]] as const).map(([key, label, Icon]) => (
+            {([["cards", "Play", LayersIcon], ["track", "Track", ClipboardCheck], ["event", "Tournament", Trophy]] as const).map(([key, label, Icon]) => (
               <button
                 key={key}
                 onClick={() => setHomeTab(key)}
@@ -530,9 +585,10 @@ export default function Home() {
               </button>
             ))}
           </div>
+          )}
 
           {/* Resume in-progress games - multiple supported (F085) */}
-          {savedGames.length > 0 && (
+          {savedGames.length > 0 && homeTab !== "event" && (
             <div className="flex flex-col gap-2">
               {savedGames.length > 1 && (
                 <span className="eyebrow px-0.5">Resume a game ({savedGames.length})</span>
@@ -562,6 +618,14 @@ export default function Home() {
 
           {homeTab === "track" && (
             <OfficialMatchSetup onStart={(o) => { triggerHaptic("light"); startOfficialMatch(o); }} />
+          )}
+
+          {homeTab === "event" && (
+            <TournamentHome
+              active={activeTournament}
+              onActiveChange={setActiveTournament}
+              onPlayMatch={startTournamentMatch}
+            />
           )}
 
           {homeTab === "cards" && (

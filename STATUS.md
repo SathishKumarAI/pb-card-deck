@@ -17,6 +17,8 @@ What the branch contains, in order:
 3. **`fix(ui)` / `fix(a11y)`** — sheet focus rings, dialog focus targets.
 4. **`feat(ui)`** — iOS glass materials, the pickleball-court backdrop, the
    scroll fixes, hover states, and the desktop two-column layouts.
+5. **`feat(tournament)`** — the event engine and screens: five formats, pools,
+   brackets, standings, courts, and a scorekeeper hand-off.
 
 ## Next action
 
@@ -45,6 +47,16 @@ behind a flag.
    and a scripted `window.scrollTo` found them in seconds.
 6. The shell scripts show as modified in `git status` on Windows — that is only
    the 755 → 644 file-mode bit. Leave them unstaged.
+
+## Tournament mode, in one paragraph
+
+`lib/tournament/` is a pure engine (31 tests) and `components/tournament/` is
+its UI; both have change-to-file READMEs. The whole thing turns on one idea: a
+match holds two **slots**, not two teams, and a slot says where its team comes
+from (a seed, the winner of a match, the loser of a match, a bye). `resolveSlots`
+fills in whatever is knowable, which is how brackets advance, byes resolve,
+pools seed the playoff, and a double-elimination reset gets dropped when it is
+not needed. Add a format by writing wiring, not advance logic.
 
 ## Design system, in one paragraph
 

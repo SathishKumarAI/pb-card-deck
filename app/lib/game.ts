@@ -70,6 +70,10 @@ export interface GameSession {
   skippedCardIds: number[];
   /* Official-mode audit trail (timeouts / faults / side-switches). */
   matchLog?: MatchLogEntry[];
+  /* Set when this game IS a tournament match, so the final score can be
+     written back to the event that scheduled it. Team 1 is always the
+     match's team A. */
+  tournamentRef?: { tournamentId: string; matchId: string };
 }
 
 export const DEFAULT_CONFIG: GameConfig = {

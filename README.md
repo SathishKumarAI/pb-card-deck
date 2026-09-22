@@ -71,6 +71,18 @@ Everything the app does, grouped so you can find it fast.
 | **"What to do" line** | The card always shows a concrete "what to do this point", not just the constraint - plus a one-time in-game hint. |
 | **Searchable manual** | **Help** sits in the header on every screen: 30 plain-language answers grouped from "Start here" to "Your data", with a search box and three quick links. Written for someone who has never played pickleball. |
 
+### 🏆 Tournaments - run an event for 4 people or 50
+| Feature | What it does |
+|---|---|
+| **Five formats** | Round robin, pools → playoff bracket, single elimination, double elimination (with a losers bracket and a grand-final reset), and rotating partners, where players enter alone, change partner every round and the score follows the **person**. |
+| **Setup in one paste** | Paste your list, one entry per line. A line can be a player (`Sam`) or an existing pair (`Sam & Priya`); the rest are paired as listed, at random, or strongest-with-weakest. 50 names in, full schedule out. |
+| **Courts** | Say how many courts you have. The app puts exactly that many matches on court, numbers them, and moves the queue up as results land. |
+| **Two ways to score** | Type the final score at the desk, or hand the match to the full scorekeeper (serve tracking, undo, timeouts) and it writes the result back. |
+| **Standings that hold up** | Wins, then head-to-head for a straight two-way tie, then point difference. Pool tables show the qualifying line. |
+| **Bracket view** | Rounds as columns, byes resolved, labelled Quarter-final / Semi-final / Final; scrolls sideways on a phone because the shape is the information. |
+| **Fix mistakes** | Undo any result and everything downstream is undone with it - a playoff re-seeds itself if a pool result changes. |
+| **Share** | Copy the standings and the winner as plain text into any group chat. |
+
 ### 🏓 Coach / Umpire mode - "Track a match"
 | Feature | What it does |
 |---|---|

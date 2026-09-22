@@ -71,8 +71,10 @@ export default function AppMenu({
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const { decks, matches } = importData(String(reader.result));
-        showNotice(`Imported ${decks} deck(s) and ${matches} match(es).`, true);
+        const { decks, matches, tournaments } = importData(String(reader.result));
+        const parts = [`${decks} deck(s)`, `${matches} match(es)`];
+        if (tournaments) parts.push(`${tournaments} tournament(s)`);
+        showNotice(`Imported ${parts.join(", ")}.`, true);
       } catch {
         showNotice("Could not read that backup file.", false);
       }

@@ -166,6 +166,61 @@ export const MANUAL: ManualSection[] = [
   },
 
   {
+    id: "tournaments",
+    title: "Running a tournament",
+    blurb: "One device, any number of players, from a club night to a 50-person day.",
+    entries: [
+      {
+        q: "Set up an event in one paste",
+        a: "Tournament is the third button at the top of the home screen. The only slow part of running an event is typing names, so the app takes them all at once.",
+        steps: [
+          "Tap Tournament, then New tournament, and give it a name.",
+          "Pick a format - if you are unsure, Pools then bracket is the usual shape for a big day.",
+          "Paste your list, one entry per line. A line can be a single player, or an already-formed pair written as “Sam & Priya”.",
+          "Say how many courts you have, and what a game goes to.",
+          "Tap Create schedule. Every match, pool and round is generated for you.",
+        ],
+        keywords: "tournament event create setup league club night 50 players names paste",
+      },
+      {
+        q: "Which format should I pick?",
+        a: "Round robin: everyone plays everyone - fairest, best up to about 10 teams. Pools then bracket: split into pools, play a mini round robin, then the top teams knock out - the standard shape for a big field. Single elimination: lose once and you are out, fastest to a winner. Double elimination: everyone gets a second life in a losers bracket, fairest knockout but longest. Rotating partners: players enter alone and get a new partner every round, and the score follows the person - the social mixer.",
+        keywords: "format round robin pools bracket single double elimination rotating mixer choose which",
+      },
+      {
+        q: "We have an odd number of people",
+        a: "That is fine in every format. A round robin sits one team out each round, in turn. A knockout draw pads up to the next power of two and gives the top seeds a bye, which is awarded automatically - nobody stands around waiting for a match that cannot happen. A partner mixer sits out whoever has sat out least, so the rest is shared evenly.",
+        keywords: "odd number bye sit out uneven spare extra person",
+      },
+      {
+        q: "How do results get in?",
+        a: "Two ways, and you can mix them freely. Enter score types the final score in two taps, which is what a desk running eight courts wants. Play opens the full scorekeeper for that match - serve tracking, undo, timeouts - and writes the result back to the event when the game ends. Either way the standings, the bracket and the court assignments update immediately.",
+        keywords: "score enter result record play scorekeeper desk referee",
+      },
+      {
+        q: "Someone typed the wrong score",
+        a: "Open the Schedule tab, find the match and tap Undo result. Anything that depended on it is undone too: a bracket match whose players came from it empties out, and a playoff seeded from a pool is rebuilt once the pool is decided again.",
+        keywords: "wrong score mistake fix undo correct result change",
+      },
+      {
+        q: "How are ties in a pool broken?",
+        a: "Wins first. If exactly two teams are level, the match between them decides it. With three or more level, head-to-head usually runs in a circle - A beat B, B beat C, C beat A - so the app uses point difference instead, then points scored. The qualifying line in the table shows who is through.",
+        keywords: "tie tiebreak head to head point difference equal level standings qualify",
+      },
+      {
+        q: "What do the courts mean?",
+        a: "A court holds one match at a time. The On now tab shows exactly as many matches as you have courts, each with its number; everything else is queued under Up next and moves up automatically as results come in. Change the court count when you set the event up.",
+        keywords: "courts court number on now up next queue schedule",
+      },
+      {
+        q: "Can I share the standings?",
+        a: "Share on the event screen copies the table - or opens your phone's share sheet - with positions, records and point difference, plus the winner once there is one. It is plain text, so it pastes into any group chat.",
+        keywords: "share standings results export copy whatsapp group chat",
+      },
+    ],
+  },
+
+  {
     id: "yours",
     title: "Making it yours",
     blurb: "Settings, sound, themes and the things you can turn off.",
