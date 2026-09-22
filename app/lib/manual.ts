@@ -97,6 +97,16 @@ export const MANUAL: ManualSection[] = [
         keywords: "rarity legendary common intensity dots badge",
       },
       {
+        q: "Post a win or a streak to Instagram or WhatsApp",
+        a: "Anywhere you see Share, the app draws a picture of the result and hands it to your phone's own share sheet - Instagram, WhatsApp and everything else you have installed are in there. Pick the shape first: Square suits the Instagram feed and WhatsApp, Story is full-screen on a phone, Tall is Instagram's 4:5 crop. Copy caption puts the text on your clipboard to paste alongside. On a laptop there is no share sheet, so it saves the PNG instead - neither app can be posted to from a browser, by anyone.",
+        keywords: "share instagram whatsapp post image picture story social streak screenshot png caption",
+      },
+      {
+        q: "Where do win streaks come from?",
+        a: "From your saved match history, per name. Match history lists a Streaks section: the number is the current run of wins, the dots are recent results newest-first, and the share button next to each one makes the picture. A streak counts consecutive wins up to your most recent match, so one loss resets it - your best-ever run is kept separately and shown on the card.",
+        keywords: "streak wins in a row record best run stats history dots",
+      },
+      {
         q: "Can I save cards I like, or build my own deck?",
         a: "Yes to both. The star on a card saves it to Favourite cards. In the menu, Custom decks lets you build a deck out of exactly the cards you want, then play it like any other deck. Both live on your device.",
         keywords: "favourite favorite star custom deck build own save",

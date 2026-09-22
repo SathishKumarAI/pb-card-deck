@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Trophy, RotateCcw, Share2 } from "lucide-react";
-import { shareResult } from "@/lib/shareImage";
+import SharePanel from "./SharePanel";
 import { useToast } from "./Toast";
 import { useScrollLock } from "@/lib/useScrollLock";
 
@@ -24,18 +24,10 @@ export default function WinCelebration({
   onEndMatch: () => void;
 }) {
   const [confetti, setConfetti] = useState<{ x: number; color: string; delay: number; dur: number; size: number; rect: boolean }[]>([]);
-  const [sharing, setSharing] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   useScrollLock(true);
   const nextBtn = useRef<HTMLButtonElement>(null);
   const toast = useToast();
-
-  const onShare = async () => {
-    setSharing(true);
-    const r = await shareResult({ winnerName, score, matchOver, seriesWon });
-    setSharing(false);
-    if (r === "downloaded") toast("Result image saved");
-    else if (r === "failed") toast("Couldn't create the image");
-  };
 
   useEffect(() => {
     // Don't render confetti for reduced-motion users - the global CSS override
@@ -112,12 +104,11 @@ export default function WinCelebration({
             </button>
           )}
           <button
-            onClick={onShare}
-            disabled={sharing}
-            className="pressable flex items-center justify-center gap-2 px-6 py-3 font-medium rounded-full disabled:opacity-60"
+            onClick={() => setShareOpen(true)}
+            className="pressable flex items-center justify-center gap-2 px-6 py-3 font-medium rounded-full"
             style={{ background: "var(--bg-elevated)", color: "var(--text)", border: "1px solid var(--border)" }}
           >
-            <Share2 size={18} /> {sharing ? "Preparing..." : "Share result"}
+            <Share2 size={18} /> Share result
           </button>
           <button
             onClick={onEndMatch}
@@ -128,6 +119,14 @@ export default function WinCelebration({
           </button>
         </div>
       </div>
+
+      {shareOpen && (
+        <SharePanel
+          card={{ kind: "result", winnerName, score, matchOver, seriesWon }}
+          title="Share this win"
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -22,6 +22,7 @@ import { standings, poolStandings, playerStandings } from "@/lib/tournament/stan
 import StandingsTable from "./StandingsTable";
 import BracketView from "./BracketView";
 import MatchCard from "./MatchCard";
+import SharePanel from "../SharePanel";
 import { useToast } from "../Toast";
 
 type Tab = "now" | "schedule" | "table" | "bracket" | "teams" | "log";
@@ -41,6 +42,7 @@ export default function TournamentScreen({
   const [tab, setTab] = useState<Tab>("now");
   const [picked, setPicked] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [sharingImage, setSharingImage] = useState(false);
   const toast = useToast();
 
   const t = tournament;
@@ -104,6 +106,9 @@ export default function TournamentScreen({
   };
 
   const share = async () => {
+    // A finished event has a champion, so it deserves the image card; a
+    // running one is more useful as pasteable text.
+    if (champion) { setSharingImage(true); return; }
     const text = shareText();
     try {
       if (navigator.share) await navigator.share({ title: t.name, text });
@@ -386,6 +391,21 @@ export default function TournamentScreen({
         )}
       </aside>
       </div>
+
+      {sharingImage && champion && (
+        <SharePanel
+          title="Share the result"
+          onClose={() => setSharingImage(false)}
+          card={{
+            kind: "tournament",
+            eventName: t.name,
+            championName: champion.name,
+            standings: (isRotating ? playerStandings(t) : standings(t))
+              .slice(0, 5)
+              .map((r) => ({ rank: r.rank, name: r.name, wins: r.wins, losses: r.losses })),
+          }}
+        />
+      )}
 
       {/* Export */}
       {exporting && (

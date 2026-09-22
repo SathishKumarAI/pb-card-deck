@@ -59,6 +59,8 @@ Everything the app does, grouped so you can find it fast.
 | Feature | What it does |
 |---|---|
 | **Match history** | Finished matches are saved automatically, on your device. |
+| **Win streaks** | Match history keeps a per-name streak: current run, best-ever run, win rate, and recent results as dots. |
+| **Share cards** | Any win, streak or tournament result renders to a PNG in three shapes - Square (Instagram feed, WhatsApp), Story (1080×1920) and Tall (4:5) - handed to your phone's share sheet, with a caption to paste. |
 | **Export / Import backup** | Move decks + history between devices via a JSON file - no account, no upload. |
 | **Offline** | A service worker keeps it working at courts with bad signal. |
 

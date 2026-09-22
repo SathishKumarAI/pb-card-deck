@@ -1,5 +1,37 @@
 # Worklog
 
+## 2026-09-21 22:05 - Share cards: streaks, wins and champions, sized for Instagram and WhatsApp
+
+**Summary:** A win, a streak or a tournament result can now be posted as a picture. Three canvas
+cards in three aspect ratios, handed to the phone's own share sheet with a caption to paste.
+
+**New:** `lib/streaks.ts` computes per-name streaks from saved match history - current run, best run,
+win rate, recent results. The subtlety it exists to get right: history is stored newest-first, and a
+streak read off that order without reversing it is the streak from the wrong end of the day. Ten
+tests, including that case explicitly.
+
+**Cards** (`lib/shareImage.ts`, rewritten): result / streak / tournament, each at square 1080x1080
+(Instagram feed, WhatsApp), story 1080x1920, and 4:5 1080x1350. Court-line backdrop and the drawn
+pickleball, so a card is recognisable as this app at thumbnail size. System font stack - a share
+card must not wait on a webfont.
+
+**Bug caught by looking at it:** the first cut positioned everything at fixed offsets from the
+vertical centre. That works at 1350px tall and collides at 1080 - the square card had its stats row
+sitting on top of the wordmark. Everything now lays out inside `box(h)` in fractions of the usable
+area, which holds at every shape. Verified by rendering all three and looking.
+
+**UI:** `components/SharePanel.tsx` - shape picker, a live preview that IS the file (the canvas is
+rendered at 1080 and scaled by CSS, so preview and export cannot drift), Share / Save / Copy
+caption. Entry points: the win screen, each row of the new Streaks section in Match history, and a
+finished tournament's Share button.
+
+**Honesty in the copy:** Instagram has no web posting API. The panel says so - Share opens the
+phone's share sheet where Instagram and WhatsApp appear; on a laptop it saves the PNG instead.
+
+**Verification:** 143 tests pass (10 new), tsc clean, build clean, eslint 0 errors. Rendered the
+streak card in square and story from seeded history: 4 wins in a row, 7 won, 88%, best run 4, dots
+matching W-W-W-W-L-W-W-W newest-first.
+
 ## 2026-09-21 21:45 - The serve rotation was out by one for a whole game
 
 **Summary:** Reported as "scoring behaves illogically - it says it is moving to the second server when

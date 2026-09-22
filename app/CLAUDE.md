@@ -44,7 +44,12 @@ lib/game.ts           - PURE game engine (addScore/sideOut/undo/checkWin) + acti
 lib/client-api.ts     - local store: custom decks, match history, export/import;
                         matchSheet() export + official fields on SavedMatch/addMatch
 lib/useFocusTrap.ts   - focus-trap hook for dialogs / sheets
-lib/shareImage.ts     - render a shareable match / win image
+lib/streaks.ts        - win streaks from saved matches (pure, tested)
+lib/shareImage.ts     - share cards on canvas: result / streak / tournament, in
+                        square / story / 4:5. Owns PIXELS only; SharePanel owns
+                        choosing and sharing. Lay out inside `box(h)`, never at
+                        fixed offsets from the centre - that collided with the
+                        footer on the square card.
 lib/sounds.ts         - Web Audio SFX + haptics
 public/cards.json     - 1,729 cards
 public/sw.js          - network-first service worker (prod only; dev unregisters it)
