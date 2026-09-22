@@ -335,6 +335,14 @@ per defect, each written before its fix and named for what a player would see.
 The player-facing version of this table is in the app: Help → Keeping score →
 "The scoring rules, in full", written as points rather than prose.
 
+## Service worker
+
+`public/sw.js` is network-first: fresh when online, cached copy when not. It
+deliberately does **not** cache cross-origin requests or `/_next/static/*` -
+those filenames already carry a content hash, the browser's own HTTP cache
+handles them, and copying them in grew the cache by a full set of chunks on
+every deploy for ever, because `activate` only clears *other* cache versions.
+
 ## Asking before saving
 
 A finished match used to be written to history the instant the game ended.
@@ -343,6 +351,11 @@ A finished match used to be written to history the instant the game ended.
 never leaves the device either way - but "stays on your phone" is still a
 promise about the phone, so the first save asks. Dismissing the dialog counts as
 *not this time*, never as consent.
+
+`shouldAskToSave(pref, answeredThisMatch)` is the whole decision, and it is
+pure so it can be tested. The answer covers the **match**, not the game: a best
+of 3 finishes three games, and three dialogs for one match is nobody's idea of
+consent.
 
 ## Colour & theming
 

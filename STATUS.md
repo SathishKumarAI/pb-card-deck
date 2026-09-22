@@ -11,7 +11,7 @@ a flag.
 | | |
 |---|---|
 | Live | https://pb-card-deck.vercel.app |
-| Tests | 156 (engine, scoring audit, tournaments, streaks, contrast, a11y, board rendering) |
+| Tests | 164 (engine, two bug-hunt suites, tournaments, streaks, contrast, a11y, board rendering) |
 | Gates | `npm test` · `npm run contrast` · `npm run lint` · `npm run build` |
 | Default theme | **light**; dark and auto are one tap away and persist |
 

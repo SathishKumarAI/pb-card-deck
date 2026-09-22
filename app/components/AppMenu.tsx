@@ -137,7 +137,7 @@ export default function AppMenu({
         </div>
       )}
 
-      <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={doImport} />
+      <input ref={fileRef} type="file" accept="application/json" aria-label="Choose a backup file to import" className="hidden" onChange={doImport} />
     </div>
 
     {notice && (

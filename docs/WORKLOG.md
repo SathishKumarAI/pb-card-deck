@@ -1,5 +1,37 @@
 # Worklog
 
+## 2026-09-22 — second bug hunt: four more, found by using the app
+
+A sweep of every screen at 1440 and 390, every menu sheet, a full best-of-3,
+and a five-player round robin created and scored through the UI. No JavaScript
+errors anywhere. Four real defects, all now fixed with tests.
+
+| Defect | How it showed | Fix |
+|---|---|---|
+| **Nine form fields had no accessible name** | The whole tournament setup form, both Track-a-match name boxes, the event label, the team-name editor and the hidden import picker. A screen reader read them as unnamed edit boxes and number spinners, because the visible label sits in a sibling `<span>` | explicit `aria-label` on each; `NumberField` takes a `label` prop; `lib/a11y.test.tsx` guards all three forms |
+| **A pause was billed as play** | `duration_ms` and the match sheet used `Date.now() - startTime`. A game paused for a coffee break recorded the break as playing time | both use `elapsedMs`, which already subtracted pauses |
+| **The save dialog asked once per GAME** | Introduced with the consent feature the day before: a best of 3 raised three dialogs for one match | `shouldAskToSave(pref, answeredThisMatch)` - the first answer carries the whole match |
+| **The service worker cache grew for ever** | Every hashed `/_next/static/*` chunk was copied into the cache, and `activate` only clears *other* cache versions, so each deploy added a full set that was never evicted | skip `/_next/static/*` (immutable, the HTTP cache handles it) and anything cross-origin |
+
+Two things looked like bugs and were not, which is worth recording because both
+cost time:
+
+- **"Scrolling is broken on mobile."** It was not. At 390x844 the home screen
+  measures 852px against an 844px viewport - **8px** of travel, which feels
+  exactly like a dead page. At 375x667 the same screen has 206px and scrolls to
+  the bottom correctly. Sheets are fine too: opening Help pins `<html>`
+  (`data-locked="true"`), its own 7,776px scroller works, and the lock is
+  released on close. Note for future sweeps: a synthetic `WheelEvent` never
+  scrolls anything in Chrome, so a script-based wheel test always looks broken.
+- **"47 of 55 controls unreachable in the Help sheet."** My detector was wrong,
+  not the app: the scroll container *is* the dialog element, and I had only
+  scanned its descendants.
+
+The dev server was also serving a **stale `globals.css` again** - the CSS the
+page had loaded contained no `scrollbar-gutter` at all while production had it.
+Same Turbopack trap as before; a rebuild fixed it. When a CSS change appears to
+do nothing locally, fetch the stylesheet the page actually loaded first.
+
 ## 2026-09-21 — the 1,010-line page, three centring bugs, and a scoring audit
 
 Six things, in the order they were asked for.
