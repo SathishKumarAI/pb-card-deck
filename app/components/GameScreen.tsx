@@ -118,7 +118,7 @@ export default function GameScreen({
         menuSlot={menuSlot}
       />
 
-      <div className="app-col app-col--wide flex-1 w-full p-4 flex flex-col items-center gap-4 lg:grid lg:grid-cols-2 lg:gap-10 lg:items-start lg:pt-8">
+      <div className="app-col app-col--wide flex-1 w-full p-4 flex flex-col items-center gap-4 lg:grid lg:grid-cols-2 lg:gap-10 lg:items-start lg:content-center lg:pt-8">
         <div className="contents lg:flex lg:flex-col lg:items-center lg:gap-4 lg:w-full">
           {showNameEditor && (
             <PlayerNames
