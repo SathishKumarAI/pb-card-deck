@@ -28,6 +28,11 @@ export default function ScoreKeeper({
   const servingName = game.servingTeam === 1 ? game.playerNames.team1 : game.playerNames.team2;
   const otherName = game.servingTeam === 1 ? game.playerNames.team2 : game.playerNames.team1;
   const lostSub = isDoubles && game.serverNumber === 1 ? "→ 2nd server serves" : `→ side out to ${otherName}`;
+  /* The opening service turn of a game has ONE server, so the board correctly
+     reads "2nd server" at 0-0. Unexplained, that looks like a bug - say it. */
+  const openingTurn =
+    officialDoubles && game.serverNumber === 2 && game.history.length === 0 &&
+    game.score.team1 === 0 && game.score.team2 === 0;
 
   // Consequence narration: on every state change, describe what happened in
   // plain words ("Point Eagles 4-2" / "Side out - Hawks serve") and, if the
@@ -96,6 +101,13 @@ export default function ScoreKeeper({
         <button onClick={onSideOut} aria-label="Side out - switch serving team" aria-live="polite" className="pressable flex items-center gap-1.5 text-xs px-3 py-1 rounded-full" style={{ background: "var(--bg-elevated)", color: "var(--yellow)", border: "1px solid var(--border)" }}>
           <CircleDot size={13} /> Serving: {game.servingTeam === 1 ? game.playerNames.team1 : game.playerNames.team2}
         </button>
+      )}
+
+      {openingTurn && (
+        <p className="text-[11px] text-center max-w-[24rem] leading-snug" style={{ color: "var(--text-muted)" }}>
+          First service turn of the game, so <strong style={{ color: "var(--text-secondary)" }}>one server only</strong> -
+          a fault here is a side out, not a second server.
+        </p>
       )}
 
       {/* Prompt: WON/LOST flow in official side-out, else tap-who-won */}

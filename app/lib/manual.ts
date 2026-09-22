@@ -121,8 +121,18 @@ export const MANUAL: ManualSection[] = [
       },
       {
         q: "Who is serving, and what is a second server?",
-        a: "The yellow ball marker sits beside the serving team. In doubles, each team gets two servers before the serve passes over: lose a rally on the first server and your partner serves, lose again and it is a side-out to the other team. When you are refereeing a match the app shows '1st server' or '2nd server' so nobody has to remember.",
+        a: "The yellow marker sits beside the serving team. In doubles each side gets two service turns before the serve passes over: lose a rally on the first server and your partner serves, lose again and it is a side out. When you are refereeing, the board shows 1st or 2nd server so nobody has to remember.",
         keywords: "serve server first second doubles rotation side out who serves",
+      },
+      {
+        q: "Why does it say 2nd server at the start of a game?",
+        a: "Because that is the rule, and it is the one that surprises everyone. The side that serves first in a game gets only ONE service turn: their first fault hands the serve straight over instead of passing it to their partner. Referees call this \u201cstarting second server\u201d, and the app shows it the same way, with a note under the board on the opening turn. Without it, the first team would get an extra service turn and every rotation after it would be out by one.",
+        keywords: "second server start game 0-0 why opening first serve one server rule confusing",
+      },
+      {
+        q: "We won the rally but the serve moved to the second server",
+        a: "That is the serving side losing a rally, which is what moves their serve on - and only the serving side can score. So when you win a rally while receiving, nothing is added to your score: either their second server comes up, or, if that was already their second server, you take the serve. The message under the score names whoever won the rally so it is clear which of the two just happened.",
+        keywords: "won rally no point second server moved confusing illogical serve changed",
       },
       {
         q: "We tapped the wrong thing",

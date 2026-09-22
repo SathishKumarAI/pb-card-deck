@@ -115,16 +115,39 @@ export function outcomeMessage(prev: GameSession, next: GameSession): string {
   // A point was scored (one team's score went up).
   if (next.score.team1 > prev.score.team1) return `Point ${name(1)} — ${next.score.team1}-${next.score.team2}`;
   if (next.score.team2 > prev.score.team2) return `Point ${name(2)} — ${next.score.team1}-${next.score.team2}`;
-  // Serve passed to the other team.
+  // Serve passed to the other team: whoever now serves is who won the rally.
   if (next.servingTeam !== prev.servingTeam) {
     const label = next.config.gameType !== "singles" ? ", server 1" : "";
-    return `Side out — ${name(next.servingTeam)} serves${label}`;
+    return `Side out — ${name(next.servingTeam)} won the rally and serves${label}`;
   }
-  // Same team, advanced from 1st to 2nd server (doubles).
+  // Same team, advanced from 1st to 2nd server (official doubles). The
+  // RECEIVING team won that rally; naming them stops the message reading as
+  // though the serving team had just done something good.
   if (next.serverNumber !== prev.serverNumber) {
-    return `${name(next.servingTeam)} — 2nd server serves`;
+    const other = next.servingTeam === 1 ? 2 : 1;
+    return `${name(other)} won the rally — ${name(next.servingTeam)} 2nd server now serves`;
   }
   return "";
+}
+
+/**
+ * Which server the team serving FIRST in a game is on.
+ *
+ * Pickleball rule (USA Pickleball 4.B.7): the first service turn of each game
+ * is a single server. The side that starts serving loses the serve on its
+ * first fault instead of handing it to a partner - otherwise they would get
+ * one extra service turn per game, and every rotation after it is out by one.
+ *
+ * Referees say this as "starting second server", which is exactly what it is:
+ * the game opens as though the first server has already been used.
+ *
+ * Only official doubles tracks server numbers at all. Singles has no second
+ * server, and casual play deliberately passes the serve straight over, so both
+ * start at 1.
+ */
+export function initialServerNumber(config: GameConfig): 1 | 2 {
+  const officialDoubles = !!config.officialMode && config.gameType !== "singles";
+  return officialDoubles ? 2 : 1;
 }
 
 export function createGame(
@@ -132,12 +155,13 @@ export function createGame(
   names?: { team1: string; team2: string },
   configOverrides?: Partial<GameConfig>,
 ): GameSession {
+  const config = { ...DEFAULT_CONFIG, ...configOverrides };
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     mode,
     score: { team1: 0, team2: 0 },
     servingTeam: 1,
-    serverNumber: 1,
+    serverNumber: initialServerNumber(config),
     history: [],
     gameNumber: 1,
     gamesWon: { team1: 0, team2: 0 },
@@ -147,7 +171,7 @@ export function createGame(
     pausedAt: null,
     pausedMs: 0,
     playerNames: names || { team1: "Team 1", team2: "Team 2" },
-    config: { ...DEFAULT_CONFIG, ...configOverrides },
+    config,
     cardIds: [],
     drawnCardIds: [],
     favoriteCardIds: [],
@@ -326,7 +350,7 @@ export function startNewGame(game: GameSession): GameSession {
     ...game,
     score: { team1: 0, team2: 0 },
     servingTeam: game.servingTeam === 1 ? 2 : 1,
-    serverNumber: 1,
+    serverNumber: initialServerNumber(game.config),
     history: [],
     gameNumber: game.gameNumber + 1,
     gamesWon,
@@ -366,7 +390,10 @@ export function matchWinner(game: GameSession): 1 | 2 | null {
 // and settings the players already chose.
 export function newMatch(game: GameSession): GameSession {
   return {
-    ...createGame(game.mode, game.playerNames),
+    // Pass the config IN, so the serve is initialised under the rules this
+    // match actually plays by - assigning it afterwards left serverNumber
+    // computed from the defaults.
+    ...createGame(game.mode, game.playerNames, game.config),
     config: game.config,
     customName: game.customName,
     customCards: game.customCards,

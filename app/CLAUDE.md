@@ -101,6 +101,16 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
 - **Every state transition goes on the undo stack, not just the ones that change
   a number.** A side-out changes no score and was therefore un-undoable; the
   engine now logs it with a serve snapshot. See `ScoreEvent.serveBefore`.
+- **The serve rules are the rulebook's, not a simplification.** Official doubles
+  gives the team serving FIRST in a game a single service turn
+  (`initialServerNumber` returns 2 - "starting second server", USA Pickleball
+  4.B.7). Starting at 1 gave that team an extra serve and put every later
+  rotation out by one. Winning a rally never advances the server number; only
+  losing one does. Singles and casual play keep server 1 because they do not
+  model two servers.
+- **State that is correct but surprising must explain itself.** "2nd server" at
+  0-0 is right, and read as a bug until the board said why. If a display needs a
+  rulebook, print the sentence.
 - Mobile-first: `100dvh`, 16px inputs, `touch-action: manipulation`, safe-area insets, responsive `clamp()` card.
 
 ## Dead code (inert stubs from an abandoned auth experiment - safe to delete)

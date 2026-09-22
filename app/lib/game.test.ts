@@ -163,13 +163,19 @@ describe("undoLast", () => {
   });
 
   it("restores the second server in official doubles", () => {
-    let g = createGame("test", undefined, { officialMode: true, gameType: "doubles" });
-    g = addScore(g, 2);   // serving side lost: server 1 -> server 2, same team
+    // Start after a side-out, where both servers are live (a game's FIRST
+    // service turn has only one server).
+    let g = sideOut(createGame("test", undefined, { officialMode: true, gameType: "doubles" }));
+    expect(g.servingTeam).toBe(2);
+    expect(g.serverNumber).toBe(1);
+
+    g = addScore(g, 1);   // serving side lost: server 1 -> server 2, same team
     expect(g.serverNumber).toBe(2);
-    expect(g.servingTeam).toBe(1);
+    expect(g.servingTeam).toBe(2);
+
     const undone = undoLast(g);
     expect(undone.serverNumber).toBe(1);
-    expect(undone.servingTeam).toBe(1);
+    expect(undone.servingTeam).toBe(2);
   });
 
   it("can take back a reset", () => {
@@ -335,11 +341,70 @@ describe("official mode: doubles server rotation", () => {
   const officialDoubles = () =>
     createGame("track", { team1: "A", team2: "B" }, { officialMode: true, gameType: "doubles" });
 
-  it("first server fault advances to server 2 on the same team", () => {
-    const g = officialDoubles(); // servingTeam 1, serverNumber 1
+  it("the team serving first in a game gets only ONE server", () => {
+    // USA Pickleball 4.B.7: the first service turn of each game is a single
+    // server, so the first fault is a side-out. Starting a game on server 1
+    // gave that team two serves and put every later rotation out by one.
+    const g = officialDoubles();
+    expect(g.serverNumber).toBe(2);
+
     const after = sideOut(g);
-    expect(after.servingTeam).toBe(1);
+    expect(after.servingTeam).toBe(2);
+    expect(after.serverNumber).toBe(1);
+  });
+
+  it("first server fault advances to server 2 on the same team", () => {
+    // Once the serve has changed hands, both servers are live.
+    const g = sideOut(officialDoubles()); // now team 2, server 1
+    expect(g.serverNumber).toBe(1);
+    const after = sideOut(g);
+    expect(after.servingTeam).toBe(2);
     expect(after.serverNumber).toBe(2);
+  });
+
+  it("keeps the same server when the serving team wins the rally", () => {
+    // Winning a rally scores a point; the partners swap ends but the SAME
+    // player serves on. It must not advance to the second server.
+    const g = sideOut(officialDoubles());      // team 2 serving, server 1
+    const after = addScore(g, 2);
+    expect(after.score.team2).toBe(1);
+    expect(after.servingTeam).toBe(2);
+    expect(after.serverNumber).toBe(1);
+  });
+
+  it("runs a full service turn the way a referee would call it", () => {
+    let g = officialDoubles();                      // A serving, one server only
+    const calls: string[] = [];
+    const call = () => calls.push(`${g.servingTeam === 1 ? "A" : "B"}${g.serverNumber} ${g.score.team1}-${g.score.team2}`);
+
+    call();                       // A2 0-0  (first turn is a single server)
+    g = addScore(g, 2); call();   // B won the rally -> side out, B1 0-0
+    g = addScore(g, 2); call();   // B scores, still B1
+    g = addScore(g, 1); call();   // A won the rally -> B's 2nd server
+    g = addScore(g, 1); call();   // A won again -> side out to A1
+
+    expect(calls).toEqual([
+      "A2 0-0",
+      "B1 0-0",
+      "B1 0-1",
+      "B2 0-1",
+      "A1 0-1",
+    ]);
+  });
+
+  it("gives each new game of a match its own single first server", () => {
+    let g = officialDoubles();
+    g = { ...g, score: { team1: 11, team2: 3 }, winner: 1 };
+    const next = startNewGame(g);
+    expect(next.servingTeam).toBe(2);   // serve alternates between games
+    expect(next.serverNumber).toBe(2);  // and that team starts on one server
+  });
+
+  it("keeps the official config when a new match starts", () => {
+    const g = officialDoubles();
+    const fresh = newMatch(g);
+    expect(fresh.config.officialMode).toBe(true);
+    expect(fresh.serverNumber).toBe(2); // not 1 - the rule still applies
   });
 
   it("second server fault passes serve to the other team, server 1", () => {
@@ -347,6 +412,15 @@ describe("official mode: doubles server rotation", () => {
     const after = sideOut(g);
     expect(after.servingTeam).toBe(2);
     expect(after.serverNumber).toBe(1);
+  });
+
+  it("singles has no second server, so it starts on server 1", () => {
+    const g = createGame("track", undefined, { officialMode: true, gameType: "singles" });
+    expect(g.serverNumber).toBe(1);
+  });
+
+  it("casual doubles starts on server 1, because it does not model two servers", () => {
+    expect(createGame("family").serverNumber).toBe(1);
   });
 
   it("singles official mode passes serve straight over", () => {
@@ -364,7 +438,9 @@ describe("official mode: doubles server rotation", () => {
   });
 
   it("serverLabel reflects doubles vs singles", () => {
-    expect(serverLabel(officialDoubles())).toBe("Server 1");
+    // A game opens on its single first server, so this reads "Server 2".
+    expect(serverLabel(officialDoubles())).toBe("Server 2");
+    expect(serverLabel(sideOut(officialDoubles()))).toBe("Server 1");
     expect(serverLabel(createGame("track", undefined, { gameType: "singles" }))).toBe("");
   });
 });
@@ -390,6 +466,26 @@ describe("official mode: match log", () => {
   });
 });
 
+describe("outcomeMessage: who won the rally", () => {
+  it("names the team that won the rally when the serve moves to the 2nd server", () => {
+    // The old wording was "A — 2nd server serves", which reads as if A had
+    // just done something good. B won that rally.
+    const g = sideOut(createGame("track", { team1: "A", team2: "B" }, { officialMode: true, gameType: "doubles" }));
+    const after = addScore(g, 1); // A (receiving) won the rally
+    const msg = outcomeMessage(g, after);
+    expect(msg).toContain("A");
+    expect(msg.toLowerCase()).toMatch(/won the rally|rally to/);
+    expect(msg).toContain("2nd server");
+  });
+
+  it("names the team that won the rally on a side out", () => {
+    const g = createGame("track", { team1: "A", team2: "B" }, { officialMode: true, gameType: "doubles" });
+    const after = addScore(g, 2); // B won it, and takes the serve
+    expect(outcomeMessage(g, after)).toContain("B");
+    expect(outcomeMessage(g, after).toLowerCase()).toContain("side out");
+  });
+});
+
 describe("outcomeMessage (score narration)", () => {
   const base = () => createGame("track", { team1: "Eagles", team2: "Hawks" }, { officialMode: true, gameType: "doubles" });
 
@@ -399,16 +495,16 @@ describe("outcomeMessage (score narration)", () => {
     expect(outcomeMessage(prev, next)).toBe("Point Eagles — 1-0");
   });
 
-  it("describes advancing to the 2nd server (same team)", () => {
-    const prev = base(); // Eagles server 1
-    const next = sideOut(prev); // -> server 2 same team
-    expect(outcomeMessage(prev, next)).toBe("Eagles — 2nd server serves");
+  it("describes advancing to the 2nd server, naming who won the rally", () => {
+    const prev = sideOut(base()); // Hawks serving, server 1
+    const next = sideOut(prev);   // -> Hawks server 2
+    expect(outcomeMessage(prev, next)).toBe("Eagles won the rally — Hawks 2nd server now serves");
   });
 
   it("describes a side-out to the other team with server 1", () => {
     const prev = { ...base(), serverNumber: 2 as const };
     const next = sideOut(prev); // -> other team, server 1
-    expect(outcomeMessage(prev, next)).toBe("Side out — Hawks serves, server 1");
+    expect(outcomeMessage(prev, next)).toBe("Side out — Hawks won the rally and serves, server 1");
   });
 
   it("announces the winner", () => {

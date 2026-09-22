@@ -1,5 +1,37 @@
 # Worklog
 
+## 2026-09-21 21:45 - The serve rotation was out by one for a whole game
+
+**Summary:** Reported as "scoring behaves illogically - it says it is moving to the second server when
+that is not true". It was a real rules bug, and a wording bug on top of it.
+
+**Bug 1, the rule.** USA Pickleball 4.B.7: the team serving first in a game gets only ONE service
+turn, so their first fault is a side out rather than a handover to their partner. Referees call it
+"starting second server". `createGame` and `startNewGame` both opened at `serverNumber: 1`, which
+handed the first team an extra service turn and put every rotation for the rest of the game out by
+one. Now `initialServerNumber(config)` returns 2 for official doubles, 1 for singles and casual play
+(which do not model two servers at all). `newMatch` also built its game from DEFAULT_CONFIG and
+swapped the real config in afterwards, so it initialised the serve under the wrong rules - it passes
+the config in now.
+
+**Bug 2, the wording.** `outcomeMessage` said "Eagles - 2nd server serves", which reads as though
+the serving team had just done something good. The receiving team won that rally. It now names the
+rally winner in both cases: "Eagles won the rally - Hawks 2nd server now serves" and "Side out -
+Hawks won the rally and serves, server 1".
+
+**Making the rule visible.** "2nd server" at 0-0 is correct and looks broken, so the board prints a
+line on the opening turn: "First service turn of the game, so one server only - a fault here is a
+side out, not a second server." Two manual answers cover it, including the exact confusion reported
+("We won the rally but the serve moved to the second server").
+
+**Tests.** Eight new/rewritten cases in lib/game.test.ts, including a referee-style call sheet that
+asserts the whole first service turn as a sequence (A2 0-0, B1 0-0, B1 0-1, B2 0-1, A1 0-1). One
+existing test had the bug baked into it - it asserted that a fresh game's first fault advances to
+server 2 - and was rewritten to start after a side-out. New lib/scoreboard-view.test.tsx renders the
+board in jsdom and asserts what it SAYS, not just what the engine computes.
+
+**Verification:** 133 tests pass (was 119), tsc clean, build clean, eslint 0 errors.
+
 ## 2026-09-21 20:05 - Undo was broken for side-outs; tournament tree, edits, export, demo
 
 **Summary:** A reported "undo and reset don't work" turned out to be two engine bugs plus silence.
