@@ -4,7 +4,35 @@ Small app, no backend - operations are mostly "deploy" and "roll back". (Backlog
 
 ## Deploy
 
-- `main` auto-deploys to production on Vercel. Keep `main` green (CI gates lint + type-check + tests + build).
+- **`main` does NOT auto-deploy to production.** Measured 2026-09-22: the Git
+  integration creates *Preview* deployments for every push and PR, and nothing
+  else. Production is a manual `vercel --prod`, and the public domain needs an
+  alias on top of that (see the two traps below). Keep `main` green regardless -
+  CI gates lint + type-check + tests + build.
+
+### Two deploy traps, both found the hard way
+
+1. **`--scope` is not optional.** The project belongs to the team
+   `sathish-s-pickleball-cards`, not the account the CLI is logged in as, so a
+   bare `vercel --prod` fails with a bare `"Not authorized"`.
+2. **A successful production deploy does not move the public domain.**
+   `pb-card-deck.vercel.app` was pinned to a deployment from **81 days**
+   earlier, so everything "deployed" in between was live nowhere. Worse, the new
+   production deployment had been aliased to the retired
+   `pickleball-card-games.vercel.app` instead. Always finish with:
+
+   ```bash
+   vercel alias set <new-deployment-url> pb-card-deck.vercel.app      --scope sathish-s-pickleball-cards
+   ```
+
+   then verify the DOMAIN, not the deployment:
+
+   ```bash
+   curl -s "https://pb-card-deck.vercel.app/?cb=$RANDOM" | grep -o 'data-theme="[a-z]*"'
+   # expect data-theme="light"
+   ```
+
+   `./deploy-vercel.sh` now does all three steps and prints the check.
 - Preview: every PR / pushed branch gets a Vercel preview URL automatically (F274).
 
 ### One command: `./ship.sh`
