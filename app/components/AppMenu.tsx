@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Menu, History, Layers, Star, Download, Upload, MessageSquare, BookOpen, Check, AlertTriangle } from "lucide-react";
-import { exportData, importData } from "@/lib/client-api";
+import Link from "next/link";
+import { Menu, History, Layers, Star, Download, Upload, MessageSquare, BookOpen, Check, AlertTriangle, Info, Trash2, Library, Award } from "lucide-react";
+import { exportData, importData, clearAllData } from "@/lib/client-api";
 
 export default function AppMenu({
   onOpenHistory,
@@ -10,12 +11,16 @@ export default function AppMenu({
   onOpenFavorites,
   onOpenFeedback,
   onOpenRules,
+  onOpenBrowser,
+  onOpenAchievements,
 }: {
   onOpenHistory: () => void;
   onOpenDecks: () => void;
   onOpenFavorites: () => void;
   onOpenFeedback: () => void;
   onOpenRules: () => void;
+  onOpenBrowser: () => void;
+  onOpenAchievements: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [notice, setNotice] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -51,14 +56,25 @@ export default function AppMenu({
     setOpen(false);
   };
 
+  const doDeleteAll = () => {
+    setOpen(false);
+    const ok = typeof window !== "undefined" &&
+      window.confirm("Delete all local data - matches, custom decks, favorites and the current game? This cannot be undone.");
+    if (!ok) return;
+    clearAllData();
+    window.location.reload();
+  };
+
   const doImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const { decks, matches } = importData(String(reader.result));
-        showNotice(`Imported ${decks} deck(s) and ${matches} match(es).`, true);
+        const { decks, matches, tournaments } = importData(String(reader.result));
+        const parts = [`${decks} deck(s)`, `${matches} match(es)`];
+        if (tournaments) parts.push(`${tournaments} tournament(s)`);
+        showNotice(`Imported ${parts.join(", ")}.`, true);
       } catch {
         showNotice("Could not read that backup file.", false);
       }
@@ -84,9 +100,11 @@ export default function AppMenu({
 
       {open && (
         <div role="menu" className="anim-pop absolute right-0 mt-2 w-52 rounded-2xl overflow-hidden z-50 shadow-2xl" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-          <Item icon={<BookOpen size={16} />} label="Rules & help" onClick={() => { setOpen(false); onOpenRules(); }} />
+          <Item icon={<BookOpen size={16} />} label="Help & manual" onClick={() => { setOpen(false); onOpenRules(); }} />
+          <Item icon={<Library size={16} />} label="Browse cards" onClick={() => { setOpen(false); onOpenBrowser(); }} />
           <Item icon={<History size={16} />} label="Match history" onClick={() => { setOpen(false); onOpenHistory(); }} />
           <Item icon={<Star size={16} />} label="Favorite cards" onClick={() => { setOpen(false); onOpenFavorites(); }} />
+          <Item icon={<Award size={16} />} label="Achievements" onClick={() => { setOpen(false); onOpenAchievements(); }} />
           <Item icon={<Layers size={16} />} label="Custom decks" onClick={() => { setOpen(false); onOpenDecks(); }} />
           <div style={{ borderTop: "1px solid var(--border)" }}>
             <Item icon={<Download size={16} />} label="Export backup" onClick={doExport} />
@@ -94,6 +112,27 @@ export default function AppMenu({
           </div>
           <div style={{ borderTop: "1px solid var(--border)" }}>
             <Item icon={<MessageSquare size={16} />} label="Send feedback" onClick={() => { setOpen(false); onOpenFeedback(); }} />
+            <Link
+              href="/about"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--bg-elevated)]"
+              style={{ color: "var(--text)" }}
+            >
+              <span style={{ color: "var(--accent)" }}><Info size={16} /></span>
+              About &amp; privacy
+            </Link>
+          </div>
+          <div style={{ borderTop: "1px solid var(--border)" }}>
+            <button
+              onClick={doDeleteAll}
+              role="menuitem"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--bg-elevated)]"
+              style={{ color: "var(--red)" }}
+            >
+              <span style={{ color: "var(--red)" }}><Trash2 size={16} /></span>
+              Delete all data
+            </button>
           </div>
         </div>
       )}

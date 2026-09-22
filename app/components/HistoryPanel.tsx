@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Trophy, Clock, History, Trash2 } from "lucide-react";
-import { DECK_MODES, DeckMode } from "@/lib/cards";
-import { listMatches, clearMatches, SavedMatch } from "@/lib/client-api";
+import { X, Trophy, Clock, History, Trash2, Download } from "lucide-react";
+import { selectionLabel } from "@/lib/cards";
+import { useScrollLock } from "@/lib/useScrollLock";
+import { listMatches, clearMatches, playerRecords, matchesToCsv, SavedMatch } from "@/lib/client-api";
+import { allStreaks, streakHeadline, type StreakStats } from "@/lib/streaks";
+import SharePanel from "./SharePanel";
+import { Flame, Share2 } from "lucide-react";
 
 function formatDur(ms: number) {
   const m = Math.floor(ms / 60000);
@@ -15,10 +19,29 @@ function formatDate(ts: number) {
 
 export default function HistoryPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [matches, setMatches] = useState<SavedMatch[]>([]);
+  const [records, setRecords] = useState<{ name: string; wins: number; played: number }[]>([]);
+  const [streaks, setStreaks] = useState<StreakStats[]>([]);
+  /** Whose streak card is open, if any. */
+  const [sharing, setSharing] = useState<StreakStats | null>(null);
 
   useEffect(() => {
-    if (open) setMatches(listMatches());
+    if (open) {
+      const all = listMatches();
+      setMatches(all);
+      setRecords(playerRecords());
+      setStreaks(allStreaks(all, 2));
+    }
   }, [open]);
+
+  const downloadCsv = () => {
+    const blob = new Blob([matchesToCsv()], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "pickleball-match-history.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (!open) return null;
 
@@ -29,27 +52,109 @@ export default function HistoryPanel({ open, onClose }: { open: boolean; onClose
       onClose={onClose}
       action={
         matches.length > 0 ? (
-          <button
-            onClick={() => { clearMatches(); setMatches([]); }}
-            className="pressable flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
-            style={{ background: "var(--bg-elevated)", color: "var(--red)" }}
-          >
-            <Trash2 size={13} /> Clear
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={downloadCsv}
+              className="pressable flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
+              style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)" }}
+            >
+              <Download size={13} /> CSV
+            </button>
+            <button
+              onClick={() => { clearMatches(); setMatches([]); }}
+              className="pressable flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
+              style={{ background: "var(--bg-elevated)", color: "var(--red)" }}
+            >
+              <Trash2 size={13} /> Clear
+            </button>
+          </div>
         ) : null
       }
     >
+      {sharing && (
+        <SharePanel card={{ kind: "streak", stats: sharing }} title="Share this streak" onClose={() => setSharing(null)} />
+      )}
+
       {matches.length === 0 ? (
         <p className="text-sm text-center py-8" style={{ color: "var(--text-muted)" }}>No saved matches yet. Finish a game to see it here.</p>
       ) : (
         <div className="stagger flex flex-col gap-2">
+          {/* Streaks come first, and each one is a share card. A run of wins is
+              the only stat anybody posts. */}
+          {streaks.length > 0 && (
+            <div className="flex flex-col gap-1.5 mb-1">
+              <div className="eyebrow">Streaks</div>
+              {streaks.slice(0, 5).map((s) => (
+                <div
+                  key={s.name}
+                  className="mat-thin flex items-center gap-3 px-3 py-2.5"
+                  style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-ctl)" }}
+                >
+                  <span
+                    className="tnum flex items-center justify-center gap-1 w-12 h-9 shrink-0 text-sm font-bold"
+                    style={{
+                      background: s.current >= 2 ? "color-mix(in srgb, var(--yellow) 18%, transparent)" : "var(--bg-elevated)",
+                      color: s.current >= 2 ? "var(--yellow)" : "var(--text-muted)",
+                      borderRadius: 10,
+                    }}
+                  >
+                    {s.current >= 2 && <Flame size={12} />}
+                    {s.current > 0 ? s.current : s.best}
+                  </span>
+
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{s.name}</span>
+                    <span className="block text-xs truncate" style={{ color: "var(--text-muted)" }}>
+                      {streakHeadline(s)} · {s.winRate}% of {s.played}
+                    </span>
+                  </span>
+
+                  {/* The last few results, newest first. */}
+                  <span className="hidden sm:flex items-center gap-1 shrink-0" aria-hidden>
+                    {s.recent.slice(0, 6).map((won, i) => (
+                      <span
+                        key={i}
+                        className="w-2 h-2 rounded-full"
+                        style={{ background: won ? "var(--accent)" : "var(--border)" }}
+                      />
+                    ))}
+                  </span>
+
+                  <button
+                    onClick={() => setSharing(s)}
+                    aria-label={`Share ${s.name}'s streak`}
+                    className="pressable hover-tint p-2 rounded-full shrink-0"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    <Share2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {records.length > 0 && (
+            <div className="rounded-xl p-3 mb-1" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+              <div className="eyebrow mb-2">Win - loss record</div>
+              <div className="flex flex-col gap-1">
+                {records.slice(0, 5).map((r) => (
+                  <div key={r.name} className="flex items-center justify-between text-sm">
+                    <span className="truncate max-w-[60%]" style={{ color: "var(--text)" }}>{r.name}</span>
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      <span style={{ color: "var(--accent)" }}>{r.wins}W</span> - {r.played - r.wins}L
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {matches.map((g) => {
-            const modeMeta = DECK_MODES[g.mode as DeckMode];
+            const modeLabel = selectionLabel(g.mode);
             return (
               <div key={g.id} className="rounded-xl p-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: "var(--bg-elevated)", color: "var(--text-secondary)" }}>
-                    {modeMeta?.label || g.mode}
+                    {modeLabel}
                   </span>
                   <span className="flex items-center gap-1 text-xs" style={{ color: "var(--text-muted)" }}>
                     <Clock size={12} /> {formatDate(g.created_at)}
@@ -84,6 +189,7 @@ function Team({ name, score, win, color, right }: { name: string; score: number;
 
 export function Sheet({ title, icon, onClose, children, action }: { title: string; icon: React.ReactNode; onClose: () => void; children: React.ReactNode; action?: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
+  useScrollLock(true);
 
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
@@ -112,17 +218,24 @@ export function Sheet({ title, icon, onClose, children, action }: { title: strin
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+    <div className="sheet-scrim fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="anim-fade-up w-full sm:max-w-md max-h-[88dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl glass p-5 outline-none"
-        style={{ border: "1px solid var(--border)", paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+        className="sheet-rise scroll-area mat-thick w-full sm:max-w-[30rem] max-h-[88dvh] p-5 outline-none"
+        style={{
+          border: "1px solid var(--mat-edge)",
+          borderRadius: "var(--r-sheet) var(--r-sheet) 0 0",
+          boxShadow: "var(--elev-3)",
+          paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* iOS grabber: says "this sheet drags/dismisses" before you touch it */}
+        <div aria-hidden className="sm:hidden mx-auto mb-3 h-1 w-9 rounded-full" style={{ background: "var(--text-muted)", opacity: 0.4 }} />
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display flex items-center gap-2 text-lg font-bold" style={{ color: "var(--text)" }}>{icon} {title}</h2>
           <div className="flex items-center gap-2">

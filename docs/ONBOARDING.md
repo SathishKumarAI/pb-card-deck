@@ -1,8 +1,8 @@
-# Onboarding - Pickleball Card Games
+# Onboarding - PB Card Deck
 
-> A mobile-first, **local-first** web app: 200 pickleball "twist" cards + a real scorekeeper. No backend, no login, no database - all state in `localStorage`.
+> A mobile-first, **local-first** web app: 1,729 pickleball "twist" cards + a real scorekeeper. No backend, no login, no database - all state in `localStorage`.
 
-**Live:** https://pickleball-card-games.vercel.app · **Repo:** https://github.com/SathishKumarAI/pickleball-shuffle
+**Live:** https://pb-card-deck.vercel.app · **Repo:** https://github.com/SathishKumarAI/pb-card-deck
 **Related docs:** [WORKLOG](WORKLOG.md) · [Bug log](BUG-LOG.md) · [UI layout notes](UI-LAYOUT-NOTES.md) · [Tickets](TICKETS.md)
 
 ---
@@ -13,6 +13,13 @@ A free pickleball party game fused with a scorekeeper. Tap to draw a card, play 
 
 ## What's new (look out for these)
 
+- **Understand & Play (v1)** - onboarding + self-explaining cards for people with zero pickleball knowledge:
+  - **Welcome tour** on first open (what it is / a point start to finish / where help lives), replayable from Help.
+  - **Tap-to-define jargon** - underlined terms on a card open a plain-language definition (shared `lib/glossary.ts`).
+  - **Per-card "?" explainer** - "what this means / how to play it / what kind of card" (plain-language `CATEGORY_INFO`).
+  - **Always-shown "What to do"** line + a one-time in-game coaching hint.
+  - **Help** in the header on every screen - a searchable manual (`lib/manual.ts`), Glossary sourced from the shared file.
+- **Coach / Umpire "Track a match" mode** - home toggle `Play with cards` / `Track a match`; run and record a real match (singles/doubles, two-server rotation, timeouts/faults, side-switch), saved to Match history with a downloadable match sheet.
 - **1,729-card deck** with per-card metadata - `rarity` (badge on the card), `intensity`, `tags`, plus both a concise `effect` and a `commentary` string. Full dataset + the "why 1729": [`docs/data/cards.json`](data/cards.json).
 - **Commentator voice toggle** (Settings) - switch every card between concise rules and hyped commentator text.
 - **In-game pause** - freezes the match clock + blocks play, persists across reload.
@@ -32,7 +39,7 @@ A free pickleball party game fused with a scorekeeper. Tap to draw a card, play 
 
 ### Setup
 ```bash
-git clone https://github.com/SathishKumarAI/pickleball-shuffle
+git clone https://github.com/SathishKumarAI/pb-card-deck
 cd pickleball-shuffle
 bash setup.sh          # installs deps + runs a production build (cd app && npm install && npm run build)
 bash run-dev.sh        # → http://localhost:3000  (binds 0.0.0.0 for phone testing)
@@ -42,7 +49,7 @@ All npm work happens in **`app/`** (the Next.js project root). The helper script
 ### Verify it works
 - [ ] `http://localhost:3000` loads the landing page (new card+pickleball logo)
 - [ ] Pick a deck mode → draw a card → tap a score tile → score changes
-- [ ] `http://localhost:3000/cards.json` returns 200 (200-card payload)
+- [ ] `http://localhost:3000/cards.json` returns 200 (1,729-card payload)
 - [ ] `cd app && npm run build` is clean
 
 ---
@@ -55,7 +62,7 @@ Phone / Browser
       v
 [Next.js 16 App Router]  ← 100% client-rendered game
       |
-      +→ public/cards.json   (the 200 cards, fetched no-store)
+      +→ public/cards.json   (the 1,729 cards, fetched no-store)
       +→ localStorage        (active game, custom decks, history, favorites, feedback backup)
       +→ public/sw.js        (network-first service worker, prod only)
 ```
@@ -80,8 +87,9 @@ No server, no DB, no auth. Deployed as a static/SSR Next app on Vercel (project 
 | `app/lib/cards.ts` | Card types, deck modes, filtering, shuffle |
 | `app/lib/client-api.ts` | Local store: custom decks, match history, export/import (**the swap point if a real DB is ever added**) |
 | `app/lib/sounds.ts` | Web Audio SFX + haptics |
-| `app/components/` | `CardDisplay` (3D flip), `ScoreKeeper`, `TopBar`, `WinCelebration`, `*Panel.tsx`, `icons.tsx` |
-| `app/public/cards.json` | The 200 cards (source of truth: `data/cards.json`) |
+| `app/components/` | `CardDisplay` (3D flip + "?" explainer), `ScoreKeeper`, `TopBar`, `WinCelebration`, `WelcomeTour` (first-run tour), `GlossaryText` (tap-to-define), `OfficialMatchSetup` + `OfficialControls` ("Track a match"), `TVScore`, `*Panel.tsx`, `icons.tsx` |
+| `app/lib/glossary.ts` | Shared pickleball glossary (Rules tab + in-card highlighter) |
+| `app/public/cards.json` | The 1,729 cards (source of truth: `data/cards.json`) |
 | `app/app/globals.css` | Theme CSS vars + `anim-*` animation utilities |
 | `app/app/icon.svg`, `app/public/icons/` | Brand logo + PWA icons (regen via `rsvg-convert`) |
 | `setup.sh` / `run-dev.sh` / `run-prod.sh` / `deploy-vercel.sh` | Repo-root helper scripts |
@@ -96,7 +104,7 @@ No server, no DB, no auth. Deployed as a static/SSR Next app on Vercel (project 
 
 ## Common Tasks
 
-**Add/edit cards** → edit `data/cards.json`, copy to `app/public/cards.json` (both must match).
+**Add/edit cards** → the deck is generated, not hand-edited: edit the word banks / templates in `scripts/generate_cards.py`, then run `python3 scripts/generate_cards.py` (it rewrites `app/public/cards.json`, `data/cards.json`, and `docs/data/cards.json` and keeps ids/names unique).
 **Add a component** → `app/components/Foo.tsx`, import + wire state in `app/app/page.tsx`.
 **Regenerate logo/icons** → edit `app/app/icon.svg`, then `rsvg-convert -w <N> -h <N> app/app/icon.svg -o app/public/icons/icon-<N>.png`.
 **Deploy** → `bash deploy-vercel.sh` (runs `vercel --prod` from **repo root** - never from `app/`, or Vercel looks for `app/app` and fails). Pushing `main` also auto-deploys.
@@ -118,9 +126,9 @@ See [BUG-LOG.md](BUG-LOG.md) for the full history of fixes.
 
 ## Contributing
 - **Branches:** `main` is protected and auto-deploys to prod. Use `feature/*` / `fix/*` branches + PR.
-- **CI** (`.github/workflows/ci.yml`, runs in `app/`): `npm run lint` → `npx tsc --noEmit` → `npm run build`. All three must be green before merge.
+- **CI** (`.github/workflows/ci.yml`, runs in `app/`): `npm run lint` → `npx tsc --noEmit` → `npm test` (64 vitest tests) → `npm audit --audit-level=high` → `npm run build`. All must be green before merge.
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`).
-- **Before a PR:** `cd app && npm run lint && npx tsc --noEmit && npm run build`.
+- **Before a PR:** `cd app && npm run lint && npx tsc --noEmit && npm test && npm run build`.
 
 ### ⚠️ Dead code - do not extend
 An abandoned auth/Supabase experiment left inert stubs: `app/app/api/`, `app/app/login`, `app/app/signup`, `lib/db.ts`, `lib/auth.ts`, `lib/supabase/`, `components/AuthForm.tsx`, `components/UserMenu.tsx`. They are untracked, return HTTP 410 / render `null`, and are **safe to delete** (security-audited clean). The app is intentionally backend-free. See [TICKETS.md](TICKETS.md) T4.

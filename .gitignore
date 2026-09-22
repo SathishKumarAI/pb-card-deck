@@ -1,1 +1,6 @@
 .vercel
+
+# NOTE: never add a directory under `app/` here. Tailwind v4's automatic source
+# detection honours .gitignore, so ignoring `app/app/` silently stopped it
+# generating every class used only in app/app/page.tsx (sr-only, gap-8,
+# justify-start, z-[70] ...). See app/CLAUDE.md, "Traps".

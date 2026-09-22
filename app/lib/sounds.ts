@@ -51,3 +51,19 @@ export function triggerHaptic(pattern: "light" | "medium" | "heavy" = "light") {
   const patterns = { light: [10], medium: [30], heavy: [50, 30, 50] };
   navigator.vibrate(patterns[pattern]);
 }
+
+// Speak a short phrase (e.g. the score) via the Web Speech API. Opt-in; guarded
+// for browsers without speech synthesis. Cancels any in-flight utterance so
+// rapid points don't queue up and lag behind play.
+export function speak(text: string) {
+  if (!text) return;
+  try {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.05;
+    u.volume = 1;
+    synth.speak(u);
+  } catch {}
+}

@@ -1,4 +1,4 @@
-# Scaffold the Pickleball Card Games app
+# Scaffold the PB Card Deck app
 
 You are a senior full-stack engineer. Your objective is to scaffold a **local-first**
 Next.js web app - a pickleball twist-card game + scorekeeper - with a clean,

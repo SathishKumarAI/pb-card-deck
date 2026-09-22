@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="PB Card Deck - Pickleball Cards">
+  <defs>
+    <linearGradient id="ball" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe066"/>
+      <stop offset="1" stop-color="#ffc107"/>
+    </linearGradient>
+  </defs>
+
+  <!-- playing card, tilted -->
+  <g transform="rotate(-14 232 256)">
+    <rect x="118" y="86" width="220" height="312" rx="30" fill="#0a3d2c" opacity="0.16"/>
+    <rect x="112" y="78" width="220" height="312" rx="30" fill="#ffffff"/>
+    <path d="M158 138 l17 23 -17 23 -17 -23 z" fill="#0b6b4f"/>
+    <path d="M286 308 l17 23 -17 23 -17 -23 z" fill="#0b6b4f" opacity="0.55"/>
+  </g>
+
+  <!-- pickleball, overlapping the card's lower-right -->
+  <circle cx="360" cy="364" r="124" fill="#0a3d2c" opacity="0.16"/>
+  <circle cx="356" cy="358" r="122" fill="url(#ball)"/>
+  <g fill="#c47d00">
+    <circle cx="356" cy="302" r="15"/>
+    <circle cx="307" cy="338" r="15"/>
+    <circle cx="405" cy="338" r="15"/>
+    <circle cx="326" cy="392" r="15"/>
+    <circle cx="386" cy="392" r="15"/>
+    <circle cx="356" cy="358" r="15"/>
+    <circle cx="356" cy="414" r="15"/>
+  </g>
+</svg>

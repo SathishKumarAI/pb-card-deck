@@ -64,16 +64,123 @@ CALLOUTS = ["Paddle up!", "Let's go!", "Boom!", "Game on!", "Soft hands!", "Send
 HOOKS = ["Ohhh, here we go!", "Folks, strap in -", "Now THIS is pickleball!",
          "Big twist on the flip!", "Crowd's on their feet -", "Spicy one here -",
          "Hold onto your visors!", "And the card turns over...", "Mercy, what a draw!",
-         "You love to see it -", "Dial in, dial in!", "Here comes the curveball -"]
+         "You love to see it -", "Dial in, dial in!", "Here comes the curveball -",
+         "Oh, the deck is COOKING -", "Stop the presses, folks -", "Well would you look at that!",
+         "The card gods have spoken -", "This one's got teeth -", "Buckle up, buttercup -",
+         "We have got ourselves a game -", "Saints alive, what a flip!"]
 STINGERS = ["Let's see who's got it!", "Pressure's ON.", "This is where legends are made.",
             "Don't blink!", "Paddle up!", "The crowd goes wild!", "Ice in the veins now.",
             "Make it count!", "Showtime, baby.", "Glory awaits!", "No guts, no glory!",
-            "Win it for the highlight reel!"]
+            "Win it for the highlight reel!", "Heroes only past this point.",
+            "Cometh the moment, cometh the dink.", "History is one rally away.",
+            "Leave it all on the court!", "This is the good stuff.", "Nerves of steel required."]
+# Mid-phrases drop in occasionally to break the hook/rule/stinger rhythm.
+MIDS = ["", "", "", " The tension is unreal -", " You can feel the momentum shift -",
+        " And the crowd holds its breath -", " This is must-see pickleball -"]
 RARITY_BANDS = {1: "common", 2: "common", 3: "uncommon", 4: "rare", 5: "legendary"}
 
 
 def voiceify(i, rule):
-    return f"{HOOKS[i % len(HOOKS)]} {rule} {STINGERS[(i // 3) % len(STINGERS)]}"
+    rule = rule.rstrip()
+    mid = MIDS[i % len(MIDS)]
+    line = f"{HOOKS[i % len(HOOKS)]} {rule}{mid} {STINGERS[(i // 3) % len(STINGERS)]}"
+    return " ".join(line.split())
+
+
+# ── richer "detail" description: how the card plays + a short tip ──────
+# Two sentences per card (a category-specific read of the card + a universal
+# nudge), picked deterministically by id so the same card always reads the same.
+DETAILS = {
+    "Shot Restriction": [
+        "Strips your power game down to touch and placement.",
+        "Whoever stays patient under the limit usually takes the rally.",
+        "Turns a firefight into a chess match at the kitchen line.",
+        "Tempting to break the rule - resist, and the point is yours.",
+        "Great for grooving clean contact when rallies get loose.",
+        "Sloppy paddles get punished; controlled ones get rewarded.",
+    ],
+    "Body & Movement": [
+        "A coordination tax - move right and the shot takes care of itself.",
+        "Keeps your feet alive and your base low.",
+        "Awkward on the first rally, automatic by the third.",
+        "Tests balance as much as hands.",
+        "Footwork wins this one quietly.",
+        "Stay athletic; lazy stances leak points.",
+    ],
+    "Wild Card / Swap": [
+        "A shake-up that rewards whoever adapts fastest.",
+        "Comfort zones gone - improvise and read the play.",
+        "Talk to your partner; coordination is everything now.",
+        "Chaos with a purpose: react first, think second.",
+        "New rules, same court - adjust on the fly.",
+        "The team that adapts steals the rally.",
+    ],
+    "Penalty": [
+        "The cost of the last point comes due - dig in.",
+        "Climb out of the hole with smart, safe shots.",
+        "Pressure's real; calm hands beat hero balls.",
+        "A setback, not a sentence - one rally at a time.",
+        "Defense first until you've clawed it back.",
+        "Make them earn it even while you're down.",
+    ],
+    "Bonus / Reward": [
+        "Risk it for the biscuit - the payoff is real.",
+        "Pick your spot and go for the highlight.",
+        "Double the reward, double the focus.",
+        "Swing for it, but don't force a low-percentage ball.",
+        "This is where leads get built in a hurry.",
+        "Style and points in the very same shot.",
+    ],
+    "Social & Party": [
+        "Half the fun is the performance - commit to the bit.",
+        "Loosen up; the laughter is the real score here.",
+        "Character work that keeps the whole court grinning.",
+        "The more you lean in, the better it plays.",
+        "Low stakes, high giggles.",
+        "Bring the energy - your audience of four loves it.",
+    ],
+    "Strategy / Skill": [
+        "Targets your shot selection, not just your swing.",
+        "Rewards a plan over raw pace.",
+        "Find the pattern, then exploit the pattern.",
+        "Patience and placement carry this one.",
+        "Think two shots ahead and you'll own it.",
+        "Discipline beats firepower here.",
+    ],
+    "Wacky / Chaos": [
+        "Anything goes - ride the wave and laugh.",
+        "Pure unpredictability; adapt or get dunked on.",
+        "No script, all vibes.",
+        "Expect the ridiculous and roll with it.",
+        "The wilder you commit, the better it plays.",
+        "Order is overrated for one glorious rally.",
+    ],
+    "Court / Environment": [
+        "Set the scene and play the conditions.",
+        "The court just changed - adjust your geometry.",
+        "Use the safe zone; respect the danger zone.",
+        "Spatial awareness is the whole game now.",
+        "Read the shrinking court and pick your lanes.",
+        "Conditions reward the adaptable.",
+    ],
+    "Meta & Game-Flow": [
+        "Stakes spike - this rally can rewrite the scoreboard.",
+        "Win it and you swing the whole game.",
+        "Sudden-drama mode; nerves are the real opponent.",
+        "Big moment - ice in the veins.",
+        "One rally to rule them all.",
+        "High variance, high glory.",
+    ],
+}
+TAILS = ["Keep it safe and keep it fun.", "Talk to your partner.",
+         "Commit fully - half-measures lose.", "Breathe, reset, attack.",
+         "Make the next ball your best ball.", "Stay loose, stay sharp.",
+         "Respect the rally, then take it.", "Have fun out there."]
+
+
+def detail(category, i):
+    pool = DETAILS.get(category, ["A twist that keeps everyone honest."])
+    return f"{pool[i % len(pool)]} {TAILS[(i // len(pool)) % len(TAILS)]}"
 
 
 # ── word banks ────────────────────────────────────────────────────────
@@ -365,7 +472,8 @@ out = []
 for c in existing:
     inten = DEFAULT_INTENSITY.get(c["category"], 3)
     out.append({**c,
-                "commentary": c["effect"],  # originals: same text in both styles
+                "commentary": voiceify(c["id"], c["effect"]),  # real caller voice (F501)
+                "detail": detail(c["category"], c["id"]),        # richer description (F502)
                 "callout": CALLOUTS[c["id"] % len(CALLOUTS)],
                 "intensity": inten,
                 "rarity": "signature",  # the original hand-written set
@@ -379,6 +487,7 @@ for n, (cat, c) in enumerate(chosen[:need]):
     out.append({"id": nid, "category": cat, "name": c["name"],
                 "effect": c["rule"],                      # concise (default)
                 "commentary": voiceify(nid, c["rule"]),   # commentator voice (toggle)
+                "detail": detail(cat, nid),               # richer description (F502)
                 "vibe": c["vibe"],
                 "callout": CALLOUTS[nid % len(CALLOUTS)],
                 "intensity": inten, "rarity": rarity, "tags": c["tags"]})
@@ -403,7 +512,7 @@ for c in out:
 
 dataset = {
     "meta": {
-        "title": "Pickleball Card Games - The 1729 Deck",
+        "title": "PB Card Deck - The 1729 Deck",
         "total": TARGET,
         "why_1729": ("1729 is the Hardy-Ramanujan 'taxicab' number: the smallest number "
                      "expressible as a sum of two cubes in two different ways "
@@ -424,6 +533,7 @@ dataset = {
             "name": "Unique card title shown large.",
             "effect": "Concise rule text (default card style).",
             "commentary": "The same rule in playful sports-commentator voice (toggled in Settings).",
+            "detail": "A richer two-sentence read: how the card plays plus a quick tip.",
             "vibe": "One-line mood tag.",
             "callout": "A short hype shout for flavour / future SFX.",
             "intensity": "1 (chill) to 5 (chaos) - how disruptive the card is.",

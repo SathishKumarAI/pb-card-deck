@@ -1,9 +1,21 @@
 export interface ScoreEvent {
   team: 1 | 2;
-  type: "score" | "undo" | "reset";
+  type: "score" | "sideout" | "adjust" | "undo" | "reset";
   scoreBefore: { team1: number; team2: number };
   scoreAfter: { team1: number; team2: number };
+  /* Who was serving before this event, and which server they were on. Undo
+     without this restores the score but leaves the serve where it ended up,
+     which silently corrupts a side-out game - and a side-out itself could not
+     be undone at all, because it changed no score and logged no event. Older
+     saved games have no serve fields; undoLast falls back to the current
+     serve for those. */
+  serveBefore?: { team: 1 | 2; server: 1 | 2 };
   timestamp: number;
+}
+
+/** The serve half of a session, snapshotted for the undo stack. */
+function serveOf(game: GameSession): { team: 1 | 2; server: 1 | 2 } {
+  return { team: game.servingTeam, server: game.serverNumber };
 }
 
 export type GameType = "singles" | "doubles" | "mixed-doubles";
@@ -20,6 +32,25 @@ export interface GameConfig {
   bestOf: number;
   /* Card text style: false = concise, true = commentator voice. */
   commentaryMode: boolean;
+  /* Coach / umpire "Track a match" mode: proper server rotation + a match log.
+     Optional so existing saved games (no flag) keep the casual behaviour. */
+  officialMode?: boolean;
+  /* In official mode, whether twist cards can still be drawn (off by default). */
+  cardsEnabled?: boolean;
+  /* Optional event / round label recorded with the match. */
+  eventLabel?: string;
+  /* Speak the score aloud after each point (Web Speech API). Off by default. */
+  announceScore?: boolean;
+}
+
+/* One entry in an official match's log: a timeout, a manual fault, or the
+   halfway side-switch, stamped with the score + time it happened. */
+export interface MatchLogEntry {
+  type: "timeout" | "fault" | "switch";
+  team?: 1 | 2;
+  score: { team1: number; team2: number };
+  gameNumber: number;
+  timestamp: number;
 }
 
 import { Card } from "./cards";
@@ -49,6 +80,12 @@ export interface GameSession {
   drawnCardIds: number[];
   favoriteCardIds: number[];
   skippedCardIds: number[];
+  /* Official-mode audit trail (timeouts / faults / side-switches). */
+  matchLog?: MatchLogEntry[];
+  /* Set when this game IS a tournament match, so the final score can be
+     written back to the event that scheduled it. Team 1 is always the
+     match's team A. */
+  tournamentRef?: { tournamentId: string; matchId: string };
 }
 
 export const DEFAULT_CONFIG: GameConfig = {
@@ -61,15 +98,70 @@ export const DEFAULT_CONFIG: GameConfig = {
   gameType: "doubles",
   bestOf: 3,
   commentaryMode: false,
+  officialMode: false,
+  cardsEnabled: true,
+  eventLabel: "",
+  announceScore: false,
 };
 
-export function createGame(mode: string, names?: { team1: string; team2: string }): GameSession {
+// Plain-language description of what changed between two game states, for the
+// on-screen "consequence" banner and the optional voice announce. Pure so it's
+// unit-testable. Returns "" when nothing meaningful changed.
+export function outcomeMessage(prev: GameSession, next: GameSession): string {
+  const name = (t: 1 | 2) => (t === 1 ? next.playerNames.team1 : next.playerNames.team2);
+  if (next.winner && next.winner !== prev.winner) {
+    return `${name(next.winner)} wins the game!`;
+  }
+  // A point was scored (one team's score went up).
+  if (next.score.team1 > prev.score.team1) return `Point ${name(1)} — ${next.score.team1}-${next.score.team2}`;
+  if (next.score.team2 > prev.score.team2) return `Point ${name(2)} — ${next.score.team1}-${next.score.team2}`;
+  // Serve passed to the other team: whoever now serves is who won the rally.
+  if (next.servingTeam !== prev.servingTeam) {
+    const label = next.config.gameType !== "singles" ? ", server 1" : "";
+    return `Side out — ${name(next.servingTeam)} won the rally and serves${label}`;
+  }
+  // Same team, advanced from 1st to 2nd server (official doubles). The
+  // RECEIVING team won that rally; naming them stops the message reading as
+  // though the serving team had just done something good.
+  if (next.serverNumber !== prev.serverNumber) {
+    const other = next.servingTeam === 1 ? 2 : 1;
+    return `${name(other)} won the rally — ${name(next.servingTeam)} 2nd server now serves`;
+  }
+  return "";
+}
+
+/**
+ * Which server the team serving FIRST in a game is on.
+ *
+ * Pickleball rule (USA Pickleball 4.B.7): the first service turn of each game
+ * is a single server. The side that starts serving loses the serve on its
+ * first fault instead of handing it to a partner - otherwise they would get
+ * one extra service turn per game, and every rotation after it is out by one.
+ *
+ * Referees say this as "starting second server", which is exactly what it is:
+ * the game opens as though the first server has already been used.
+ *
+ * Only official doubles tracks server numbers at all. Singles has no second
+ * server, and casual play deliberately passes the serve straight over, so both
+ * start at 1.
+ */
+export function initialServerNumber(config: GameConfig): 1 | 2 {
+  const officialDoubles = !!config.officialMode && config.gameType !== "singles";
+  return officialDoubles ? 2 : 1;
+}
+
+export function createGame(
+  mode: string,
+  names?: { team1: string; team2: string },
+  configOverrides?: Partial<GameConfig>,
+): GameSession {
+  const config = { ...DEFAULT_CONFIG, ...configOverrides };
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     mode,
     score: { team1: 0, team2: 0 },
     servingTeam: 1,
-    serverNumber: 1,
+    serverNumber: initialServerNumber(config),
     history: [],
     gameNumber: 1,
     gamesWon: { team1: 0, team2: 0 },
@@ -79,26 +171,46 @@ export function createGame(mode: string, names?: { team1: string; team2: string 
     pausedAt: null,
     pausedMs: 0,
     playerNames: names || { team1: "Team 1", team2: "Team 2" },
-    config: { ...DEFAULT_CONFIG },
+    config,
     cardIds: [],
     drawnCardIds: [],
     favoriteCardIds: [],
     skippedCardIds: [],
+    matchLog: [],
   };
 }
 
 export function addScore(game: GameSession, team: 1 | 2): GameSession {
   if (game.config.scoreLocked || game.winner) return game;
 
+  // The receiving side winning a rally scores nothing - it wins the serve. That
+  // is the most common tap in a side-out game, so it goes on the undo stack
+  // like any other action.
   if (game.config.sideOutScoring && team !== game.servingTeam) {
-    return sideOut(game);
+    const after = sideOut(game);
+    const event: ScoreEvent = {
+      team,
+      type: "sideout",
+      scoreBefore: { ...game.score },
+      scoreAfter: { ...game.score },
+      serveBefore: serveOf(game),
+      timestamp: Date.now(),
+    };
+    return { ...after, history: [...game.history, event] };
   }
 
   const key = team === 1 ? "team1" : "team2";
   const scoreBefore = { ...game.score };
   const scoreAfter = { ...game.score, [key]: game.score[key] + 1 };
 
-  const event: ScoreEvent = { team, type: "score", scoreBefore, scoreAfter, timestamp: Date.now() };
+  const event: ScoreEvent = {
+    team,
+    type: "score",
+    scoreBefore,
+    scoreAfter,
+    serveBefore: serveOf(game),
+    timestamp: Date.now(),
+  };
 
   const winner = checkWin(scoreAfter, game.config);
 
@@ -110,39 +222,120 @@ export function addScore(game: GameSession, team: 1 | 2): GameSession {
   };
 }
 
-export function sideOut(game: GameSession): GameSession {
-  const newServingTeam: 1 | 2 = game.servingTeam === 1 ? 2 : 1;
-  const newServerNumber: 1 | 2 = game.serverNumber === 1 ? 2 : 1;
-
-  return {
-    ...game,
-    servingTeam: newServingTeam,
-    serverNumber: newServerNumber === 2 ? 1 : newServerNumber,
+// Manual score correction (backlog F065): nudge a team's score by delta,
+// clamped at 0, recomputing the winner. Logged so it can be undone.
+export function adjustScore(game: GameSession, team: 1 | 2, delta: number): GameSession {
+  const key = team === 1 ? "team1" : "team2";
+  const next = Math.max(0, game.score[key] + delta);
+  if (next === game.score[key]) return game;
+  const scoreBefore = { ...game.score };
+  const scoreAfter = { ...game.score, [key]: next };
+  const event: ScoreEvent = {
+    team,
+    type: "adjust",
+    scoreBefore,
+    scoreAfter,
+    serveBefore: serveOf(game),
+    timestamp: Date.now(),
   };
+  return { ...game, score: scoreAfter, history: [...game.history, event], winner: checkWin(scoreAfter, game.config) };
+}
+
+export function sideOut(game: GameSession): GameSession {
+  // Official doubles uses the real two-server rotation: the first server's
+  // fault passes to the second server on the SAME team; the second server's
+  // fault passes the serve to the other team (back to server 1). Casual play
+  // (no officialMode) and singles just pass the serve straight over.
+  const officialDoubles = !!game.config.officialMode && game.config.gameType !== "singles";
+  if (officialDoubles && game.serverNumber === 1) {
+    return { ...game, serverNumber: 2 };
+  }
+  const newServingTeam: 1 | 2 = game.servingTeam === 1 ? 2 : 1;
+  return { ...game, servingTeam: newServingTeam, serverNumber: 1 };
+}
+
+// Human label for who's serving, e.g. "Server 2" (doubles only). Empty in
+// singles, where there's just one server per side.
+export function serverLabel(game: GameSession): string {
+  if (game.config.gameType === "singles") return "";
+  return `Server ${game.serverNumber}`;
+}
+
+// Append a timeout/fault/side-switch to the official match log (pure).
+function logEntry(game: GameSession, type: MatchLogEntry["type"], team?: 1 | 2): GameSession {
+  const entry: MatchLogEntry = {
+    type,
+    team,
+    score: { ...game.score },
+    gameNumber: game.gameNumber,
+    timestamp: Date.now(),
+  };
+  return { ...game, matchLog: [...(game.matchLog ?? []), entry] };
+}
+
+export function recordTimeout(game: GameSession, team: 1 | 2): GameSession {
+  return logEntry(game, "timeout", team);
+}
+
+export function recordFault(game: GameSession, team: 1 | 2): GameSession {
+  return logEntry(game, "fault", team);
+}
+
+// Count of a given log type, optionally for one team (for the in-game chips).
+export function logCount(game: GameSession, type: MatchLogEntry["type"], team?: 1 | 2): number {
+  return (game.matchLog ?? []).filter((e) => e.type === type && (team ? e.team === team : true)).length;
 }
 
 export function undoLast(game: GameSession): GameSession {
   if (game.history.length === 0) return game;
 
   const lastEvent = game.history[game.history.length - 1];
+  const serve = lastEvent.serveBefore;
 
   return {
     ...game,
     score: lastEvent.scoreBefore,
+    servingTeam: serve?.team ?? game.servingTeam,
+    serverNumber: serve?.server ?? game.serverNumber,
     history: game.history.slice(0, -1),
     winner: null,
   };
 }
 
+/** What the last undoable action was, for telling the user what they took back. */
+export function lastActionLabel(game: GameSession, names: { team1: string; team2: string }): string | null {
+  const last = game.history[game.history.length - 1];
+  if (!last) return null;
+  const who = last.team === 1 ? names.team1 : names.team2;
+  switch (last.type) {
+    case "score": return `point to ${who}`;
+    case "sideout": return "side out";
+    case "adjust": return `correction to ${who}`;
+    case "reset": return "reset";
+    default: return "last action";
+  }
+}
+
 export function resetScore(game: GameSession): GameSession {
-  // Clean slate for the current game: zero the score and clear the undo stack.
-  // (Saved Match history in localStorage is separate and is NOT touched here.)
+  // Clean slate for the current game, but NOT an unrecoverable one: the reset
+  // itself goes on the undo stack carrying the score and serve it wiped, so a
+  // mis-tapped Reset is one Undo away. (Saved Match history in localStorage is
+  // separate and is NOT touched here.)
+  const event: ScoreEvent = {
+    team: game.servingTeam,
+    type: "reset",
+    scoreBefore: { ...game.score },
+    scoreAfter: { team1: 0, team2: 0 },
+    serveBefore: serveOf(game),
+    timestamp: Date.now(),
+  };
+
   return {
     ...game,
     score: { team1: 0, team2: 0 },
     servingTeam: 1,
     serverNumber: 1,
-    history: [],
+    history: [event],
     winner: null,
   };
 }
@@ -157,7 +350,7 @@ export function startNewGame(game: GameSession): GameSession {
     ...game,
     score: { team1: 0, team2: 0 },
     servingTeam: game.servingTeam === 1 ? 2 : 1,
-    serverNumber: 1,
+    serverNumber: initialServerNumber(game.config),
     history: [],
     gameNumber: game.gameNumber + 1,
     gamesWon,
@@ -197,7 +390,10 @@ export function matchWinner(game: GameSession): 1 | 2 | null {
 // and settings the players already chose.
 export function newMatch(game: GameSession): GameSession {
   return {
-    ...createGame(game.mode, game.playerNames),
+    // Pass the config IN, so the serve is initialised under the rules this
+    // match actually plays by - assigning it afterwards left serverNumber
+    // computed from the defaults.
+    ...createGame(game.mode, game.playerNames, game.config),
     config: game.config,
     customName: game.customName,
     customCards: game.customCards,
@@ -236,6 +432,21 @@ export function checkWin(score: { team1: number; team2: number }, config: GameCo
   return null;
 }
 
+// Is a team one point from winning the game (or the whole match)? Drives the
+// "Game point / Match point" banner (backlog F077). Returns null otherwise.
+export function pointStatus(game: GameSession): { team: 1 | 2; match: boolean } | null {
+  if (game.winner) return null;
+  for (const team of [1, 2] as const) {
+    const key = team === 1 ? "team1" : "team2";
+    const probe = { ...game.score, [key]: game.score[key] + 1 };
+    if (checkWin(probe, game.config) === team) {
+      const wonAfter = (team === 1 ? game.gamesWon.team1 : game.gamesWon.team2) + 1;
+      return { team, match: wonAfter >= gamesToWinMatch(game.config) };
+    }
+  }
+  return null;
+}
+
 export function formatTime(ms: number): string {
   const seconds = Math.floor(ms / 1000);
   const m = Math.floor(seconds / 60);
@@ -243,26 +454,75 @@ export function formatTime(ms: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-const STORAGE_KEY = "pickleball-shuffle-game";
+const STORAGE_KEY = "pickleball-shuffle-game"; // legacy single-game key (migrated)
+const GAMES_KEY = "pickleball-shuffle-games"; // map of id -> GameSession (F085)
+const MAX_SAVED = 8;
 
+function readGames(): Record<string, GameSession> {
+  try {
+    const raw = localStorage.getItem(GAMES_KEY);
+    if (raw) return JSON.parse(raw);
+    // One-time migration from the old single-game key.
+    const legacy = localStorage.getItem(STORAGE_KEY);
+    if (legacy) {
+      const g = JSON.parse(legacy) as GameSession;
+      return { [g.id]: g };
+    }
+  } catch {}
+  return {};
+}
+
+function writeGames(map: Record<string, GameSession>) {
+  // Keep only the most recent few so storage can't grow without bound.
+  const trimmed = Object.values(map)
+    .sort((a, b) => b.startTime - a.startTime)
+    .slice(0, MAX_SAVED);
+  const out: Record<string, GameSession> = {};
+  for (const g of trimmed) out[g.id] = g;
+  try {
+    localStorage.setItem(GAMES_KEY, JSON.stringify(out));
+  } catch {}
+}
+
+// Save (or update) one game in the keyed store. Mirrors to the legacy key so an
+// older build still finds the most recent game.
 export function saveGame(game: GameSession) {
+  const map = readGames();
+  map[game.id] = game;
+  writeGames(map);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(game));
   } catch {}
 }
 
-export function loadGame(): GameSession | null {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) return null;
-    return JSON.parse(data);
-  } catch {
-    return null;
-  }
+// All unfinished games, most recently started first (F085).
+export function listSavedGames(): GameSession[] {
+  return Object.values(readGames())
+    .filter((g) => g && !g.winner)
+    .sort((a, b) => b.startTime - a.startTime);
 }
 
-export function clearSavedGame() {
+// Back-compat: the most recent unfinished game.
+export function loadGame(): GameSession | null {
+  return listSavedGames()[0] ?? null;
+}
+
+// Remove one saved game by id, or all when no id is given.
+export function clearSavedGame(id?: string) {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    if (!id) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(GAMES_KEY);
+      return;
+    }
+    const map = readGames();
+    delete map[id];
+    writeGames(map);
+    const legacy = localStorage.getItem(STORAGE_KEY);
+    if (legacy) {
+      try {
+        if ((JSON.parse(legacy) as GameSession).id === id) localStorage.removeItem(STORAGE_KEY);
+      } catch {}
+    }
   } catch {}
 }

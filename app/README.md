@@ -1,14 +1,14 @@
-# 🏓 Pickleball Card Games
+# 🏓 PB Card Deck
 
 **Draw twist cards mid-match. Shake up the game.**
 
 A free, **mobile-first, local-first** web app with 1,729 pickleball twist cards across 10 categories. Tap to draw, read the rule, play the next point under that twist - then keep score with a real pickleball scoring engine.
 
-### ▶︎ Live app: **https://pickleball-card-games.vercel.app**
+### ▶︎ Live app: **https://pb-card-deck.vercel.app**
 
 No login. No install. Open the link at the court and play.
 
-> **What's new:** a **1,729-card deck** (the Ramanujan taxicab number) with per-card **rarity / intensity / tags**; a **Commentator voice** toggle (concise vs hyped card text); **in-game pause**; configurable **match length** + match-complete screen; a **Back** button beside Draw and a bigger responsive card; plus a full accessibility pass and custom fonts. Full card dataset with the design rationale: [`../docs/data/cards.json`](../docs/data/cards.json).
+> **What's new:** **Understand & Play (v1)** - a first-run **welcome tour** (replayable from Rules & help), **tap-to-define** jargon, a per-card **"?" explainer**, an always-shown **"What to do"** line, and a **"Why & how"** Rules tab, so newcomers need zero pickleball knowledge. Plus a **Coach / Umpire "Track a match"** mode (home `Play with cards` / `Track a match` toggle) that runs and records a real match - singles/doubles, two-server rotation, timeouts/faults, side-switch, saved to history with a downloadable match sheet. Also: a **1,729-card deck** (the Ramanujan taxicab number) with per-card **rarity / intensity / tags**; a **Commentator voice** toggle (concise vs hyped card text); **in-game pause**; configurable **match length** + match-complete screen; a **Back** button beside Draw and a bigger responsive card; plus a full accessibility pass and custom fonts. Full card dataset with the design rationale: [`../docs/data/cards.json`](../docs/data/cards.json).
 
 ---
 
@@ -69,7 +69,7 @@ The tradeoff we accept: **no cross-device sync.** Custom decks and match history
 ### Scoring & game engine
 - **Tap-to-score** scorekeeper with full game logic.
 - **Side-out scoring** - only the serving team can score (real pickleball rules); off-team taps trigger a side-out.
-- **Win detection** - first to 11 (configurable 7/15/21), **win by 2**.
+- **Win detection** - first to 11 (configurable 7/11/15/21), **win by 2**.
 - **Serving indicator** - pulsing ring shows who serves; tap to switch.
 - **Undo stack** - reverses the last action completely (fixes wrong-team taps).
 - **Score lock** - prevents accidental taps.
@@ -89,6 +89,20 @@ The tradeoff we accept: **no cross-device sync.** Custom decks and match history
 - **Sound + haptics** on score and draw.
 - **Responsive** - the card and layout scale to the device with `clamp()`/`dvh` so nothing overflows on small phones.
 - **PWA** - installable, full-screen, safe-area aware, works offline after first load.
+
+### Learn & understand (no pickleball knowledge needed)
+- **Welcome tour** - on first open, three slides (what this is / a point start to finish / where help lives); hands over to the manual, replayable any time from **Help**.
+- **Tap-to-define jargon** - terms on a card (dink, kitchen, erne, side-out…) are underlined; tap one for a plain-language definition, powered by the shared `lib/glossary.ts`.
+- **Per-card "?" explainer** - every card has a **?** that opens *what this means · how to play it · what kind of card* in beginner words (from `CATEGORY_INFO`).
+- **"What to do" line** - the card always shows a concrete action for the point, not just the constraint, plus a one-time in-game hint.
+- **Searchable manual** - `Help` in the header on every screen opens `components/HelpPanel.tsx`: 30 answers from `lib/manual.ts` in plain language, with search (every query word must match) and three quick links.
+
+### Coach / Umpire mode - "Track a match"
+- **One-tap mode switch** - home has a `Play with cards` / `Track a match` toggle that swaps the whole flow.
+- **Match setup** - singles or doubles, player/team names, an event/round label, points-to-win (11/15/21), match length, and cards on/off (off by default).
+- **Real server rotation** - doubles uses the two-server rotation (Server 1 → 2 → side-out) with the serving side + server number shown live; singles passes serve straight over.
+- **Officiating controls** - per-team timeout and fault buttons, a side-out button, and the halfway side-switch reminder.
+- **Match sheet** - saves to Match history with the event label + format and downloads a one-tap text **match sheet** (teams, game-by-game, timeouts, faults, duration).
 
 ## Architecture (deep dive)
 
@@ -171,23 +185,37 @@ app/
 │   ├── layout.tsx            # Root layout, viewport, PWA metadata
 │   └── globals.css           # Theme tokens, animation utilities, mobile hardening
 ├── components/
-│   ├── CardDisplay.tsx       # 3D flip card (responsive clamp sizing)
-│   ├── ScoreKeeper.tsx       # Side-out scoring, serving ring, score bump
-│   ├── TopBar.tsx            # In-game bar: back, mode, menu, settings, theme
-│   ├── CardHistory.tsx       # Last 3 draws
-│   ├── WinCelebration.tsx    # Confetti + trophy modal
-│   ├── PlayerNames.tsx       # Inline team-name editor
-│   ├── SettingsSheet.tsx     # Points-to-win, scoring rules, sound
-│   ├── AppMenu.tsx           # History / Decks / Export-Import / Feedback
-│   ├── HistoryPanel.tsx      # Match history sheet (+ reusable Sheet)
-│   ├── DecksPanel.tsx        # Custom deck list + editor
-│   ├── FeedbackPanel.tsx     # Rating + message → mailto
-│   └── icons.tsx             # lucide icon maps (modes, categories)
+│   ├── CardDisplay.tsx          # 3D flip card + per-card "?" explainer
+│   ├── ScoreKeeper.tsx          # Side-out scoring, serving ring, score bump
+│   ├── TopBar.tsx               # In-game bar: back, mode, menu, settings, theme
+│   ├── CardHistory.tsx          # Last 3 draws
+│   ├── WinCelebration.tsx       # Confetti + trophy modal
+│   ├── PlayerNames.tsx          # Inline team-name editor
+│   ├── SettingsSheet.tsx        # Points-to-win, scoring rules, sound
+│   ├── AppMenu.tsx              # History / Decks / Export-Import / Feedback
+│   ├── HistoryPanel.tsx         # Match history sheet (+ reusable Sheet)
+│   ├── DecksPanel.tsx           # Custom deck list + editor
+│   ├── FeedbackPanel.tsx        # Rating + message → mailto
+│   ├── HelpPanel.tsx            # Searchable manual (content in lib/manual.ts) + glossary
+│   ├── WelcomeTour.tsx          # First-run tour, three slides (replayable)
+│   ├── GlossaryText.tsx         # Tap-to-define jargon highlighter
+│   ├── OfficialMatchSetup.tsx   # "Track a match" setup (singles/doubles, etc.)
+│   ├── OfficialControls.tsx     # Coach/umpire controls: server, timeouts, faults
+│   ├── TVScore.tsx              # Big-score courtside / TV display
+│   ├── AchievementsPanel.tsx    # Badges / achievements from local stats
+│   ├── FavoritesPanel.tsx       # Starred cards list
+│   ├── CardBrowserPanel.tsx     # Browse / search the full deck
+│   ├── NetworkStatus.tsx        # Offline indicator
+│   ├── Toast.tsx                # In-app toast (import status, etc.)
+│   └── icons.tsx                # lucide icon maps (modes, categories)
 ├── lib/
-│   ├── cards.ts              # Card types, deck modes, filtering, shuffle
-│   ├── game.ts               # Pure game engine + localStorage active game
-│   ├── client-api.ts         # Local store: decks, history, export/import
-│   └── sounds.ts             # Web Audio sound effects + haptics
+│   ├── cards.ts                 # Card types, deck modes, filtering, shuffle
+│   ├── game.ts                  # Pure game engine (+ official mode) + active game
+│   ├── client-api.ts            # Local store: decks, history, export/import, match sheet
+│   ├── glossary.ts              # Shared pickleball glossary (Rules + in-card)
+│   ├── useFocusTrap.ts          # Focus-trap hook for dialogs/sheets
+│   ├── shareImage.ts            # Render a shareable match/win image
+│   └── sounds.ts                # Web Audio sound effects + haptics
 └── public/
     ├── cards.json            # All 1,729 cards
     ├── manifest.json         # PWA manifest
@@ -220,7 +248,7 @@ vercel --prod        # from the app/ directory
 ./deploy-vercel.sh   # from the repo root
 ```
 
-Current production alias: **https://pickleball-card-games.vercel.app**
+Current production alias: **https://pb-card-deck.vercel.app**
 
 ## Data & privacy
 
@@ -232,25 +260,25 @@ Everything you create - games, custom decks, match history, settings - is stored
 
 | Category | Cards | Description |
 |---|---|---|
-| Shot Restriction | 20 | Limits what shots you can hit |
-| Body & Movement | 20 | Physical challenges and restrictions |
-| Wild Card / Swap | 20 | Partner swaps, paddle trades, side switches |
-| Penalty | 20 | Bad-luck draws - lose a serve, sit out |
-| Bonus / Reward | 20 | Free points, double serves, advantages |
-| Social & Party | 20 | Selfies, compliments, trash talk |
-| Strategy / Skill | 20 | Erne bounties, ATP bonuses, coach's choice |
-| Wacky / Chaos | 20 | Pirate voice, animal sounds, blindfolds |
-| Court / Environment | 20 | Shrunken courts, giant kitchens, zone rules |
-| Meta & Game-Flow | 20 | Draw two, skip draws, reverse scoring |
+| Shot Restriction | 182 | Limits what shots you can hit |
+| Body & Movement | 140 | Physical challenges and restrictions |
+| Wild Card / Swap | 164 | Partner swaps, paddle trades, side switches |
+| Penalty | 152 | Bad-luck draws - lose a serve, sit out |
+| Bonus / Reward | 182 | Free points, double serves, advantages |
+| Social & Party | 182 | Selfies, compliments, trash talk |
+| Strategy / Skill | 182 | Erne bounties, ATP bonuses, coach's choice |
+| Wacky / Chaos | 182 | Pirate voice, animal sounds, blindfolds |
+| Court / Environment | 182 | Shrunken courts, giant kitchens, zone rules |
+| Meta & Game-Flow | 181 | Draw two, skip draws, reverse scoring |
 
 ### Deck modes
 
 | Mode | Description | Card count |
 |---|---|---|
-| Family | Fun for all ages | 80 |
-| Party | Laughs, dares & drinks | 100 |
-| Drill | Sharpen your game | 60 |
-| Tournament | Competitive twists | 60 |
+| Family | Fun for all ages | 686 |
+| Party | Laughs, dares & drinks | 862 |
+| Drill | Sharpen your game | 504 |
+| Tournament | Competitive twists | 545 |
 | Chaos | All 1,729 cards, anything goes | 1,729 |
 
 ## Roadmap
