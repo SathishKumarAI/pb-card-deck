@@ -103,6 +103,8 @@ Everything the app does, grouped so you can find it fast.
 ### 🎨 Feel & accessibility
 | Feature | What it does |
 |---|---|
+| **Light by default, dark on request** | The app opens light, because it is used in daylight far more than at night. The header button cycles light → dark → auto (follow the device), and the choice sticks. |
+| **Measured colour, not eyeballed** | Every text/surface pair in both themes is checked against WCAG AA by `npm run contrast`, which runs as a test. Two light-mode pairs failed when it was first written - a button label at 3.77:1 and the serve marker at 2.84:1 - and the palette was darkened until they passed. |
 | **Native-app feel** | iOS-style glass materials (thin / regular / thick), bottom sheets with a grabber, a pickleball-court backdrop, and hover states on pointer devices only. Scales from a phone to a two-column desktop layout. |
 | **Polished motion** | 3D card flip, glassy panels, win confetti - all respect `prefers-reduced-motion`. |
 | **Accessible** | Keyboard focus rings, dialog semantics + Escape on every panel, screen-reader labels, 44px tap targets, and pinch-zoom left on. |
@@ -110,6 +112,62 @@ Everything the app does, grouped so you can find it fast.
 | **Installable PWA** | "Add to Home Screen" and it runs like a native app. |
 
 > Want the raw data? The full card set with all metadata and the design rationale lives in **[`docs/data/cards.json`](docs/data/cards.json)**.
+
+## Making a change
+
+The codebase is organised so that changing one thing means opening one small
+file. Start from the change, not the code:
+
+| I want to change… | Open |
+|---|---|
+| Anything visual - colour, spacing, radius, glass | `app/app/globals.css` (tokens at the top) |
+| The home screen or the game screen | `app/app/page.tsx` |
+| What a card looks like | `app/components/CardDisplay.tsx` |
+| Scoring rules, serve rotation, undo | `app/lib/game.ts` (pure, tested) |
+| Tournament formats, brackets, standings | `app/lib/tournament/` (see its README) |
+| Tournament screens | `app/components/tournament/` (see its README) |
+| Help text | `app/lib/manual.ts` |
+| Pickleball definitions | `app/lib/glossary.ts` |
+| Share images | `app/lib/shareImage.ts` |
+| Anything saved to the device | `app/lib/client-api.ts` |
+
+Two rules that this project learned the hard way:
+
+1. **Measure, do not infer.** Every UI bug fixed in the last pass looked correct
+   in the markup - a missing Tailwind class, a clipped card title, a focus ring
+   on every sheet, a page scrolling behind a dialog. `getComputedStyle` and a
+   scripted scroll found them in seconds. `npm run contrast` exists for the same
+   reason.
+2. **Never put a directory under `app/` in a `.gitignore`.** Tailwind v4 honours
+   `.gitignore` for source detection, so ignoring `app/app/` silently stopped it
+   generating every class used only in `page.tsx`. Full note in
+   `app/CLAUDE.md` → Traps.
+
+```bash
+cd app
+npm install
+npm run dev        # http://localhost:3000, and your LAN IP for phone testing
+npm test           # 144 tests: engine, tournaments, streaks, contrast, a11y
+npm run contrast   # WCAG table for both themes
+npm run lint
+npm run build
+```
+
+## Where it could go next
+
+Nothing here is started; this is the honest list of what the current design
+makes possible, and what it deliberately does not do.
+
+| Idea | Why it is not here yet |
+|---|---|
+| **Cross-device sync** | Would need accounts and a server, which the local-first design exists to avoid. The realistic version is a share code or a QR handoff between two phones, not a backend. |
+| **Seeding by rating** | Seeds are the order you type names in. A rating needs match history per player over time, which the app keeps but has never aggregated. |
+| **Consolation / plate draws, third-place play-off** | The slot model supports it (a bracket is just wiring); nobody has asked for it yet. |
+| **Timed rounds and scheduled start times** | The queue is ordered, not clocked. Real events often run to a clock. |
+| **A spectator link** | A read-only view of a running event on another phone. Needs the sync question answered first. |
+| **Rotating partners that never repeats a pairing** | Currently ranks, groups and pairs, which keeps games close but can repeat a pairing late in a small field. |
+| **More languages** | All copy lives in `lib/manual.ts`, `lib/glossary.ts` and the components; nothing is extracted for translation. |
+| **Splitting `app/page.tsx`** | It is past the 500-line ceiling this workspace sets. The tournament code was deliberately kept out of it; the game screen is the next split. |
 
 ## Repository layout
 

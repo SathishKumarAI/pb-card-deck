@@ -207,15 +207,36 @@ app/
 │   ├── CardBrowserPanel.tsx     # Browse / search the full deck
 │   ├── NetworkStatus.tsx        # Offline indicator
 │   ├── Toast.tsx                # In-app toast (import status, etc.)
-│   └── icons.tsx                # lucide icon maps (modes, categories)
+│   ├── SharePanel.tsx           # Share sheet: shape, live canvas preview, caption
+│   ├── icons.tsx                # lucide icon maps + the drawn pickleball mark
+│   └── tournament/              # The event screens - see its README
+│       ├── TournamentHome.tsx   #   list / setup / running event, and storage
+│       ├── TournamentSetup.tsx  #   create: names, format, division, counts
+│       ├── TournamentScreen.tsx #   the dashboard: tabs, rail, export, log
+│       ├── BracketView.tsx      #   the draw as a tree, SVG connectors
+│       ├── MatchCard.tsx        #   one match: enter, edit or play its score
+│       └── StandingsTable.tsx   #   the table, full and compact
 ├── lib/
 │   ├── cards.ts                 # Card types, deck modes, filtering, shuffle
 │   ├── game.ts                  # Pure game engine (+ official mode) + active game
 │   ├── client-api.ts            # Local store: decks, history, export/import, match sheet
 │   ├── glossary.ts              # Shared pickleball glossary (Rules + in-card)
+│   ├── manual.ts                # The in-app manual: every help answer, as data
+│   ├── streaks.ts               # Win streaks from saved matches (pure)
 │   ├── useFocusTrap.ts          # Focus-trap hook for dialogs/sheets
-│   ├── shareImage.ts            # Render a shareable match/win image
-│   └── sounds.ts                # Web Audio sound effects + haptics
+│   ├── useScrollLock.ts         # Freeze the page behind an open sheet
+│   ├── shareImage.ts            # Share cards on canvas: result/streak/champion
+│   ├── sounds.ts                # Web Audio sound effects + haptics
+│   └── tournament/              # The event engine - see its README
+│       ├── types.ts             #   shapes: Tournament, Match, Slot, Division
+│       ├── engine.ts            #   create, resolveSlots, record, courts, log
+│       ├── roundRobin.ts        #   circle-method scheduling
+│       ├── elimination.ts       #   single + double bracket wiring, seeding
+│       ├── standings.ts         #   tables, tiebreaks, per-player scoring
+│       ├── export.ts            #   CSV / Markdown / JSON / text
+│       └── demo.ts              #   a worked example, played through the engine
+├── scripts/
+│   └── contrast-audit.mjs    # WCAG table for both themes (npm run contrast)
 └── public/
     ├── cards.json            # All 1,729 cards
     ├── manifest.json         # PWA manifest
@@ -281,11 +302,81 @@ Everything you create - games, custom decks, match history, settings - is stored
 | Tournament | Competitive twists | 545 |
 | Chaos | All 1,729 cards, anything goes | 1,729 |
 
+## Colour & theming
+
+Light is the default theme. Dark and "auto" are one tap away in the header and
+the choice persists in `localStorage`.
+
+- Tokens live at the top of `app/globals.css`. `:root` carries the **light**
+  palette; `[data-theme="dark"]` overrides it. Radius (`--r-chip` → `--r-hero`),
+  elevation (`--elev-1..3`), glass materials (`--mat-thin/regular/thick`) and
+  `--accent-ink` are all tokens - nothing is eyeballed per component.
+- `npm run contrast` prints a WCAG table for both themes and exits non-zero if a
+  pair drops below its threshold. It also runs as a test
+  (`lib/contrast.test.ts`), so a palette edit that breaks contrast fails CI
+  rather than someone's eyes in sunlight.
+- When it was first written, two light-mode pairs failed: white on `#059669`
+  came to 3.77:1 (AA wants 4.5 for a button label) and the `#d97706` serve
+  marker sat at 2.84:1 on the page. The palette was darkened - same hues - until
+  both passed. The numbers are in the comments beside the tokens.
+
+## Tournaments
+
+`lib/tournament/` is a pure engine and `components/tournament/` is its UI; both
+carry a change-to-file README. Five formats - round robin, pools → playoff,
+single and double elimination, rotating partners - run on one idea:
+
+**A match holds two SLOTS, not two teams.** A slot says where its team comes
+from: a seed, the winner of another match, the loser of another match, or a bye.
+
+```ts
+type Slot =
+  | { from: "team"; teamId: string }
+  | { from: "winner"; matchId: string }
+  | { from: "loser"; matchId: string }
+  | { from: "bye" };
+```
+
+One function, `resolveSlots`, fills in whatever is now knowable. That single
+pass advances a bracket, awards a bye nobody plays, builds the playoff the
+moment pools finish, and drops a double-elimination reset when the
+winners-bracket team takes the grand final. **Adding a format means writing
+wiring, not advance logic.**
+
+Around it: a live bracket tree (SVG connectors, geometry computed from one slot
+constant), editable scores with an audit log that records what a score used to
+be, CSV/Markdown/JSON/text export, divisions including mixed pairing from
+`(m)`/`(f)` markers, typed court and pool counts, and a demo event built by
+playing one through the real engine.
+
+A tournament match can be typed at a desk or played on the scorekeeper; in the
+second case the game carries `GameSession.tournamentRef` and **team 1 is always
+the match's team A**, which is the invariant that makes the write-back safe.
+
+## Sharing
+
+`lib/streaks.ts` computes per-name streaks from saved matches - current run,
+best run, win rate, recent results. `lib/shareImage.ts` draws three card kinds
+(result, streak, champion) at three sizes (square 1080², story 1080×1920, 4:5
+1080×1350) on a canvas, and `components/SharePanel.tsx` previews and hands them
+to the phone's share sheet. The preview *is* the file: the canvas renders at
+full 1080 and is scaled by CSS, so it cannot drift from the export.
+
 ## Roadmap
 
-- Guest → account migration **if** an optional sync layer is ever added.
-- Shareable custom decks (link or QR) - the strongest reason to add a backend later.
-- Per-card analytics (most-drawn, most-skipped) from local match history.
+Nothing below is started. It is the honest list of what the current shape makes
+possible, with the reason each one is still absent.
+
+| Idea | Note |
+|---|---|
+| Share codes / QR handoff for an event or a custom deck | The strongest reason to add any server at all. A read-only spectator link is the same problem. |
+| Seeding and pairing by rating | Match history holds the data per player; nothing aggregates it into a rating yet. |
+| Consolation and plate draws, third-place play-off | The slot model already supports it - it is wiring, not new engine code. |
+| Timed rounds, scheduled starts | The queue is ordered, not clocked; real events often run to a clock. |
+| Rotating partners that never repeats a pairing | Currently ranks, groups and pairs: close games, but a pairing can repeat late in a small field. |
+| Per-card analytics (most drawn, most skipped) | The counters exist in `lib/client-api.ts`; nothing reads them yet. |
+| Translation | All copy sits in `lib/manual.ts`, `lib/glossary.ts` and components - none of it extracted. |
+| Splitting `app/page.tsx` | Past the 500-line ceiling. Tournament code was kept out of it deliberately; the game screen is the next split. |
 
 ## License
 

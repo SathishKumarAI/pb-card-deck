@@ -74,6 +74,15 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
   and team 1 is ALWAYS the match's team A. That is what lets the final score be
   written straight back; swap the sides and results land on the wrong team.
 - Theme via CSS vars + `data-theme` on `<html>`; animation utilities live in `globals.css`.
+- **Light is the DEFAULT theme.** `:root` carries the light palette and
+  `[data-theme="dark"]` overrides it - not the other way round. The app is used
+  in daylight far more than at night, and a first-time visitor should not be
+  handed a dark interface before choosing one.
+- **Colour is measured, never eyeballed.** `npm run contrast` prints a WCAG
+  table for both themes and fails below threshold; `lib/contrast.test.ts` runs
+  it in CI. When the light palette was first written, white on `#059669` was
+  3.77:1 (AA wants 4.5 on a button label) and the `#d97706` serve marker 2.84:1
+  on the page - both invisible to a dark-first eye. Change a colour, run it.
 - **Surfaces are glass materials, not divs with a background.** `.mat-thin`
   (chips, rows, tiles) / `.mat-regular` (bars, inline panels) / `.mat-thick`
   (sheets and dialogs). Each is a tint + blur + saturation + hairline

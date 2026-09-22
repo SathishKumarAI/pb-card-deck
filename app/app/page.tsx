@@ -87,10 +87,12 @@ export default function Home() {
   const [lastDeck, setLastDeck] = useState<string>("beginner");
   const [customCards, setCustomCards] = useState<Card[] | null>(null);
   const [customName, setCustomName] = useState<string | null>(null);
-  const [theme, setTheme] = useState<"dark" | "light" | "auto">("dark");
-  const [systemDark, setSystemDark] = useState(true);
+  /* Light by default. Anyone who prefers dark switches once and the choice is
+     remembered; "auto" follows the device. */
+  const [theme, setTheme] = useState<"dark" | "light" | "auto">("light");
+  const [systemDark, setSystemDark] = useState(false);
   const darkMode = theme === "auto" ? systemDark : theme === "dark";
-  const cycleTheme = () => setTheme((t) => (t === "dark" ? "light" : t === "light" ? "auto" : "dark"));
+  const cycleTheme = () => setTheme((t) => (t === "light" ? "dark" : t === "dark" ? "auto" : "light"));
   const [showSettings, setShowSettings] = useState(false);
   const [showNameEditor, setShowNameEditor] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -194,7 +196,8 @@ export default function Home() {
       meta.setAttribute("name", "theme-color");
       document.head.appendChild(meta);
     }
-    meta.setAttribute("content", darkMode ? "#0e0e11" : "#f4f4f6");
+    // Must match --bg for each theme, or the browser chrome fights the page.
+    meta.setAttribute("content", darkMode ? "#0b0e0f" : "#eef3f1");
   }, [darkMode]);
 
   // Theme preference: load once, persist on change, and follow the system when

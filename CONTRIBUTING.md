@@ -3,6 +3,21 @@
 Thanks for considering a contribution! This is a small, friendly, **local-first**
 project (no backend, no login) - bug fixes, card ideas, and features are all welcome.
 
+## Checks before a PR
+
+```bash
+cd app
+npm test           # 144 tests - game engine, tournaments, streaks, a11y, contrast
+npm run contrast   # WCAG table for both themes (also runs as a test)
+npm run lint       # 0 errors expected; there are known pre-existing warnings
+npm run build
+```
+
+A change to `app/globals.css` must keep `npm run contrast` green. A change to
+scoring, tournaments or streaks needs a test that fails before the fix - every
+bug fixed in this repo has one, and the commit message says what the failure
+was.
+
 ## Ways to help
 
 - **Report a bug** - [open an issue](https://github.com/SathishKumarAI/pb-card-deck/issues/new).
