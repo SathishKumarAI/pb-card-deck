@@ -1,5 +1,46 @@
 # Worklog
 
+## 2026-09-29 — the open-source pass: a README that tells the story
+
+Four months of work existed in the code and in 16 docs, and nowhere in a form a
+visitor to the GitHub page could read. This pass fixed the front door, and found
+four stale facts on the way.
+
+**What was written**
+
+| File | What it is |
+|---|---|
+| `README.md` (rewritten) | The story of why it exists, what is actually innovative in it, three ways to use it, every feature grouped, recording gameplay, running a tournament, **stack with real version numbers**, how it is built and verified, milestones, **the plan** (next / later / not doing), and a real contribution + ideas ask |
+| `CHANGELOG.md` (new) | Every shipped change, newest first, dated, with the why — the first time the whole history is in one file |
+| `LICENSE` (new) | MIT. Claimed in the README since June; **the file was missing** |
+| `docs/TOURNAMENTS.md` (new) | Running an event: formats, one-paste entry, courts, scoring routes, tiebreaks, fixing mistakes, exports |
+| `docs/RECORDING-A-MATCH.md` (new) | The three levels of record, the consent model, the match sheet (with a sample), every export route, and the storage keys |
+| `.github/ISSUE_TEMPLATE/*`, `PULL_REQUEST_TEMPLATE.md` (new) | Bug / card idea / feature idea, plus a PR template whose Verification block asks for pasted output |
+| `CONTRIBUTING.md` (rewritten) | Good-first-task table, the real gates, the code-layout rules, the traps |
+| `app/README.md`, `docs/index.md`, `STATUS.md` | Versions, the full storage-key table, the undocumented features, new links |
+
+**Four stale facts, each corrected**
+
+| Claim | Reality |
+|---|---|
+| "144 tests" (`README.md`, `CONTRIBUTING.md`), "64 vitest tests" (CONTRIBUTING) | **164 tests in 14 files**, measured by running them |
+| "`main` auto-deploys to production" (CONTRIBUTING **and** the CI comment) | It does not — the Git integration only builds Previews. This is the exact belief that left the domain 81 days stale in #11 |
+| `cd pickleball-shuffle/app` | The repo is `pb-card-deck` |
+| Roadmap: "Splitting `app/page.tsx`" | Done in #12 — 1,010 → ~470 lines |
+
+**Features that shipped and had never been documented:** achievements, the
+full-deck browser, TV/courtside score, the daily challenge (seeded `mulberry32`,
+so it is the same for everyone with no server), the screen wake lock, deck share
+codes, match-history CSV, and rally scoring as an alternative to side-out.
+
+**Verification:** `npm test` → **164 passed (14 files)**; `npm run lint` clean;
+`npx tsc --noEmit` clean; `npm run contrast` passed; `npm run build` clean. No
+app code changed in this pass — the gates were run as evidence, not because the
+docs could break them.
+
+**Follow-up:** `docs/BACKLOG.md` and `docs/TICKETS.md` still carry their own
+counts and statuses; they were left alone rather than half-migrated.
+
 ## 2026-09-22 (later) — the empty bottom third on desktop
 
 Flagged while checking the live site, then fixed. Both the home and the game

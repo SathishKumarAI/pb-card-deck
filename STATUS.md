@@ -1,19 +1,26 @@
 # STATUS — PB Card Deck
 
-_Last written 2026-09-21. Read this when you come back._
+_Last written 2026-09-29. Read this when you come back._
 
 ## Where things stand
 
-**Merged and deployed.** PR #5 squash-merged to `main` as `33d6f12`, and the
-colour + docs pass on top of it. Nothing is half-finished, nothing sits behind
-a flag.
+**Merged and deployed** through PR #14. On top of that, an **open-source
+documentation pass** on branch `docs/open-source-story-refresh`: a README that
+tells the story (why it exists, what is innovative, stack + versions, how it is
+built, the plan, the contribution ask), a new `CHANGELOG.md`, the missing MIT
+`LICENSE` file, `docs/TOURNAMENTS.md`, `docs/RECORDING-A-MATCH.md`, GitHub issue
+and PR templates, and stale facts corrected across `README.md`, `app/README.md`,
+`CONTRIBUTING.md` and the CI comment (144-vs-**164** tests, a false
+"`main` auto-deploys to production" claim, the wrong clone path, and the
+`page.tsx` split listed as pending when it is done).
 
 | | |
 |---|---|
 | Live | https://pb-card-deck.vercel.app |
-| Tests | 164 (engine, two bug-hunt suites, tournaments, streaks, contrast, a11y, board rendering) |
-| Gates | `npm test` · `npm run contrast` · `npm run lint` · `npm run build` |
+| Tests | **164 in 14 files** (engine, scoring audit, two bug-hunt suites, tournaments, streaks, contrast, a11y, board rendering) |
+| Gates | `npm test` · `npm run contrast` · `npm run lint` · `npx tsc --noEmit` · `npm run build` |
 | Default theme | **light**; dark and auto are one tap away and persist |
+| Docs entry points | `README.md` (the story) · `CHANGELOG.md` (history) · `docs/index.md` (index) |
 
 ## What the app does now
 
@@ -32,8 +39,14 @@ a flag.
 
 ## Next action
 
-Nothing is pending. Pick from the roadmap tables in `README.md` ("Where it could
-go next") or `app/README.md` — each row says why that idea is not there yet.
+Open the PR for `docs/open-source-story-refresh` and squash-merge it; nothing in
+it touches app code, so the gates were run for evidence rather than risk.
+
+After that, nothing is pending. Pick from **The plan** in `README.md` (now split
+into *Next up* / *Later* / *Deliberately not doing*) or the roadmap in
+`app/README.md` — each row says why that idea is not there yet. The rows flagged
+as good first contributions are a third-place play-off / consolation draw (slot
+wiring only) and a "most drawn cards" panel (the counters already exist).
 
 The 500-line debt is **paid**: `app/page.tsx` went from 1,010 lines to ~470 and
 now owns session state only. Layout lives in `components/HomeScreen.tsx`,
