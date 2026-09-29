@@ -6,12 +6,16 @@ Draw twist cards. Shake up the game. A free, local-first pickleball card game + 
 
 Made just for fun and personal use only - not for making sales.
 
+Open source, MIT. Contributions, card ideas and opinions are all welcome.
+
 ## Feedback & ideas
-- **Feedback / bugs / feature requests:** <a href="https://github.com/SathishKumarAI/pb-card-deck/issues/new" target="_blank" rel="noopener noreferrer">open a GitHub issue</a>
+- **Bug, card idea, or a feature idea:** <a href="https://github.com/SathishKumarAI/pb-card-deck/issues/new/choose" target="_blank" rel="noopener noreferrer">open a GitHub issue</a> — there is a template for each.
+- **Want to send code?** <a href="../CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">CONTRIBUTING.md</a> has the setup, the four CI gates and a good-first-task list.
 
 ## Docs
 
 **Start here**
+- <a href="../CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a> — everything that shipped, newest first, with the why
 - <a href="SESSION-NOTES.md" target="_blank" rel="noopener noreferrer">Session notes &amp; change history</a> — everything built + why, this session and earlier
 - <a href="ONBOARDING.md" target="_blank" rel="noopener noreferrer">Onboarding</a> — set up, run, architecture, common tasks
 - <a href="../CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a> — branches, CI gates, PR checklist
@@ -19,6 +23,10 @@ Made just for fun and personal use only - not for making sales.
 **Module docs (change → file tables)**
 - <a href="../app/lib/tournament/README.md" target="_blank" rel="noopener noreferrer">lib/tournament</a> — the event engine: formats, brackets, standings, the slot model
 - <a href="../app/components/tournament/README.md" target="_blank" rel="noopener noreferrer">components/tournament</a> — the event screens and the decisions behind them
+
+**Using the app**
+- <a href="TOURNAMENTS.md" target="_blank" rel="noopener noreferrer">Running a tournament</a> — formats, one-paste setup, courts, brackets, fixing scores, exports
+- <a href="RECORDING-A-MATCH.md" target="_blank" rel="noopener noreferrer">Recording a match</a> — casual history, coach/umpire mode, the match sheet, CSV, backups, storage keys
 
 **How the game works**
 - <a href="DOUBLES-SCORING.md" target="_blank" rel="noopener noreferrer">Doubles scoring &amp; serving</a> — rules model, which button to press, the why

@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Play the app
+    url: https://pb-card-deck.vercel.app
+    about: The live app - no login, works offline after first load.
+  - name: How to contribute
+    url: https://github.com/SathishKumarAI/pb-card-deck/blob/main/CONTRIBUTING.md
+    about: Dev setup, the four CI gates, and how to add cards.
+  - name: Running a tournament
+    url: https://github.com/SathishKumarAI/pb-card-deck/blob/main/docs/TOURNAMENTS.md
+    about: Read this before filing a tournament bug - it may already be answered.

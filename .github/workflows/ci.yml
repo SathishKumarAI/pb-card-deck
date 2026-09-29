@@ -1,8 +1,12 @@
 name: CI
 
-# Lint, type-check, and build on every push and PR. Pair this with branch
-# protection (require the "build" check) so broken code can't reach `main` -
-# and since Vercel auto-deploys `main` to production, that keeps prod green.
+# Lint, type-check, test and build on every push and PR. Pair this with branch
+# protection (require the "build" check) so broken code can't reach `main`.
+#
+# `main` does NOT auto-deploy to production: the Vercel Git integration only
+# builds Previews. Production moves when someone runs ./deploy-vercel.sh, which
+# deploys with --scope, aliases the domain, then curls the domain to verify.
+# (The domain was once found pinned to a deployment 81 days old - see PR #11.)
 
 on:
   push:

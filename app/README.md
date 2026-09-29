@@ -8,7 +8,16 @@ A free, **mobile-first, local-first** web app with 1,729 pickleball twist cards 
 
 No login. No install. Open the link at the court and play.
 
-> **What's new:** **Understand & Play (v1)** - a first-run **welcome tour** (replayable from Rules & help), **tap-to-define** jargon, a per-card **"?" explainer**, an always-shown **"What to do"** line, and a **"Why & how"** Rules tab, so newcomers need zero pickleball knowledge. Plus a **Coach / Umpire "Track a match"** mode (home `Play with cards` / `Track a match` toggle) that runs and records a real match - singles/doubles, two-server rotation, timeouts/faults, side-switch, saved to history with a downloadable match sheet. Also: a **1,729-card deck** (the Ramanujan taxicab number) with per-card **rarity / intensity / tags**; a **Commentator voice** toggle (concise vs hyped card text); **in-game pause**; configurable **match length** + match-complete screen; a **Back** button beside Draw and a bigger responsive card; plus a full accessibility pass and custom fonts. Full card dataset with the design rationale: [`../docs/data/cards.json`](../docs/data/cards.json).
+> **What's new:** the whole shipped history, newest first and with the reasoning,
+> now lives in **[`../CHANGELOG.md`](../CHANGELOG.md)**. The last big arrivals:
+> **tournaments** (five formats, a live bracket tree, standings, exports, an
+> audit log), coach/umpire **Track a match** with a downloadable match sheet, a
+> **searchable manual** plus tap-to-define jargon, **share cards** as PNGs,
+> **light as the default theme** with a measured WCAG palette, and a rulebook
+> **scoring audit**. Product-level guides: [running an
+> event](../docs/TOURNAMENTS.md) · [recording a
+> match](../docs/RECORDING-A-MATCH.md). Full card dataset with the design
+> rationale: [`../docs/data/cards.json`](../docs/data/cards.json).
 
 ---
 
@@ -61,14 +70,19 @@ The tradeoff we accept: **no cross-device sync.** Custom decks and match history
 ### Cards & decks
 - **1,729 cards** across 10 categories, each with a name + effect.
 - **5 deck modes** - Family, Party, Drill, Tournament, Chaos - each a category filter.
-- **Custom decks** - build your own twist cards (name + effect + category), save them locally, and play them.
+- **Custom decks** - build your own twist cards (name + effect + category), save them locally, play them, and hand one to a friend as a **share code** (`encodeDeck` / `importDeckCode`, no upload).
 - **True 3D card flip** - perspective flip with a shine sweep on reveal.
 - **Recent draws** - the last 3 cards stay visible below the deck.
 - **Favorite / skip** - star cards you love; skip excludes a card from future draws this game.
+- **Full-deck browser** - search and filter all 1,729 cards by text, category and rarity (`CardBrowserPanel`, results capped at 120 with a count of what is hidden).
+- **Daily challenge** - a deck seeded from the date with a `mulberry32` PRNG, so it is identical for everyone that day with no server keeping the seed.
 
 ### Scoring & game engine
 - **Tap-to-score** scorekeeper with full game logic.
 - **Side-out scoring** - only the serving team can score (real pickleball rules); off-team taps trigger a side-out.
+- **Rally scoring** as an alternative - the rally winner scores *and* serves next.
+- **TV / courtside score** - a huge-score, minimal-chrome view for a phone or tablet propped at the side of the court.
+- **Screen wake lock** - the screen stays awake while a game is live and re-acquires when the tab returns to the foreground.
 - **Win detection** - first to 11 (configurable 7/11/15/21), **win by 2**.
 - **Serving indicator** - pulsing ring shows who serves; tap to switch.
 - **Undo stack** - reverses the last action completely (fixes wrong-team taps).
@@ -78,8 +92,11 @@ The tradeoff we accept: **no cross-device sync.** Custom decks and match history
 - **Resume last game** - leave to the menu and a *Resume* banner brings the in-progress match back, score intact.
 
 ### Match data (local)
-- **Match history** - every finished match is saved locally with score, mode, winner, and duration.
-- **Export / Import backup** - download all decks + history as JSON; restore on any device.
+- **Match history** - every finished match is saved locally with score, mode, winner, per-game results and **played** duration (pause time excluded), after the app asks for consent.
+- **Win streaks and lifetime records** - per-name current run, best run, win rate and recent results (`lib/streaks.ts`, `playerRecords`).
+- **Achievements** - local milestones computed from your own counters (`pb-stats`): first draw, 100 and 500 draws, a legendary, a custom deck, 10 and 50 matches, daily challenges. No accounts, no leaderboard.
+- **CSV export** - match history as `date, mode, team1, score1, team2, score2, winner, games, minutes`.
+- **Export / Import backup** - download all decks + history + events as JSON; restore on any device.
 - **In-app feedback** - star rating + message that opens a prefilled email to the maintainer (and keeps a local copy).
 
 ### Experience
@@ -106,7 +123,17 @@ The tradeoff we accept: **no cross-device sync.** Custom decks and match history
 
 ## Architecture (deep dive)
 
-**Stack:** Next.js 16 (App Router, Turbopack) · React 19 · TypeScript · Tailwind CSS v4 · lucide-react. The app ships as a single client-rendered route - there is no server-side data path in production.
+**Stack, with the versions in `package.json`:** Next.js `16.2.6` (App Router,
+Turbopack) · React `19.2.4` · TypeScript `^5` · Tailwind CSS `^4` ·
+lucide-react `^1.17.0` · Vitest `^4.1.9` + Testing Library + jsdom +
+`vitest-axe` · Node `24` in CI, matching the Vercel runtime. **Four runtime
+dependencies in total** (`next`, `react`, `react-dom`, `lucide-react`) - no state
+library, no component library, no backend. The app ships as a single
+client-rendered route; there is no server-side data path in production.
+
+**Gates:** `npm run lint` · `npx tsc --noEmit` · `npm test` (**164 tests in 14
+files**) · `npm run contrast` · `npm run build`. CI runs all of them plus
+`npm audit` and a gitleaks secret scan.
 
 ### Data flow
 
@@ -148,8 +175,15 @@ All persistence is `localStorage`, isolated behind **`lib/client-api.ts`** so th
 | Key | Holds | Cap |
 |---|---|---|
 | `pickleball-shuffle-game` | the active `GameSession` (for resume) | 1 |
+| `pickleball-shuffle-games` | saved in-progress games | - |
 | `pb-custom-decks` | user-authored decks `{ id, name, description, cards[] }` | - |
-| `pb-match-history` | finished matches `{ teams, score, winner, mode, duration }` | 200 |
+| `pb-match-history` | finished matches `{ teams, score, winner, mode, duration, official fields }` | 200 |
+| `pb-tournaments` | events, including their change log | - |
+| `pb-favorites` | starred card ids | - |
+| `pb-stats` | counters behind achievements (draws, legendaries, dailies) | - |
+| `pb-save-history` | the save-to-device answer (`ask` / `always` / `never`) | 1 |
+| `pb-theme`, `pb-last-deck` | theme choice, last deck mode | 1 each |
+| `pb-welcome-tour-seen`, `pb-beginner-intro-seen` | one-time gates | 1 each |
 | `pb-feedback` | local backup of submitted feedback | 50 |
 
 `exportData()` serializes decks + history to a JSON blob (downloaded via an object URL); `importData()` restores them. Custom-deck cards are mapped to playable `Card`s with **negative ids** (`deckToCards`) so they never collide with the built-in 1-1729 id space.
@@ -181,7 +215,7 @@ The primary use case is a phone at a court, so the app is tuned for it:
 ```
 app/
 ├── app/
-│   ├── page.tsx              # The whole game: state, draw, score, panels, resume
+│   ├── page.tsx              # Session state only (~470 lines): draw, score, storage, resume
 │   ├── layout.tsx            # Root layout, viewport, PWA metadata
 │   └── globals.css           # Theme tokens, animation utilities, mobile hardening
 ├── components/
@@ -431,8 +465,18 @@ possible, with the reason each one is still absent.
 | Rotating partners that never repeats a pairing | Currently ranks, groups and pairs: close games, but a pairing can repeat late in a small field. |
 | Per-card analytics (most drawn, most skipped) | The counters exist in `lib/client-api.ts`; nothing reads them yet. |
 | Translation | All copy sits in `lib/manual.ts`, `lib/glossary.ts` and components - none of it extracted. |
-| Splitting `app/page.tsx` | Past the 500-line ceiling. Tournament code was kept out of it deliberately; the game screen is the next split. |
+
+> `app/page.tsx` used to head this list at 1,010 lines. It is now ~470 and owns
+> session state only; layout lives in `HomeScreen`, `GameScreen` and
+> `AppPanels`. The debt is paid - see [`../CHANGELOG.md`](../CHANGELOG.md).
+
+## Contributing
+
+Ideas, cards, bug reports and PRs are all welcome - see
+[`../CONTRIBUTING.md`](../CONTRIBUTING.md) for the four CI gates, the card
+generator, and the traps that have cost real time here. Two ground rules: keep it
+local-first, keep the build green.
 
 ## License
 
-MIT
+[MIT](../LICENSE)
