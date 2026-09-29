@@ -16,6 +16,35 @@ export const ACTIVE_GAME_KEY = "pickleball-shuffle-game";
 export const SAVED_GAMES_KEY = "pickleball-shuffle-games";
 export const INTRO_SEEN_KEY = "pb-beginner-intro-seen";
 
+export const THEME_KEY = "pb-theme";
+export const LAST_DECK_KEY = "pb-last-deck";
+export const SAVE_HISTORY_KEY = "pb-save-history";
+export const TOUR_SEEN_KEY = "pb-welcome-tour-seen";
+
+/**
+ * Every key holding something the user made, played or wrote. The erase path
+ * enumerates THIS, so adding an entity to the app cannot quietly leave it behind
+ * when someone presses "delete all my data" - which is exactly what happened to
+ * events, saved games and the feedback copy before this list existed.
+ */
+export const USER_DATA_KEYS = [
+  DECKS_KEY,
+  MATCHES_KEY,
+  FAVORITES_KEY,
+  STATS_KEY,
+  EVENTS_KEY,
+  FEEDBACK_KEY,
+  ACTIVE_GAME_KEY,
+  SAVED_GAMES_KEY,
+  INTRO_SEEN_KEY,
+] as const;
+
+/**
+ * Settings, not data. Deliberately survive an erase: wiping your matches should
+ * not put you back in light mode and replay the welcome tour.
+ */
+export const PREFERENCE_KEYS = [THEME_KEY, LAST_DECK_KEY, SAVE_HISTORY_KEY, TOUR_SEEN_KEY] as const;
+
 export function read<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);

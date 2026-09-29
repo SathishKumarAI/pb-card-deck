@@ -45,8 +45,13 @@ lib/manual.ts         - the in-app manual: every help answer as plain data (no J
 lib/game.ts           - PURE game engine (addScore/sideOut/undo/checkWin) + active-game
                         localStorage; official mode: serverLabel/recordTimeout/recordFault/
                         logCount + two-server doubles rotation (behind config.officialMode)
-lib/client-api.ts     - local store: custom decks, match history, export/import;
-                        matchSheet() export + official fields on SavedMatch/addMatch
+lib/client-api.ts     - FAÇADE ONLY, no logic: the single door components use for
+                        storage, and the swap point for the optional Supabase sync
+lib/store/            - the local store, one file per concern: keys.ts (every
+                        localStorage key + read/write guards), decks.ts (decks,
+                        share codes), matches.ts (history, matchSheet, CSV,
+                        records), tournaments.ts (events), prefs.ts (favorites,
+                        stats, backup, erase). See its README.
 lib/useFocusTrap.ts   - focus-trap hook for dialogs / sheets
 lib/streaks.ts        - win streaks from saved matches (pure, tested)
 lib/shareImage.ts     - share cards on canvas: result / streak / tournament, in
@@ -87,8 +92,16 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
 
 ## Conventions
 - Game logic = pure functions in `lib/game.ts`; UI calls them and stores the returned `GameSession`.
-- All persistence goes through `lib/client-api.ts` (swap point if a real DB is ever added),
-  tournaments included - the engine never reads or writes storage itself.
+- All persistence goes through `lib/client-api.ts` (the swap point for the optional
+  Supabase account in phase 2a), tournaments included - the engine never reads or
+  writes storage itself. Components import the façade, never `lib/store/*`.
+- **A storage key is a constant in `lib/store/keys.ts`, never a string at a call
+  site, and the erase path enumerates `USER_DATA_KEYS`.** `clearAllData` used a
+  hand-written list of six keys, so the tournaments someone ran, their saved
+  games and the local copy of their feedback all survived "delete all my data"
+  for three months. `lib/store/erase.test.ts` fails if a data key escapes it.
+  `PREFERENCE_KEYS` survive an erase on purpose - wiping matches should not
+  reset the theme.
 - A tournament match played on the scorekeeper carries `GameSession.tournamentRef`,
   and team 1 is ALWAYS the match's team A. That is what lets the final score be
   written straight back; swap the sides and results land on the wrong team.

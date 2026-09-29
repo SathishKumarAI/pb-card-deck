@@ -7,7 +7,7 @@
  * those live in `decks.ts`, `matches.ts` and `tournaments.ts`.
  */
 
-import { FAVORITES_KEY, STATS_KEY, DECKS_KEY, MATCHES_KEY, EVENTS_KEY, ACTIVE_GAME_KEY, INTRO_SEEN_KEY, read, write, remove } from "./keys";
+import { FAVORITES_KEY, STATS_KEY, DECKS_KEY, MATCHES_KEY, EVENTS_KEY, USER_DATA_KEYS, read, write, remove } from "./keys";
 import { listDecks } from "./decks";
 import { listMatches } from "./matches";
 import { listTournaments } from "./tournaments";
@@ -61,8 +61,15 @@ export function importData(json: string): { decks: number; matches: number; tour
   };
 }
 
-// Wipe every local trace of the user's data (backlog F342). Local-first means
-// there's nothing on a server to delete - clearing these keys is a full erase.
+/**
+ * Wipe every local trace of the user's data (backlog F342). With no account
+ * there is nothing on a server to delete, so clearing these keys IS the erase -
+ * which is why it enumerates `USER_DATA_KEYS` instead of a hand-written list.
+ * The hand-written list is how events, saved games and the local feedback copy
+ * survived an erase for three months (`store/erase.test.ts`).
+ *
+ * Preferences are left alone on purpose - see `PREFERENCE_KEYS`.
+ */
 export function clearAllData() {
-  [DECKS_KEY, MATCHES_KEY, FAVORITES_KEY, STATS_KEY, ACTIVE_GAME_KEY, INTRO_SEEN_KEY].forEach(remove);
+  USER_DATA_KEYS.forEach(remove);
 }

@@ -59,7 +59,9 @@ export default function AppMenu({
   const doDeleteAll = () => {
     setOpen(false);
     const ok = typeof window !== "undefined" &&
-      window.confirm("Delete all local data - matches, custom decks, favorites and the current game? This cannot be undone.");
+      window.confirm(
+        "Delete all local data - matches, custom decks, favorites, tournaments and the current game? This cannot be undone.",
+      );
     if (!ok) return;
     clearAllData();
     window.location.reload();
