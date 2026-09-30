@@ -23,7 +23,45 @@
  * The secret key is used ONLY to create and delete the two test users. Every
  * assertion runs with a normal user session and the publishable key, exactly as
  * the browser does.
+ *
+ * Easier route: fill in `.env.rls.local` at the repo root and just run
+ * `npm run test:rls` from `app/`.
  */
+
+import { readFileSync } from "node:fs";
+
+/**
+ * Credentials come from the environment, or from `.env.rls.local` at the repo root -
+ * a git-ignored file that exists so a secret key never has to be typed on a command
+ * line (where it lands in shell history) and never has to live in the app's own
+ * `.env.local` (where a NEXT_PUBLIC_ prefix could one day ship it to every visitor).
+ *
+ * Hand-parsed rather than pulling in dotenv: this file has no dependencies, which is
+ * part of why it can be trusted to test the wire.
+ */
+function loadEnvFile() {
+  const path = new URL("../../.env.rls.local", import.meta.url);
+  let text;
+  try {
+    text = readFileSync(path, "utf8");
+  } catch {
+    return; // no file: the environment is expected to carry the values
+  }
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq < 1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const value = trimmed.slice(eq + 1).trim();
+    // A placeholder is not a value: leaving <paste …> in place must read as "unset",
+    // so the suite says what is missing instead of failing against a nonsense URL.
+    if (!value || value.startsWith("<")) continue;
+    if (process.env[key] === undefined) process.env[key] = value;
+  }
+}
+
+loadEnvFile();
 
 const URL_ = process.env.SUPABASE_URL;
 const PUBKEY = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
@@ -36,10 +74,11 @@ function die(why) {
   process.exit(1);
 }
 
-if (!URL_ || !PUBKEY) die("SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY) are required");
-if (!SECRET) die("SUPABASE_SECRET_KEY is required to create the two throwaway test users");
+const HINT = "Fill in .env.rls.local at the repo root (it is git-ignored), or pass the values in the environment.";
+if (!URL_ || !PUBKEY) die(`SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY) are required. ${HINT}`);
+if (!SECRET) die(`SUPABASE_SECRET_KEY is required to create the two throwaway test users. ${HINT}`);
 if (CONSENT !== "i-understand-this-creates-and-deletes-users") {
-  die("set SUPABASE_RLS_TEST=i-understand-this-creates-and-deletes-users, and point this at a dev project");
+  die(`set SUPABASE_RLS_TEST=i-understand-this-creates-and-deletes-users, and point this at a dev project. ${HINT}`);
 }
 
 /* ─── tiny test harness ─── */

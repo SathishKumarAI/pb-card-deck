@@ -83,12 +83,17 @@ Supabase is retiring them by the end of 2026, so prefer the new names.
 
 ## 5. Give the app the env vars
 
-`app/.env.local` (git-ignored):
+`app/.env.local` (git-ignored). The repo ships this file with the two placeholders in
+it, so filling it in is a two-line edit:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
+
+**Nothing else belongs in that file.** The Google client secret goes in the Supabase
+dashboard, and the secret key goes in `.env.rls.local` (step 6) - never in a file the
+app loads.
 
 Then the same two in Vercel → Project → Settings → Environment Variables, for
 Production and Preview. Redeploy with `./deploy-vercel.sh` — and verify the
@@ -102,13 +107,26 @@ that prefix.**
 
 This is not optional, and it is the step that proves the rest.
 
+Fill in **`.env.rls.local`** at the repo root - git-ignored, and deliberately separate
+from `app/.env.local` so nothing the app loads can reach a secret key. The repo ships
+it with placeholders:
+
 ```bash
-SUPABASE_URL=https://<ref>.supabase.co \
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_... \
-SUPABASE_SECRET_KEY=sb_secret_... \
-SUPABASE_RLS_TEST=i-understand-this-creates-and-deletes-users \
-npm run test:rls            # from app/
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+SUPABASE_SECRET_KEY=sb_secret_...
+SUPABASE_RLS_TEST=i-understand-this-creates-and-deletes-users
 ```
+
+Then, from `app/`:
+
+```bash
+npm run test:rls
+```
+
+Passing the values in the environment instead still works and takes precedence. A
+left-in `<paste ...>` placeholder counts as **unset**, so the suite tells you what is
+missing rather than failing against a nonsense URL.
 
 It creates two throwaway users, has the second one try to read, edit, delete,
 forge and rewrite the first one's data, then deletes them. **Point it at a
