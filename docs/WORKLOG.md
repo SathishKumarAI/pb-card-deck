@@ -1,5 +1,40 @@
 # Worklog
 
+## 2026-09-29 — phase 2a stage 5: the docs stop contradicting the product
+
+Four stages shipped an optional account. Every user-facing document still said "no
+backend, no login", which by then was true of the default mode and false as a
+description of the app.
+
+**What changed**
+
+| File | What it now says |
+|---|---|
+| `README.md` | A **two-modes table** up front: no account vs account, what syncs and what does not, and that the cloud code is not even downloaded without an account. Plus the security paragraph, the stack row for Supabase, the local security-gate command, and sharing named as *not built yet* |
+| `app/app/(info)/privacy/page.tsx` | Both modes, honestly: what an account stores, **where** (Supabase, in the project's region), that only that account can read it, **the names an organiser types for other people**, how to delete the account and every row, and that signing out deletes nothing |
+| `CONTRIBUTING.md` | The ground rule is now "the **no-account** mode must keep working with no backend configured" — and that a contributor needs no Supabase project at all |
+| `CHANGELOG.md` | A full phase-2a entry, including the four defects the work surfaced |
+| `STATUS.md` | Rewritten around **the one thing that needs the owner**: six setup steps, without which phase 2a is inert in production |
+| `app/README.md`, `docs/index.md` | Sync bookkeeping keys, the real gate counts, and links to the setup runbook, the spec and the stage plan |
+
+**The privacy page was the one that mattered.** Two modes means two honest
+paragraphs, not one reassuring one — and it now names the thing a local-first app
+never had to: an organiser types **other people's** names, and those travel with the
+event. It asks for first names or nicknames, and points at the one-operation account
+deletion.
+
+**One number corrected while writing it:** the suite is **262 tests in 23 files**,
+not 26 — the file count came from a guess and the run says 23.
+
+**Verification:** `npm test` 262 passed (23 files); lint 0 errors, 14 pre-existing
+warnings; `tsc --noEmit` clean; contrast pass; build clean. Every relative link in
+all twelve touched documents resolved against the filesystem — 0 missing.
+
+**Phase 2a is complete.** What is not done is the owner's Supabase setup, and until
+that exists the production app is byte-for-byte the local-first one — a supported,
+tested state. Phase 2b (a revocable read-only share link) and 2c (invited signed-in
+writers) each get their own spec.
+
 ## 2026-09-29 — phase 2a stage 4b: events sync, one blob into three tables
 
 Tournaments now sync too, which was the half of stage 4 worth separating.

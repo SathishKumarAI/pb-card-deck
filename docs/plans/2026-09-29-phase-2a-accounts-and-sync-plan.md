@@ -110,15 +110,15 @@ once a project exists — it needs credentials this repo does not have.
       round-trips field by field, including slot wiring, an unplayed match staying
       unplayed, the log's order and its per-line match links
 
-## Stage 5 — the docs catch up `docs/two-modes`
+## Stage 5 — the docs catch up `docs/two-modes` — **DONE** (this PR)
 
-- [ ] `README.md` — two modes, what syncs, what does not, the security model,
+- [x] `README.md` — two modes, what syncs, what does not, the security model,
       the accepted `localStorage`-session risk
-- [ ] `CONTRIBUTING.md` — the ground rule becomes "local-first **default**, cloud
+- [x] `CONTRIBUTING.md` — the ground rule becomes "local-first **default**, cloud
       optional"; how to run without a project
-- [ ] `app/app/(info)/privacy/page.tsx` — what is stored, the region, third-party
+- [x] `app/app/(info)/privacy/page.tsx` — what is stored, the region, third-party
       names an organiser types, deletion, no tracking
-- [ ] `CHANGELOG.md`, `STATUS.md`, `docs/index.md`, `app/README.md`
+- [x] `CHANGELOG.md`, `STATUS.md`, `docs/index.md`, `app/README.md`
 
 **Proof:** every relative link resolved; gates green.
 

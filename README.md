@@ -5,7 +5,8 @@
 A free, open-source, **mobile-first, local-first** web app: 1,729 pickleball
 twist cards fused with a real pickleball scorekeeper, a coach/umpire match
 recorder, and a tournament engine that will run an event for 4 people or 50.
-No login, no backend, works at a court with no signal.
+Works at a court with no signal - and an **optional** account keeps your data
+across devices if you want one.
 
 ### ▶︎ Live app: **<https://pb-card-deck.vercel.app>**
 
@@ -20,6 +21,7 @@ No login, no backend, works at a court with no signal.
 ## Contents
 
 - [The story](#the-story)
+- [Two ways to use it](#two-ways-to-use-it-no-account-or-an-account)
 - [What makes it different](#what-makes-it-different)
 - [Three ways to use it](#three-ways-to-use-it)
 - [Everything it does](#everything-it-does)
@@ -59,6 +61,42 @@ later, it is a single static site that never phones home. **It is open source
 because the next good idea probably is not mine** - see
 [Contributing](#contributing-and-ideas-wanted).
 
+## Two ways to use it: no account, or an account
+
+Both are first-class. The app opens in the first one and never nags you about the
+second.
+
+| | **No account** (default) | **With an account** (optional) |
+|---|---|---|
+| Sign-in | none | Google, or a link emailed to you - **no passwords** |
+| Where data lives | your browser only | your browser **and** a private row in the cloud |
+| Offline | always | always - a tap never waits on the network |
+| Survives a cleared browser | no (export a backup) | yes |
+| Appears on your other phone | no | yes |
+| Cloud code downloaded | **none at all** | ~249 KB, and only when you open the account sheet |
+
+What syncs with an account: **matches, custom decks, tournaments (with their
+change log), favourite cards and achievement counters.** What does not: the
+in-progress game on this device, your theme, and the one-time tour flags - those
+are per device by design.
+
+How it is kept safe, in one paragraph: every row is owned by your account and
+enforced **by the database**, per row, rather than by app code that could be
+bypassed; there are no passwords to leak; a tournament's audit log cannot be
+edited by anyone, including you; and **Delete my account** removes every row in one
+operation. The control-by-control list is in the
+[design spec](docs/superpowers/specs/2026-09-29-supabase-accounts-and-sync-design.md),
+and the policies are verified by an adversarial suite that tries to read another
+account's data and must fail - runnable offline with
+`bash scripts/verify-rls-local.sh`.
+
+**Sharing an event with other people is not built yet.** An account is private to
+you today. The plan is a revocable read-only link for spectators, then invited
+signed-in co-organisers who can enter results - [phases 2b and 2c](#the-plan).
+
+Running your own copy? An account needs a Supabase project, and the app works
+perfectly with none: see [`docs/SUPABASE-SETUP.md`](docs/SUPABASE-SETUP.md).
+
 ## What makes it different
 
 Plenty of apps keep a pickleball score. A few sell twist-card decks. The
@@ -67,7 +105,8 @@ interesting part is what falls out of doing both, locally, on a phone:
 | | Why it is not the obvious approach |
 |---|---|
 | **A card deck *inside* the scoreboard** | The twist applies to the *next point*, so the card and the score have to share one state machine. Card games and score apps are normally two apps and a house rule. |
-| **Zero backend, on purpose** | No login, no database, no per-user cost, nothing to leak. A court has bad signal; a static site plus a service worker does not care. The whole store sits behind one module, so it stays honest. |
+| **Optional backend, on purpose** | The default is still no login, no server, nothing to leak - and an account is a second mode beside it, not a replacement. The whole store sits behind one module, so the sync queue hooks in without a single screen knowing it exists. |
+| **A tap never waits on the network** | Even signed in, scoring writes the device and returns; a queue drains in the background and the chip says `Synced` / `3 to save` / `Offline`. Plenty of "offline-capable" apps put the network in the hot path and degrade when it is missing. |
 | **A tournament engine where a match holds two *slots*, not two teams** | A slot says where its team comes from: a seed, the winner of a match, the loser of a match, or a bye. One function fills in whatever is now knowable - and that single pass advances a bracket, awards a bye nobody plays, builds the playoff the moment pools finish, and decides a double-elimination reset is not needed. **Adding a format is wiring, not new advance logic.** |
 | **Colour that is measured, not eyeballed** | `npm run contrast` prints a WCAG table for both themes and fails the build below threshold. Two light-mode pairs failed the first time it ran - a button label at 3.77:1 and the serve marker at 2.84:1 - and the palette was darkened until they passed. |
 | **Rules verified against the rulebook, not vibes** | `lib/scoring-audit.test.ts` is a rulebook audit: one test per defect, written before the fix, named for what a player would see. It caught the single opening service turn (USAP 4.B.7) and reset not restoring the first server. |
@@ -123,6 +162,7 @@ match history.
 | **Share cards** | Any win, streak or tournament result rendered to a PNG in three shapes - square (feed), story (1080×1920) and tall (4:5) - handed to your phone's share sheet with a caption to paste. |
 | **CSV export** | Match history as CSV for a spreadsheet. |
 | **Export / Import backup** | Move decks, history and events between devices as a JSON file. No account, no upload. |
+| **Optional cloud sync** | Sign in and the same data also lives in a private row only your account can read, so it survives a cleared browser and appears on your other devices. Off by default. |
 | **Offline** | A service worker keeps the whole thing working at a court with bad signal. |
 
 Full detail: **[`docs/RECORDING-A-MATCH.md`](docs/RECORDING-A-MATCH.md)**.
@@ -208,6 +248,7 @@ library, no backend.
 | Layer | Choice | Version | Why this one |
 |---|---|---|---|
 | Framework | [Next.js](https://nextjs.org) App Router + Turbopack | `16.2.6` | Static export-friendly, good PWA story, one route |
+| Accounts + sync (optional) | [Supabase](https://supabase.com) - Postgres, Auth, row-level security | `@supabase/supabase-js ^2.117` | Loaded lazily, and absent entirely when no project is configured |
 | UI | [React](https://react.dev) | `19.2.4` | - |
 | Language | TypeScript | `^5` | The engine is pure functions; types are the cheapest test |
 | Styling | [Tailwind CSS](https://tailwindcss.com) v4 + CSS custom properties | `^4` | Utilities for layout, **tokens** for colour/radius/elevation |
@@ -217,10 +258,12 @@ library, no backend.
 | Node | Node LTS | `24` (CI) | Matches the Vercel runtime |
 | Hosting | [Vercel](https://vercel.com) | - | Static site, global CDN, free tier |
 | Storage | `localStorage` behind `lib/client-api.ts` | - | The entire persistence layer, swappable in one module |
+| Cloud storage (optional) | Postgres on Supabase, RLS per row | - | Security enforced by the database, not by app code |
 | Offline | Service worker, network-first | `pb-shuffle-v2` | Fresh when online, last good copy when not |
 
-**Runtime dependencies in full:** `next`, `react`, `react-dom`,
-`lucide-react`. That is the list.
+**Runtime dependencies in full:** `next`, `react`, `react-dom`, `lucide-react`,
+and `@supabase/supabase-js` - which sits behind a dynamic `import()`, so a player
+without an account never downloads it. That is the list.
 
 ## How it is built
 
@@ -253,11 +296,24 @@ npm run build      # production build
 | `tournament/*.test.ts` | Scheduling, bracket wiring, byes, tiebreaks, exports |
 | `bugs-round2.test.ts` | Every bug found by hand, kept as a test so it cannot come back |
 | `streaks.test.ts`, `cards*.test.ts`, `client-api.test.ts`, `manual.test.ts` | Streak maths, deck integrity and uniqueness, the local store, manual content |
-| `a11y.test.tsx`, `scoreboard-view.test.tsx` | Axe violations and what the board actually renders |
+| `a11y.test.tsx`, `scoreboard-view.test.tsx`, `account-panel.test.tsx` | Axe violations, what the board renders, and that the account sheet never reveals who has an account |
+| `sync/*.test.ts` | The outbox rules, the conflict rule, tombstones, prefs merging, and an event round-tripping through three tables |
+| `store/erase.test.ts` | A data key escaping "delete all my data" |
 | `contrast.test.ts` | A palette edit that drops a pair below WCAG AA |
 
 **CI** (`.github/workflows/ci.yml`) runs lint → type-check → tests →
 `npm audit` → build on every push and PR, plus a **gitleaks** secret scan.
+
+### Verifying the database rules (no Supabase account needed)
+
+```bash
+bash scripts/verify-rls-local.sh   # needs Docker
+```
+
+Starts a throwaway Postgres, applies the migrations, and has a second account try to
+read, edit, delete, forge and rewrite the first one's data. Every attempt must fail.
+It is mutation-tested: disable RLS on one table and it reports
+`SECURITY GATE FAILED: B can read decks`.
 
 ### Deploying
 
@@ -302,7 +358,10 @@ a primary key. It writes `app/public/cards.json`, `data/cards.json` and
 | Help text and the Help shortcuts | `app/lib/manual.ts` |
 | Pickleball definitions | `app/lib/glossary.ts` |
 | Share images | `app/lib/shareImage.ts` |
-| Anything saved to the device | `app/lib/client-api.ts` |
+| Anything saved to the device | `app/lib/client-api.ts` (facade) then `app/lib/store/` |
+| Sign-in, sign-out, delete account | `app/lib/auth.ts`, `app/components/AccountPanel.tsx` |
+| What syncs, when, and who wins a conflict | `app/lib/sync/` (see its README) |
+| The database schema or its security rules | `supabase/migrations/` (see `supabase/README.md`) |
 
 Two rules this project learned the hard way:
 
@@ -362,7 +421,8 @@ place to jump in** - say so in an issue and it is yours.
 ### Next up (most likely to happen)
 | Idea | Where it stands |
 |---|---|
-| **Share codes / QR handoff** for an event or a custom deck | The strongest reason to add any server at all - and a peer-to-peer version needs none. Deck share codes already exist; events do not. |
+| **A read-only link to a running event** (phase 2b) | Spectators open a link, see the live bracket, change nothing. One revocable token, no signup for viewers; the schema already has the shape for it. |
+| **Invited co-organisers entering results** (phase 2c) | Writers sign in and are invited per event, so the change log names a person. This is why event matches are stored as rows rather than a blob. |
 | **Consolation / plate draws and a third-place play-off** | The slot model already supports it. This is wiring, not engine work - a genuinely good first contribution. |
 | **Per-card analytics** (most drawn, most skipped, most favourited) | The counters already exist in `lib/client-api.ts`; nothing reads them yet. |
 | **Rotating partners that never repeats a pairing** | Today it ranks, groups and pairs, which keeps games close but can repeat a pairing late in a small field. |
@@ -378,7 +438,8 @@ place to jump in** - say so in an issue and it is yours.
 ### Deliberately not doing
 | Not doing | Because |
 |---|---|
-| **Accounts and cross-device sync** | The local-first design exists to avoid them. The realistic version is a share code or QR handoff between two phones, not a backend. |
+| **Making an account compulsory** | The no-account mode is the default and stays fully featured. Every cloud path checks whether a project is even configured, and a fork with none behaves exactly like today's app. |
+| **Storing anything we do not need** | No analytics, no profiles, no email copies beyond the sign-in record. What syncs is what you made: matches, decks, events, favourites, counters. |
 | **Ads, paywalls, or selling anything** | It is a for-fun project. MIT, free, no tracking. |
 | **Emoji in the UI** | One icon set (lucide), everywhere. |
 
@@ -386,8 +447,8 @@ place to jump in** - say so in an issue and it is yours.
 
 **This is an open-source project and contributions are genuinely welcome** -
 code, cards, bug reports, or just an opinion about how a screen should work. No
-CLA, no red tape. Two ground rules: keep it **local-first** (no backend, no
-login) and keep the **build green**.
+CLA, no red tape. Two ground rules: **the no-account mode must keep working with no
+backend at all**, and keep the **build green**.
 
 ### The easiest ways to help (no code needed)
 
@@ -444,6 +505,8 @@ Full index: **[`docs/index.md`](docs/index.md)**.
 | [`CHANGELOG.md`](CHANGELOG.md) | Everything that shipped, newest first, with the why |
 | [`docs/TOURNAMENTS.md`](docs/TOURNAMENTS.md) | Running a real event, start to finish |
 | [`docs/RECORDING-A-MATCH.md`](docs/RECORDING-A-MATCH.md) | Every way to record and export gameplay |
+| [`docs/SUPABASE-SETUP.md`](docs/SUPABASE-SETUP.md) | Connecting your own deployment to the optional account service |
+| [the phase 2 spec](docs/superpowers/specs/2026-09-29-supabase-accounts-and-sync-design.md) | Accounts + sync: schema, security control by control, sync mechanics, failure modes |
 | [`app/README.md`](app/README.md) | Architecture deep-dive: data flow, engine, storage schema, PWA, mobile hardening |
 | [`docs/ONBOARDING.md`](docs/ONBOARDING.md) | 3-minute setup and a codebase map |
 | [`docs/DOUBLES-SCORING.md`](docs/DOUBLES-SCORING.md) | The doubles rules model and which button to press |

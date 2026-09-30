@@ -24,6 +24,11 @@ Open source, MIT. Contributions, card ideas and opinions are all welcome.
 - <a href="../app/lib/tournament/README.md" target="_blank" rel="noopener noreferrer">lib/tournament</a> — the event engine: formats, brackets, standings, the slot model
 - <a href="../app/components/tournament/README.md" target="_blank" rel="noopener noreferrer">components/tournament</a> — the event screens and the decisions behind them
 
+**Accounts &amp; sync (optional, phase 2a)**
+- <a href="SUPABASE-SETUP.md" target="_blank" rel="noopener noreferrer">Supabase setup</a> — the one-time owner runbook, and how to verify the security rules with no account
+- <a href="superpowers/specs/2026-09-29-supabase-accounts-and-sync-design.md" target="_blank" rel="noopener noreferrer">Design spec</a> — schema, security control by control, sync mechanics, failure modes
+- <a href="plans/2026-09-29-phase-2a-accounts-and-sync-plan.md" target="_blank" rel="noopener noreferrer">Stage plan</a> — the five stages and what each one proved
+
 **Using the app**
 - <a href="TOURNAMENTS.md" target="_blank" rel="noopener noreferrer">Running a tournament</a> — formats, one-paste setup, courts, brackets, fixing scores, exports
 - <a href="RECORDING-A-MATCH.md" target="_blank" rel="noopener noreferrer">Recording a match</a> — casual history, coach/umpire mode, the match sheet, CSV, backups, storage keys

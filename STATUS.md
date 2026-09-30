@@ -4,23 +4,39 @@ _Last written 2026-09-29. Read this when you come back._
 
 ## Where things stand
 
-**Merged and deployed** through PR #14. On top of that, an **open-source
-documentation pass** on branch `docs/open-source-story-refresh`: a README that
-tells the story (why it exists, what is innovative, stack + versions, how it is
-built, the plan, the contribution ask), a new `CHANGELOG.md`, the missing MIT
-`LICENSE` file, `docs/TOURNAMENTS.md`, `docs/RECORDING-A-MATCH.md`, GitHub issue
-and PR templates, and stale facts corrected across `README.md`, `app/README.md`,
-`CONTRIBUTING.md` and the CI comment (144-vs-**164** tests, a false
-"`main` auto-deploys to production" claim, the wrong clone path, and the
-`page.tsx` split listed as pending when it is done).
+**Phase 2a is built and merged**: an **optional** Supabase account beside the
+local-first default. Six PRs, #16 through #22, each with its own docs and a dated
+`WORKLOG.md` entry.
 
 | | |
 |---|---|
 | Live | https://pb-card-deck.vercel.app |
-| Tests | **164 in 14 files** (engine, scoring audit, two bug-hunt suites, tournaments, streaks, contrast, a11y, board rendering) |
-| Gates | `npm test` · `npm run contrast` · `npm run lint` · `npx tsc --noEmit` · `npm run build` |
+| Tests | **262 in 23 files** (engine, scoring audit, two bug hunts, tournaments, streaks, contrast, a11y, board rendering, store erase, auth, account sheet, sync: outbox / engine / rows / events / claim) |
+| Gates | `npm test` · `npm run lint` · `npx tsc --noEmit` · `npm run contrast` · `npm run build` |
+| Security gate | `bash scripts/verify-rls-local.sh` — Docker, no Supabase account needed |
 | Default theme | **light**; dark and auto are one tap away and persist |
-| Docs entry points | `README.md` (the story) · `CHANGELOG.md` (history) · `docs/index.md` (index) |
+
+## The one thing that needs YOU
+
+**Nothing about the account works until a Supabase project exists**, and only the
+owner can create one. Until then the app is byte-for-byte the local-first one: with
+no `NEXT_PUBLIC_SUPABASE_*` env vars the cloud code is never downloaded and the
+account menu item is absent. That is a supported, tested state, not a broken one.
+
+Six steps, all in **[`docs/SUPABASE-SETUP.md`](docs/SUPABASE-SETUP.md)**:
+
+1. Create the project (**choose the region deliberately** — the privacy page names it).
+2. Run `supabase/migrations/0001` → `0002` → `0003`, in order.
+3. Enable **Google** and **email magic link**; set the redirect allowlist to the
+   production origin and `http://localhost:3000` — exact entries, no wildcard.
+4. Put `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in
+   `app/.env.local` **and** in Vercel.
+5. Run `npm run test:rls` against the project and keep the output.
+6. Deploy with `./deploy-vercel.sh` and verify the **domain**, never the deployment
+   URL.
+
+The secret key belongs on your machine only, for step 5. Never in the app, never in
+Vercel, never in CI.
 
 ## What the app does now
 
@@ -28,83 +44,91 @@ and PR templates, and stale facts corrected across `README.md`, `app/README.md`,
   doubles serve rotation, pause, undo, match lengths, TV score.
 - **Track a match** — coach/umpire mode: timeouts, faults, a downloadable match
   sheet.
-- **Tournaments** — five formats (round robin, pools → playoff, single and
-  double elimination, rotating partners), a live bracket tree, editable scores
-  with an audit log, exports in four formats, divisions including mixed pairing,
-  and a demo event.
-- **Help** — a searchable manual of plain-language answers, reachable from every
-  screen, plus tap-to-define pickleball terms.
+- **Tournaments** — five formats, a live bracket tree, editable scores with an audit
+  log, exports in four formats, divisions including mixed pairing, and a demo event.
+- **Optional account** — Google or an email link, sync for matches / decks / events /
+  favourites / counters, a status chip that never lies, and one-operation account
+  deletion.
+- **Help** — a searchable manual, plus tap-to-define pickleball terms.
 - **Sharing** — win / streak / champion cards as PNGs at Instagram and WhatsApp
-  sizes, handed to the phone's share sheet.
+  sizes.
 
 ## Next action
 
-Open the PR for `docs/open-source-story-refresh` and squash-merge it; nothing in
-it touches app code, so the gates were run for evidence rather than risk.
+Phase 2a is done. Two things are queued and neither is started:
 
-After that, nothing is pending. Pick from **The plan** in `README.md` (now split
-into *Next up* / *Later* / *Deliberately not doing*) or the roadmap in
-`app/README.md` — each row says why that idea is not there yet. The rows flagged
-as good first contributions are a third-place play-off / consolation draw (slot
-wiring only) and a "most drawn cards" panel (the counters already exist).
+1. **The owner setup above.** Without it, phase 2a is inert in production.
+2. **Phase 2b — a revocable read-only share link for one event.** Its own spec, on
+   top of 2a. The schema already names `event_shares` (token **hash**, role,
+   `expires_at`, `revoked_at`) so this is additive. Then **2c**, invited signed-in
+   writers, which is why event matches are rows and not a blob.
 
-The 500-line debt is **paid**: `app/page.tsx` went from 1,010 lines to ~470 and
-now owns session state only. Layout lives in `components/HomeScreen.tsx`,
-`components/GameScreen.tsx` and `components/AppPanels.tsx`.
-
-`docs/LINKEDIN-POST.md` holds a launch post drafted but **not posted** — the
-author posts it.
+Or pick from **The plan** in `README.md` — each row says why that idea is not there
+yet.
 
 ## Traps that cost time here
 
 1. **Never put a directory under `app/` in a `.gitignore`.** Tailwind v4 honours
-   `.gitignore` for source detection, so `app/app/` silently stopped every class
-   used only in `page.tsx` from being generated — no error, just a page missing
-   half its layout. Restart the dev server after editing `.gitignore`; Tailwind
-   caches the list.
-2. **Turbopack can serve a stale `globals.css`.** A new rule was on disk and
-   absent from the served bundle twice this session. When a rule "does nothing",
-   fetch the stylesheet the page actually loaded and grep it before debugging
-   the rule.
-3. **`.app-col` beats `lg:max-w-*`** — both are single-class selectors and the
-   custom class is defined after the utilities. Widen with `.app-col--wide` or
+   `.gitignore` for source detection, so `app/app/` silently stopped every class used
+   only in `page.tsx` from being generated — no error, just a page missing half its
+   layout. Restart the dev server after editing `.gitignore`; Tailwind caches the
+   list.
+2. **Turbopack can serve a stale `globals.css`.** When a rule "does nothing", fetch
+   the stylesheet the page actually loaded and grep it before debugging the rule.
+3. **`.app-col` beats `lg:max-w-*`** — both are single-class selectors and the custom
+   class is defined after the utilities. Widen with `.app-col--wide` or
    `.app-col--event`.
-4. **Measure, don't infer.** Every UI bug fixed this session looked correct in
-   the markup: a missing class, a clipped card title, a focus ring on every
-   sheet, the page scrolling behind a dialog, a serve rotation out by one.
-   `getComputedStyle`, a scripted scroll, and `npm run contrast` found them.
-   The contrast script itself had a bug that made both themes report identical
+4. **Measure, don't infer.** Every UI bug fixed here looked correct in the markup.
+   `getComputedStyle`, a scripted scroll, and `npm run contrast` found them. The
+   contrast script itself once had a bug that made both themes report identical
    numbers — check the tool as carefully as the thing it measures.
-5. **Windows phantom file modes** are silenced with `core.fileMode=false`
-   (already set locally). Without it every `git status` shows the `.sh` files as
-   modified.
-6. **On Windows the checkout has no `node_modules/.bin`** until `npm install`
-   runs inside `app/`.
-7. **Layout drift is measurable, so measure it.** Three separate causes of "the
-   page is off centre" were found by reading boxes in the browser, not markup:
-   a per-tab column width (64px jump), a missing `scrollbar-gutter` (4px jump),
-   and a top bar 544px narrower than the content beneath it. `getComputedStyle`
-   plus `getBoundingClientRect` found all three in minutes.
-7. **"Deployed" is not "live".** `main` does **not** auto-deploy to production -
-   the Git integration only builds Previews. And a successful `vercel --prod`
-   does not move `pb-card-deck.vercel.app`: that domain was found pinned to a
-   deployment **81 days old**, so months of shipped work was live nowhere. Use
-   `./deploy-vercel.sh` (it deploys with `--scope`, aliases the domain, then
-   curls the domain to check), and verify the DOMAIN, never the deployment URL.
+5. **Windows phantom file modes** are silenced with `core.fileMode=false` (already
+   set locally).
+6. **On Windows the checkout has no `node_modules/.bin`** until `npm install` runs
+   inside `app/`.
+7. **"Deployed" is not "live".** `main` does **not** auto-deploy to production — the
+   Git integration only builds Previews. And a successful `vercel --prod` does not
+   move `pb-card-deck.vercel.app`: that domain was once found pinned to a deployment
+   **81 days old**. Use `./deploy-vercel.sh` and verify the DOMAIN.
+8. **`force row level security` breaks the definer functions.** It subjects the table
+   owner to the policies, and every policy is scoped `to authenticated` while the
+   owner is `postgres` — so the signup trigger cannot insert a profile and
+   `delete_my_account()` deletes **zero rows while reporting success**. The comment in
+   `0002_rls.sql` sits at the line where someone would add it back.
+9. **Supabase's default grants are wider than the policies.** `event_log` was
+   append-only in policy but not in privilege, so an UPDATE reached the policy layer
+   instead of being refused outright. Revoked explicitly; the suite reports
+   `(2 refused at privilege level)`.
+10. **A skipped security test must fail, not pass.** `npm run test:rls` exits
+    non-zero when credentials are missing, and the whole suite is mutation-tested —
+    disable RLS on one table and it says `SECURITY GATE FAILED: B can read decks`.
+11. **A free Supabase project pauses after 7 days idle.** The app surfaces that as a
+    sync error with the reason rather than retrying for ever.
 
 ## The rules the code now encodes
 
 Recorded properly in `app/CLAUDE.md`; the short version:
 
-- Surfaces are glass materials (`.mat-thin/regular/thick`), radius carries
-  hierarchy, elevation is three tokens, `--accent-ink` for text on accent,
-  `.tnum` for anything that counts.
-- Light is the default palette on `:root`; dark overrides it.
-- Colour is measured — `npm run contrast` fails below WCAG threshold.
-- One scroll container per page; inner scrollers use `.scroll-area`; every
-  dialog calls `useScrollLock`.
+- Surfaces are glass materials (`.mat-thin/regular/thick`), radius carries hierarchy,
+  elevation is three tokens, `--accent-ink` for text on accent, `.tnum` for anything
+  that counts.
+- Light is the default palette on `:root`; dark overrides it. Colour is measured —
+  `npm run contrast` fails below WCAG threshold.
+- One scroll container per page; inner scrollers use `.scroll-area`; every dialog
+  calls `useScrollLock`.
 - Hover only inside `@media (hover: hover) and (pointer: fine)`.
 - One primary action per screen; a confirmation renders where its button is.
-- Every state transition goes on the undo stack, not just the ones that change
-  a number.
-- Serve rules follow the rulebook, including the single first service turn.
+- Every state transition goes on the undo stack, not just the ones that change a
+  number. Serve rules follow the rulebook, including the single first service turn.
+- **A storage key is a constant in `lib/store/keys.ts`**, and the erase path
+  enumerates `USER_DATA_KEYS`. Hand-written lists are how three entities survived
+  "delete all my data" for months.
+- **Unconfigured is a first-class state.** Every cloud path starts with
+  `isCloudConfigured()`, and `supabase-js` is behind a dynamic `import()` so an
+  anonymous player downloads none of it (asserted by a test).
+- **`lib/store/*` enqueues; components never do**, and `applyRemote*` never enqueues
+  — that would push a pulled row straight back for ever.
+- **The sync conflict rule is the queue, not a clock**: a row with a pending outbox
+  entry wins, otherwise the server wins. Prefs are the exception and merge.
+- **Signing out keeps this device's data.** It clears the queue, cursors and id map
+  only. "Delete all data" is the explicit wipe.
