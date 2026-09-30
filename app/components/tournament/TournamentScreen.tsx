@@ -10,7 +10,7 @@
 
 import { useMemo, useState } from "react";
 import {
-  ArrowLeft, ListChecks, Table2, GitBranch, Users, Trophy, Plus, Share2, Check, History, Download, X,
+  ArrowLeft, ListChecks, Table2, GitBranch, Users, Trophy, Plus, Share2, Check, History, Download, X, Link2,
 } from "lucide-react";
 import type { Tournament, TournamentMatch } from "@/lib/tournament/types";
 import { FORMAT_INFO, DIVISION_INFO } from "@/lib/tournament/types";
@@ -20,6 +20,9 @@ import {
 } from "@/lib/tournament/engine";
 import { standings, poolStandings, playerStandings } from "@/lib/tournament/standings";
 import StandingsTable from "./StandingsTable";
+import ShareLinkPanel from "./ShareLinkPanel";
+import { isCloudConfigured } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth";
 import BracketView from "./BracketView";
 import MatchCard from "./MatchCard";
 import SharePanel from "../SharePanel";
@@ -40,6 +43,11 @@ export default function TournamentScreen({
   onPlayMatch: (m: TournamentMatch) => void;
 }) {
   const [tab, setTab] = useState<Tab>("now");
+  /* The read-only spectator link (phase 2b). Only offered to a signed-in owner:
+     a link lives in the account, so there is nothing to mint without one. */
+  const [sharingLink, setSharingLink] = useState(false);
+  const auth = useAuth();
+  const canShareLink = isCloudConfigured() && auth.status === "signed-in";
   const [picked, setPicked] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [sharingImage, setSharingImage] = useState(false);
@@ -174,6 +182,15 @@ export default function TournamentScreen({
           >
             <Share2 size={15} /> <span className="hidden sm:inline">Share</span>
           </button>
+          {canShareLink && (
+            <button
+              onClick={() => setSharingLink(true)}
+              className="pressable hoverable mat-thin flex items-center gap-1.5 px-3 py-2 text-sm font-semibold"
+              style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-chip)", color: "var(--text)" }}
+            >
+              <Link2 size={15} /> <span className="hidden sm:inline">Live link</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -325,6 +342,15 @@ export default function TournamentScreen({
       )}
 
       {/* Changes: the audit trail, newest first */}
+      {canShareLink && (
+        <ShareLinkPanel
+          open={sharingLink}
+          onClose={() => setSharingLink(false)}
+          tournamentId={t.id}
+          eventName={t.name}
+        />
+      )}
+
       {tab === "log" && (
         <div className="flex flex-col gap-2">
           <p className="text-xs" style={{ color: "var(--text-muted)" }}>

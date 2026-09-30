@@ -114,8 +114,14 @@ export default function PrivacyPage() {
           including you. Correcting a score adds a line saying what it used to be.
         </li>
         <li>
-          <strong>Sharing does not exist yet.</strong> Today an account is private to
-          you. If shared events arrive later, this page will say so before they do.
+          <strong>Sharing is something you choose, one event at a time.</strong> An
+          account is private to you unless you create a <strong>live link</strong> for a
+          specific event. Anyone holding that link can see that event&apos;s schedule,
+          results and <strong>the player names in it</strong> - so only share it where
+          those people would expect it. They cannot change anything, cannot see your
+          other events, and cannot see any account details. Links expire (seven days by
+          default), you can revoke one at any time, and deleting the event removes its
+          links with it.
         </li>
       </ul>
 

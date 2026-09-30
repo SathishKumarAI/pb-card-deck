@@ -13,7 +13,9 @@ for why any of it exists.
 | A column, a table, a check constraint, an index | `migrations/0001_init.sql` |
 | Who may read or write a table | `migrations/0002_rls.sql` |
 | A privileged operation (definer function, RPC) | `migrations/0003_functions.sql` |
-| What "try to break in" means | `tests/rls.test.mjs` |
+| Share links: the table, or any of the four share functions | `migrations/0004_event_shares.sql` |
+| What a SPECTATOR may see | `migrations/0004_event_shares.sql` (`get_shared_event`) |
+| What "try to break in" means | `tests/rls.test.mjs` (accounts), `tests/shares.local.sql` (share links) |
 | The owner's setup steps, keys, provider config | `../docs/SUPABASE-SETUP.md` |
 
 Migrations are additive and numbered. A schema change is a new file
@@ -42,6 +44,13 @@ Migrations are additive and numbered. A schema change is a new file
 - **The client never sets `updated_at` or `user_id`.** Triggers overwrite both, so
   a device cannot win a sync conflict by lying about the time, or create a row in
   someone else's name.
-- **Change anything here and run the gate.** `npm run test:rls` from `app/`, output
-  into the PR. It exits non-zero when it cannot run, so "it passed" always means
-  it ran.
+- **A spectator never touches a table.** `get_shared_event` is the entire anonymous
+  surface, and it returns **hand-picked columns, never rows** - so adding a column to a
+  table can never widen what a link holder sees. Never grant `anon` a table.
+- **A share token is stored only as a SHA-256 hash**, and a bad, expired or revoked
+  token must stay indistinguishable: all three return null, so probing cannot discover
+  which events exist.
+- **Change anything here and run the gate.** `bash scripts/verify-rls-local.sh` runs
+  both suites offline; `npm run test:rls` from `app/` covers the HTTP surface. Output
+  into the PR. They exit non-zero when they cannot run, so "it passed" always means
+  they ran.

@@ -49,10 +49,13 @@ for f in "$ROOT"/supabase/migrations/*.sql; do
   run_sql_file "$f" >/dev/null
 done
 
-echo "==> adversarial suite"
+echo "==> adversarial suite: accounts (rls.local.sql)"
 run_sql_file "$ROOT/supabase/tests/rls.local.sql"
 
+echo "==> adversarial suite: share links (shares.local.sql)"
+run_sql_file "$ROOT/supabase/tests/shares.local.sql"
+
 echo ""
-echo "All migrations applied and every attack refused."
+echo "All migrations applied and every attack refused (accounts + share links)."
 echo "This verifies the POLICIES. The HTTP surface and real sign-in still need"
 echo "'npm run test:rls' against a Supabase project - see docs/SUPABASE-SETUP.md."

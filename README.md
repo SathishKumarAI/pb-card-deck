@@ -90,9 +90,11 @@ and the policies are verified by an adversarial suite that tries to read another
 account's data and must fail - runnable offline with
 `bash scripts/verify-rls-local.sh`.
 
-**Sharing an event with other people is not built yet.** An account is private to
-you today. The plan is a revocable read-only link for spectators, then invited
-signed-in co-organisers who can enter results - [phases 2b and 2c](#the-plan).
+**Sharing, so far:** a signed-in organiser can create a **revocable read-only link**
+to one event (`Live link` in the event screen). Anyone with it watches the schedule,
+standings and bracket update - no signup, nothing they can change, and it expires in
+seven days by default. Everything else in an account stays private to you. Letting
+invited people *enter* results is phase 2c - see [the plan](#the-plan).
 
 Running your own copy? An account needs a Supabase project, and the app works
 perfectly with none: see [`docs/SUPABASE-SETUP.md`](docs/SUPABASE-SETUP.md).
@@ -230,6 +232,7 @@ An event for 4 people or 50, on a phone, with no signal. Setup is one paste.
 | **Standings that hold up** | Wins, then head-to-head for a straight two-way tie, then point difference. (Head-to-head only breaks a *two-way* tie - with three teams level it is usually circular.) Pool tables show the qualifying line. |
 | **Live bracket tree** | Rounds as columns, matches centred between the two that feed them, byes resolved, connectors turning green as results land. Tap a match to enter or edit its score. It scrolls sideways on a phone, because the shape is the information. |
 | **Fix mistakes safely** | Undo any result and everything downstream is undone with it - a playoff re-seeds itself if a pool result changes. |
+| **A live link for spectators** | With an account: one tap makes a read-only link to this event. People watch the bracket update from their own phones, with no signup. It expires in seven days by default, and one tap revokes it. Only a fingerprint of the link is stored, so it is shown once. |
 | **A change log** | Every result, correction and clear is logged with the time and the old score, shown in a **Changes** tab and carried into every export. |
 | **Divisions** | Open, men's, women's or mixed. A mixed draw pairs one of each from names marked `Sam (m)` / `Priya (f)`, and says up front how many pairs will be same-sex if the numbers do not balance. |
 | **Any number of courts or pools** | Counts are typed, not picked from a fixed list. |
@@ -421,7 +424,6 @@ place to jump in** - say so in an issue and it is yours.
 ### Next up (most likely to happen)
 | Idea | Where it stands |
 |---|---|
-| **A read-only link to a running event** (phase 2b) | Spectators open a link, see the live bracket, change nothing. One revocable token, no signup for viewers; the schema already has the shape for it. |
 | **Invited co-organisers entering results** (phase 2c) | Writers sign in and are invited per event, so the change log names a person. This is why event matches are stored as rows rather than a blob. |
 | **Consolation / plate draws and a third-place play-off** | The slot model already supports it. This is wiring, not engine work - a genuinely good first contribution. |
 | **Per-card analytics** (most drawn, most skipped, most favourited) | The counters already exist in `lib/client-api.ts`; nothing reads them yet. |
