@@ -1,11 +1,15 @@
 # Contributing to PB Card Deck
 
 Thanks for being here. This is a small, friendly, **open-source, local-first**
-project (no backend, no login) and contributions of every size are welcome - a
-bug report, one card idea, a typo, or a whole tournament format.
+project and contributions of every size are welcome - a bug report, one card idea, a
+typo, or a whole tournament format. There is now an **optional** account (Supabase)
+beside the no-account mode; the no-account mode is still the default and still needs
+no backend at all.
 
-**No CLA, no red tape.** Two ground rules: keep it **local-first** and keep the
-**build green**.
+**No CLA, no red tape.** Two ground rules: **the no-account mode must keep working
+with no backend configured**, and keep the **build green**. You do not need a
+Supabase project to work on this repo - with no env vars the cloud code is never even
+downloaded.
 
 ## Ways to help, easiest first
 
@@ -35,6 +39,7 @@ bug report, one card idea, a typo, or a whole tournament format.
 | A new card category, or a batch of cards | `scripts/generate_cards.py`, stdlib Python, one command to regenerate |
 | Extracting UI copy for translation | Mechanical, well-bounded, high value |
 | Any open row in [the plan](README.md#the-plan) | Each row says exactly why it is not there yet |
+| A read-only share link for a running event (phase 2b) | The schema has the shape for it; it is one revocable token and a read path |
 
 ## Dev setup (~3 minutes)
 
@@ -155,8 +160,13 @@ More, with the details: [`app/CLAUDE.md`](app/CLAUDE.md) → Traps, and
 
 ## Ground rules
 
-- **Stay local-first** - no servers, databases or login. State lives in
-  `localStorage` behind `lib/client-api.ts`.
+- **Local-first stays the default.** Every cloud path checks `isCloudConfigured()`
+  first; with no project the app is exactly what it was before phase 2. Never write
+  code that assumes a session exists.
+- **All persistence goes through `lib/client-api.ts`** (the facade) into
+  `lib/store/*`. Components never import `lib/store/*` or `lib/sync/*` directly.
+- **Touching `supabase/`?** Run `bash scripts/verify-rls-local.sh` and paste the
+  output in the PR. Security rules are not reviewed by reading them.
 - **Keep the bundle lean** - four runtime dependencies today; a new one needs a
   reason a few lines cannot cover.
 - **Be kind** in issues and reviews. This is a for-fun project.

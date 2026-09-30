@@ -11,7 +11,72 @@ diffs is not a history.
 
 ---
 
-## Unreleased - documentation pass (2026-09-29)
+## Unreleased - phase 2a: an optional account (2026-09-29)
+
+An account is now **optional and additive**. The no-account mode is untouched and
+still the default: with no Supabase project configured, the cloud code is never even
+downloaded and the app is byte-for-byte what it was.
+
+### Added
+- **Sign in with Google, or with a link emailed to you.** No passwords anywhere in
+  this app - which means none to leak, reset, or rate-limit beyond the link itself.
+  A magic link reaches any mailbox, including Yahoo, which is not a Supabase
+  provider (#19).
+- **Cloud sync for what you made:** matches, custom decks, tournaments with their
+  change log, favourite cards and achievement counters. They survive a cleared
+  browser and appear on your other devices (#20, #21).
+- **A tap still never waits on the network.** A local write goes to `localStorage`
+  and appends to a queue; the queue drains in the background, coalescing per row,
+  backing off on failure, and giving up **visibly** rather than claiming to sync
+  for ever. The chip says `Synced` / `3 to save` / `Offline` / `Not synced` (#20).
+- **The first sign-in asks before uploading anything**, names real counts from your
+  device ("40 matches, 3 decks, 2 events"), and defaults to yes. Declining deletes
+  nothing (#20, #21).
+- **Delete my account** removes every row it owns in one database operation, behind
+  a typed confirmation (#19).
+- **The database enforces privacy, not app code.** Row-level security on every
+  table, a policy per operation, `anon` revoked, and a tournament's audit log with
+  no update or delete policy **at all** - a corrected score appends a line saying
+  what it used to be (#18).
+- **An adversarial security suite that can actually fail.** A second account tries
+  to read, edit, delete, forge and rewrite the first one's data, and every attempt
+  must be refused. `bash scripts/verify-rls-local.sh` runs it on a throwaway
+  Postgres in Docker with no Supabase account at all; `npm run test:rls` runs it
+  over HTTP against a real project (#18).
+
+### Changed
+- `lib/client-api.ts` is now a façade over `lib/store/*`, one file per concern, so
+  sync hooks in without a single screen knowing it exists (#17).
+- **`connect-src` was `https:`** - every host on the internet. It is now `'self'`
+  plus exactly the configured Supabase origin (#19).
+- The privacy page now describes both modes: what an account stores, where, who can
+  read it, the names an organiser types for other people, and how to delete all of
+  it (#22).
+
+### Fixed
+- **"Delete all local data" left three things behind.** Tournaments, in-progress
+  games and the local copy of submitted feedback survived it, because the erase
+  path listed keys by hand and three had been added later. It now enumerates a
+  catalogue, so a new entity cannot be missed (#17).
+- **A write landing while its own row was being pushed could be lost silently.**
+  Queue bookkeeping matched on `(entity, id)` and deleted the brand-new entry as
+  "sent"; keying on the timestamp collided in the same millisecond. Entries now
+  carry a sequence number (#20).
+- `force row level security` would have made account deletion delete **zero rows
+  while reporting success**, because every policy is scoped to `authenticated`
+  while the table owner is `postgres`. Caught by running the migrations, not by
+  reading them (#18).
+- The `event_log` table was append-only in policy but not in privilege: Supabase's
+  default grants let an UPDATE reach the policy layer. Now revoked explicitly (#18).
+
+### Not here yet
+- **Sharing an event.** An account is private to you today. Phase 2b is a revocable
+  read-only link for spectators; phase 2c is invited signed-in co-organisers who can
+  enter results - which is why event matches are stored as rows, not as a blob.
+
+---
+
+## Documentation pass (2026-09-29)
 
 ### Docs
 - **A README that tells the story**, not just a feature list: why the app

@@ -51,9 +51,12 @@ You're mid-game on a pickleball court. Between points, someone taps the big card
 
 Everything runs on the device. There is no account and no server round-trip during play.
 
-## Design philosophy: local-first
+## Design philosophy: local-first, with an optional account
 
-This app deliberately has **no backend and no login.** That is a design decision, not a missing feature. The reasoning:
+The default has **no backend and no login**, and that is a design decision rather
+than a missing feature. Phase 2a added an **optional** account beside it: with no
+`NEXT_PUBLIC_SUPABASE_*` env vars the cloud code is never downloaded and this whole
+section describes the app exactly. The reasoning for the default:
 
 | Concern | Why local-first wins here |
 |---|---|
@@ -63,7 +66,16 @@ This app deliberately has **no backend and no login.** That is a design decision
 | **Cost & ops** | No database, no auth provider, no secrets to rotate, no per-user billing. |
 | **Privacy** | Your games, decks, and settings never leave your device. |
 
-The tradeoff we accept: **no cross-device sync.** Custom decks and match history live in `localStorage`, so they're per-device. To move data between devices we provide a manual **Export / Import** backup (a JSON file). If a real sync/sharing need appears later, an optional auth + database layer can be added *without* changing the core - the local store is already isolated behind one module (`lib/client-api.ts`).
+The tradeoff the default accepts: **no cross-device sync.** An account lifts it for
+people who want one - see `lib/sync/README.md` and `../docs/SUPABASE-SETUP.md` - and
+the local store stays authoritative for play either way.
+
+Historical note: the sentence below used to end "an optional auth + database layer
+can be added *without* changing the core - the local store is already isolated behind
+one module". That turned out to be true: `lib/client-api.ts` became a façade over
+`lib/store/*`, the sync queue hooked in behind it, and **no screen changed**.
+
+The tradeoff, as it was written before any of that existed: **no cross-device sync.** Custom decks and match history live in `localStorage`, so they're per-device. To move data between devices we provide a manual **Export / Import** backup (a JSON file). If a real sync/sharing need appears later, an optional auth + database layer can be added *without* changing the core - the local store is already isolated behind one module (`lib/client-api.ts`).
 
 ## Feature overview
 
@@ -131,8 +143,9 @@ dependencies in total** (`next`, `react`, `react-dom`, `lucide-react`) - no stat
 library, no component library, no backend. The app ships as a single
 client-rendered route; there is no server-side data path in production.
 
-**Gates:** `npm run lint` · `npx tsc --noEmit` · `npm test` (**164 tests in 14
-files**) · `npm run contrast` · `npm run build`. CI runs all of them plus
+**Gates:** `npm run lint` · `npx tsc --noEmit` · `npm test` (**262 tests in 23
+files**) · `npm run contrast` · `npm run build`. Touching `../supabase/` also means
+`bash ../scripts/verify-rls-local.sh`. CI runs all of them plus
 `npm audit` and a gitleaks secret scan.
 
 ### Data flow
@@ -174,6 +187,7 @@ All persistence is `localStorage`, isolated behind **`lib/client-api.ts`** so th
 
 | Key | Holds | Cap |
 |---|---|---|
+| `pb-sync-outbox`, `pb-sync-cursors`, `pb-sync-idmap`, `pb-sync-logsent`, `pb-sync-claimed` | sync bookkeeping; all cleared on sign-out | - |
 | `pickleball-shuffle-game` | the active `GameSession` (for resume) | 1 |
 | `pickleball-shuffle-games` | saved in-progress games | - |
 | `pb-custom-decks` | user-authored decks `{ id, name, description, cards[] }` | - |
