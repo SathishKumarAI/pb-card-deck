@@ -53,20 +53,20 @@ with `git diff --stat` showing no `components/` changes.
 **Proof:** the suite run against a real project, output pasted into the PR. No
 app code in this stage, so the app gates prove only that nothing regressed.
 
-## Stage 3 — auth `feat/accounts`
+## Stage 3 — auth `feat/accounts` — **DONE** (this PR)
 
-- [ ] `lib/supabase/client.ts` — dynamic import, PKCE explicit, publishable key
+- [x] `lib/supabase/client.ts` — dynamic import, PKCE explicit, publishable key
       preferred with the legacy `anon` name accepted, `null` when unconfigured
-- [ ] `lib/auth.ts` — `useSession`, `signInWithGoogle`, `sendMagicLink`,
+- [x] `lib/auth.ts` — `useSession`, `signInWithGoogle`, `sendMagicLink`,
       `signOut`, `deleteAccount`; pure state machine, testable with a fake client
-- [ ] `components/AccountPanel.tsx` — sheet: signed-out (Google button, email
+- [x] `components/AccountPanel.tsx` — sheet: signed-out (Google button, email
       field), signed-in (email, sync state, sign out, delete account with a typed
       confirmation)
-- [ ] Menu entry + the account state in `AppMenu`
-- [ ] `next.config.ts` — `connect-src` narrowed to the Supabase host
-- [ ] Root `.gitignore` — `.env*` rule; delete the dead `AUTH_SECRET` from
+- [x] Menu entry + the account state in `AppMenu`
+- [x] `next.config.ts` — `connect-src` narrowed to the Supabase host
+- [x] Root `.gitignore` — `.env*` rule; delete the dead `AUTH_SECRET` from
       `app/.env.local`
-- [ ] Tests: auth state machine, "no env means `supabase-js` is never imported",
+- [x] Tests: auth state machine, "no env means `supabase-js` is never imported",
       a11y of the new sheet
 
 **Proof:** with no env vars the app is byte-for-byte today's behaviour (asserted

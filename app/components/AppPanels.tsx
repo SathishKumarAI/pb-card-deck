@@ -2,7 +2,8 @@
 
 /**
  * Every menu-reachable sheet, in one place: history, decks, favourites,
- * feedback, help, the card browser, achievements and the welcome tour.
+ * feedback, help, the card browser, achievements, the account sheet and the
+ * welcome tour.
  *
  * The home screen and the game screen both render this. They each used to
  * carry their own verbatim copy of the list, which is how one of them ended up
@@ -19,6 +20,7 @@ import FeedbackPanel from "@/components/FeedbackPanel";
 import HelpPanel from "@/components/HelpPanel";
 import CardBrowserPanel from "@/components/CardBrowserPanel";
 import AchievementsPanel from "@/components/AchievementsPanel";
+import AccountPanel from "@/components/AccountPanel";
 import WelcomeTour from "@/components/WelcomeTour";
 
 export interface AppPanelsProps {
@@ -53,6 +55,7 @@ export default function AppPanels({
       <HelpPanel open={open.rules} onClose={() => onClose("rules")} onReplayTour={onReplayTour} />
       <CardBrowserPanel open={open.browser} onClose={() => onClose("browser")} allCards={allCards} />
       <AchievementsPanel open={open.achievements} onClose={() => onClose("achievements")} />
+      <AccountPanel open={open.account} onClose={() => onClose("account")} />
       <WelcomeTour
         open={tourOpen}
         onClose={onCloseTour}
