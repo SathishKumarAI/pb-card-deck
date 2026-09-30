@@ -1,7 +1,11 @@
 # PB Card Deck
 
 Next.js card game + pickleball scorekeeper. 1,729 twist cards across 10 categories, 5 deck modes.
-**Local-first: no backend, no login, no database.** All state lives in `localStorage`.
+**Local-first by default: no backend, no login, no database** - all state in `localStorage`.
+**Optionally**, a deployment can be given a Supabase project and players can choose
+an account (phase 2a). With no `NEXT_PUBLIC_SUPABASE_*` env vars the account UI is
+absent and `@supabase/supabase-js` is never downloaded - that is the default and it
+is a supported, tested state (`lib/supabase/client.test.ts`).
 
 Live: https://pb-card-deck.vercel.app
 
@@ -52,6 +56,13 @@ lib/store/            - the local store, one file per concern: keys.ts (every
                         share codes), matches.ts (history, matchSheet, CSV,
                         records), tournaments.ts (events), prefs.ts (favorites,
                         stats, backup, erase). See its README.
+lib/supabase/client.ts- WHETHER there is a cloud, and the client if so. Dynamic
+                        import + PKCE. Returns null when unconfigured.
+lib/auth.ts           - sign in (Google / email magic link), sign out, delete the
+                        account. Pure state machine `nextAuthState` + a tiny store.
+                        No passwords anywhere in this app, by design.
+components/AccountPanel - the account sheet. Absent from the menu entirely when
+                        no project is configured.
 lib/useFocusTrap.ts   - focus-trap hook for dialogs / sheets
 lib/streaks.ts        - win streaks from saved matches (pure, tested)
 lib/shareImage.ts     - share cards on canvas: result / streak / tournament, in
@@ -193,6 +204,31 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
   0-0 is right, and read as a bug until the board said why. If a display needs a
   rulebook, print the sentence.
 - Mobile-first: `100dvh`, 16px inputs, `touch-action: manipulation`, safe-area insets, responsive `clamp()` card.
+
+## Optional cloud (phase 2a)
+
+- **Unconfigured is a first-class state, not a degraded one.** Every cloud path
+  starts with `isCloudConfigured()`; a missing project means the app is exactly the
+  local-first one. Never write code that assumes a session exists.
+- **`@supabase/supabase-js` is behind a dynamic `import()`.** Measured: it lands in
+  its own ~249 KB chunk that no build manifest and no prerendered HTML references,
+  so an anonymous player never fetches it. `lib/supabase/client.test.ts` fails if a
+  static import creeps in - the regression is otherwise invisible.
+- **The browser only ever holds the PUBLISHABLE key** (`sb_publishable_…`, or the
+  legacy `anon` key). It has no privileges of its own; row-level security decides
+  everything. A secret key must never carry a `NEXT_PUBLIC_` prefix - that prefix
+  means "shipped to every visitor".
+- **`connect-src` in `next.config.ts` is 'self' plus exactly the configured Supabase
+  host**, derived from the same env var. It used to be `https:`. A malformed URL
+  yields no origin rather than silently widening the policy.
+- **No passwords.** A magic link reaches any mailbox (including Yahoo, which is not
+  a Supabase provider) without this app storing a credential that can leak or need a
+  reset flow.
+- **Never say whether an address already has an account.** The link-sent copy is one
+  sentence either way; `lib/account-panel.test.tsx` asserts the absence of "welcome
+  back"-style wording.
+- **The security model lives in SQL**, not here: `supabase/migrations/0002_rls.sql`.
+  Change anything under `supabase/` and run `bash scripts/verify-rls-local.sh`.
 
 ## Dead code (inert stubs from an abandoned auth experiment - safe to delete)
 `app/api/`, `app/login`, `app/signup`, `lib/db.ts`, `lib/auth.ts`, `lib/supabase/`,

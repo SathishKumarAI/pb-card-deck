@@ -9,13 +9,14 @@
 import { useCallback, useMemo, useState } from "react";
 
 export type PanelName =
-  | "history" | "decks" | "favorites" | "feedback" | "rules" | "browser" | "achievements";
+  | "history" | "decks" | "favorites" | "feedback" | "rules" | "browser" | "achievements" | "account";
 
 export type PanelFlags = Record<PanelName, boolean>;
 
 const CLOSED: PanelFlags = {
   history: false, decks: false, favorites: false,
   feedback: false, rules: false, browser: false, achievements: false,
+  account: false,
 };
 
 export function usePanels() {

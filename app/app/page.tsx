@@ -382,6 +382,7 @@ export default function Home() {
       onOpenRules={() => panels.show("rules")}
       onOpenBrowser={() => panels.show("browser")}
       onOpenAchievements={() => panels.show("achievements")}
+      onOpenAccount={() => panels.show("account")}
     />
   );
 

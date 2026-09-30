@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Menu, History, Layers, Star, Download, Upload, MessageSquare, BookOpen, Check, AlertTriangle, Info, Trash2, Library, Award } from "lucide-react";
+import { Menu, History, Layers, Star, Download, Upload, MessageSquare, BookOpen, Check, AlertTriangle, Info, Trash2, Library, Award, UserRound } from "lucide-react";
 import { exportData, importData, clearAllData } from "@/lib/client-api";
+import { isCloudConfigured } from "@/lib/supabase/client";
 
 export default function AppMenu({
   onOpenHistory,
@@ -13,6 +14,7 @@ export default function AppMenu({
   onOpenRules,
   onOpenBrowser,
   onOpenAchievements,
+  onOpenAccount,
 }: {
   onOpenHistory: () => void;
   onOpenDecks: () => void;
@@ -21,6 +23,7 @@ export default function AppMenu({
   onOpenRules: () => void;
   onOpenBrowser: () => void;
   onOpenAchievements: () => void;
+  onOpenAccount: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [notice, setNotice] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -108,6 +111,13 @@ export default function AppMenu({
           <Item icon={<Star size={16} />} label="Favorite cards" onClick={() => { setOpen(false); onOpenFavorites(); }} />
           <Item icon={<Award size={16} />} label="Achievements" onClick={() => { setOpen(false); onOpenAchievements(); }} />
           <Item icon={<Layers size={16} />} label="Custom decks" onClick={() => { setOpen(false); onOpenDecks(); }} />
+          {/* Absent entirely when this deployment has no account service: a
+              sign-in that cannot work is worse than no sign-in. */}
+          {isCloudConfigured() && (
+            <div style={{ borderTop: "1px solid var(--border)" }}>
+              <Item icon={<UserRound size={16} />} label="Account & sync" onClick={() => { setOpen(false); onOpenAccount(); }} />
+            </div>
+          )}
           <div style={{ borderTop: "1px solid var(--border)" }}>
             <Item icon={<Download size={16} />} label="Export backup" onClick={doExport} />
             <Item icon={<Upload size={16} />} label="Import backup" onClick={() => fileRef.current?.click()} />

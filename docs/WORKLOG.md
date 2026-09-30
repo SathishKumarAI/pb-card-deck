@@ -1,5 +1,59 @@
 # Worklog
 
+## 2026-09-29 — phase 2a stage 3: sign in with Google or an email link
+
+The account itself. Sign in, sign out, delete the account — and **nothing changes
+for anyone who does not want one**, which is the property that took most of the
+care.
+
+**What shipped**
+
+| File | What it owns |
+|---|---|
+| `lib/supabase/client.ts` | Whether there is a cloud at all, and the client if so. Dynamic `import()`, PKCE set explicitly, publishable key preferred with the legacy `anon` name accepted, `null` when unconfigured |
+| `lib/auth.ts` | The state machine (`nextAuthState`, pure), Google OAuth, magic link, sign out, delete account, email normalisation, a 60-second resend cooldown |
+| `components/AccountPanel.tsx` | The sheet: what an account is for, both ways in, signed-in state, and deletion behind a typed confirmation |
+| `lib/{auth,account-panel}.test.ts(x)`, `lib/supabase/client.test.ts` | 28 new tests |
+| `app/.env.example` | Which two variables exist, and a written warning that `NEXT_PUBLIC_` means "shipped to every visitor" |
+
+**No passwords, deliberately.** A magic link reaches any mailbox — including
+Yahoo, which is not a Supabase provider — without this app ever storing a
+credential that can be leaked, reused or need a reset flow. That is a whole
+security surface removed rather than defended.
+
+**Three things measured rather than assumed**
+
+1. **An anonymous player downloads none of the cloud code.** `supabase-js` lands
+   in its own **249 KB** chunk that no build manifest and no prerendered HTML
+   references. `lib/supabase/client.test.ts` fails if a static import creeps in —
+   the regression is otherwise invisible, it just slows every first paint.
+2. **`connect-src` was `https:`** — every host on the internet. It is now `'self'`
+   plus exactly the configured Supabase origin and its websocket scheme, derived
+   from the same env var the client uses. A malformed URL yields no origin rather
+   than silently widening the policy.
+3. **The dead `AUTH_SECRET` in `app/.env.local`** (left from the abandoned June
+   auth experiment) is gone, and `git log --all -S` confirms **no `.env` file was
+   ever committed**, so the value never entered history.
+
+**Two copy decisions that are security decisions**
+
+- The link-sent screen says *"if this address can receive mail, a link is on its
+  way"* — the same sentence whether the address is known or new. Supabase's own
+  response does not reveal which; copy saying "welcome back" would have undone
+  that. A test asserts the absence of that wording.
+- Deleting the account requires typing `delete`, and the confirmation renders
+  **where the button is**, next to a list of what goes and what stays.
+
+**One lint warning of my own, fixed rather than accepted:** the sheet reset its
+confirmation state in an effect on `open`, which is a cascading render. Every
+close path already goes through one function, so the reset moved there. Lint is
+back to the 14 pre-existing warnings.
+
+**Verification:** `npm test` 197 passed (18 files) — 169 plus 28 new; lint 0
+errors, 14 warnings (pre-existing); `tsc --noEmit` clean; build clean, 8 static
+routes; bundle inspected as above. Still no project configured anywhere, so the
+app in production is unchanged.
+
 ## 2026-09-29 — phase 2a stage 2: the database, and a security gate that can fail
 
 The schema for the optional account, its row-level security, the two privileged
