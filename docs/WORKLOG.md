@@ -1,5 +1,60 @@
 # Worklog
 
+## 2026-09-29 — phase 2b: a read-only link to a running event
+
+Twenty people at a club night asking "am I on next?" now have an answer that is not
+the organiser's phone held up. One tap makes a link; anyone with it watches the
+schedule, standings and bracket update; nobody can change anything.
+
+**The security problem, and the shape that solved it**
+
+A spectator is **not authenticated**, so `auth.uid()` is null and no row-level policy
+can express "this anonymous person may read exactly this event". Granting `anon` a
+table would grant it to the whole internet.
+
+So the viewer never touches a table. **One definer function is the entire anonymous
+surface**, authorised by a token rather than a session:
+
+- `get_shared_event(p_token)` returns **hand-picked columns, never rows** — so adding
+  a column to a table can never widen what a link holder sees. No `user_id`, no
+  `actor_user_id`, no `client_id`, no email; player names yes, because a schedule
+  without names is not a schedule.
+- **Only the SHA-256 hash of the token is stored.** A database dump yields no working
+  links, and the token cannot be shown twice — the UI says so.
+- **The token lives in the URL fragment** (`/shared#t=…`), which is never sent to a
+  server, so it stays out of access logs and out of the `Referer` header.
+- **Bad, expired and revoked are indistinguishable** — all three return null, so
+  probing cannot discover which events exist.
+- **Nobody can UPDATE a share row.** Revoking goes through a function, so the history
+  of links is append-then-revoke rather than editable.
+
+**Ten adversarial cases, and the same privilege gap as before**
+
+`supabase/tests/shares.local.sql` joins the runner. It caught the identical mistake
+`event_log` had in 0002: share rows were unmodifiable *in policy* but Supabase's
+default grants still let an UPDATE reach the policy layer — it reported
+`0 refused at privilege level` until `revoke insert, update, truncate` was added.
+
+**Mutation-tested twice**, because a security test that cannot fail is decoration:
+removing the `revoked_at is null` check from `get_shared_event` makes the suite exit 3
+with `SECURITY GATE FAILED: a REVOKED token still works`.
+
+**The viewer reuses the organiser's own components** (`StandingsTable`,
+`BracketView`), fed from the payload, so the two views cannot drift into different
+answers about who is winning. It polls every 30 s **only while the tab is visible** —
+a phone in a pocket must not poll — and each failure names itself: expired/revoked,
+offline, not-enabled-here, incomplete link. `/shared` is disallowed in `robots.txt`.
+
+**Copy that is a security decision:** the share sheet says what the link publishes
+("the schedule, results and **player names in this event**") *before* anything is
+created, because an organiser is sharing other people's names.
+
+**Verification:** `bash scripts/verify-rls-local.sh` — 19 groups across both suites,
+all pass; `npm test` 279 passed (24 files), 17 new; lint 0 errors, 16 warnings (14
+pre-existing plus two of the "load when the sheet opens" effect pattern every other
+panel here uses); `tsc --noEmit` clean; contrast pass; build clean with `/shared` as a
+ninth static route.
+
 ## 2026-09-29 — phase 2a stage 5: the docs stop contradicting the product
 
 Four stages shipped an optional account. Every user-facing document still said "no

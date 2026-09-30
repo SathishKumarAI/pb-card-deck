@@ -28,6 +28,7 @@ functions.
 | `supabase/migrations/0001_init.sql` | The seven tables, the `updated_at` and ownership triggers |
 | `supabase/migrations/0002_rls.sql` | Enables RLS, one policy per operation, revokes `anon` |
 | `supabase/migrations/0003_functions.sql` | `handle_new_user()`, `delete_my_account()` |
+| `supabase/migrations/0004_event_shares.sql` | Phase 2b: the `event_shares` table and the four share functions, including `get_shared_event` - the only thing an unauthenticated visitor may call |
 
 Either paste each into the dashboard's **SQL editor** in that order, or, with the
 [Supabase CLI](https://supabase.com/docs/guides/local-development):
@@ -158,11 +159,26 @@ Expected output ends:
   pass  A is gone entirely, B is untouched
   pass  anon cannot call delete_my_account
 Security gate passed: no cross-account read, write, forge, transfer or rewrite.
+  pass  a live token returns one event, with no account identifiers
+  pass  revoked, expired, garbage, short and null all return null
+  pass  anon is refused on event_shares, tournaments and matches
+  pass  a token returns its own event only
+  pass  a stranger cannot mint, see or list another owner's links
+  pass  a stranger's revoke attempt changes nothing
+  pass  share rows cannot be updated (2 refused at privilege level)
+  pass  a revoked link stays revoked
+  pass  deleting the event kills its links
+  pass  share rows cascade with the event
+Share gate passed: a token opens one event read-only, and nothing else.
 ```
 
-**The suite has been mutation-tested**, because a security test that cannot fail
-is decoration: disabling RLS on one table makes it exit non-zero with
-`SECURITY GATE FAILED: B can read decks`.
+**Both suites have been mutation-tested**, because a security test that cannot fail
+is decoration:
+
+- disabling RLS on one table makes the account suite exit non-zero with
+  `SECURITY GATE FAILED: B can read decks`;
+- removing the `revoked_at is null` check from `get_shared_event` makes the share
+  suite exit non-zero with `SECURITY GATE FAILED: a REVOKED token still works`.
 
 What this does **not** cover, and why `npm run test:rls` against a real project is
 still required: the HTTP surface (PostgREST parsing, headers, the publishable key),

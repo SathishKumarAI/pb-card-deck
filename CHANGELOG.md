@@ -11,6 +11,35 @@ diffs is not a history.
 
 ---
 
+## Unreleased - phase 2b: a live link for spectators (2026-09-29)
+
+### Added
+- **A read-only share link for one event.** A signed-in organiser taps `Live link`,
+  sends one URL, and anyone can watch the schedule, standings and bracket update from
+  their own phone. No signup for viewers, nothing they can change (#23).
+- Expiry chosen on creation (1 / 7 / 30 days or never, **default 7**), a list of an
+  event's links with their state, and **Revoke**, effective on the next request (#23).
+- The spectator page reuses the organiser's own standings and bracket components, so
+  the two views cannot drift; it polls every 30 s **only while the tab is visible**,
+  and names each failure instead of showing an empty bracket (#23).
+
+### Security
+- **A spectator never touches a table.** One `SECURITY DEFINER` function is the whole
+  anonymous surface and returns hand-picked columns, so no `user_id`, no email and no
+  device id can ride along - and adding a column to a table cannot widen what a link
+  holder sees (#23).
+- **Only the SHA-256 hash of a token is stored**, so a database dump yields no working
+  links. 256 bits of entropy, and the token travels in the URL **fragment**, which is
+  never sent to a server (#23).
+- **Bad, expired and revoked tokens are indistinguishable**, so probing learns nothing
+  about which events exist. Share rows cannot be UPDATEd by anyone - revoking goes
+  through a function, so the history of links is append-then-revoke (#23).
+- Ten new adversarial cases, mutation-tested: removing the revocation check makes the
+  suite fail with `a REVOKED token still works` (#23).
+- `/shared` is disallowed in `robots.txt`: it shows real player names (#23).
+
+---
+
 ## Unreleased - phase 2a: an optional account (2026-09-29)
 
 An account is now **optional and additive**. The no-account mode is untouched and
