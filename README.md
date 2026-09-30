@@ -424,7 +424,7 @@ place to jump in** - say so in an issue and it is yours.
 ### Next up (most likely to happen)
 | Idea | Where it stands |
 |---|---|
-| **Invited co-organisers entering results** (phase 2c) | Writers sign in and are invited per event, so the change log names a person. This is why event matches are stored as rows rather than a blob. |
+| **Invited co-organisers entering results** (phase 2c) | The database half is done - membership, policies and the eleven adversarial cases. The app still needs the join screen and the writer-mode event screen. |
 | **Consolation / plate draws and a third-place play-off** | The slot model already supports it. This is wiring, not engine work - a genuinely good first contribution. |
 | **Per-card analytics** (most drawn, most skipped, most favourited) | The counters already exist in `lib/client-api.ts`; nothing reads them yet. |
 | **Rotating partners that never repeats a pairing** | Today it ranks, groups and pairs, which keeps games close but can repeat a pairing late in a small field. |

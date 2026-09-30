@@ -11,6 +11,31 @@ diffs is not a history.
 
 ---
 
+## Unreleased - phase 2c (in progress): invited co-organisers (2026-09-29)
+
+### Added
+- **The database half of invited writers** (#24): per-event membership, invite links
+  that reuse `event_shares` with `role = 'writer'`, and functions to accept, list,
+  remove and leave. Thirteen adversarial cases, mutation-tested.
+
+### Changed
+- **`tournament_matches.user_id` now means the EVENT's owner**, not whoever wrote the
+  row, with a new `updated_by` recording who wrote last. Without this a helper's score
+  entry would silently move the row out of the owner's event - with the score looking
+  right (#24).
+
+### Fixed
+- **A write landing mid-sync could still be clobbered by the pull in the same run.**
+  The protected set was chosen with `due(now)`, and `now` is captured before the push,
+  so an entry re-queued during the push fell outside it whenever the clock ticked. It
+  surfaced as a 1-in-3 flaky test; it was a silently lost edit in production (#24).
+
+### Not here yet
+- The app side of 2c: the join screen, the writer-mode event screen, and the sync
+  engine skipping the header for an event you do not own.
+
+---
+
 ## Unreleased - phase 2b: a live link for spectators (2026-09-29)
 
 ### Added

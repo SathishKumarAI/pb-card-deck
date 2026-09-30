@@ -29,6 +29,7 @@ functions.
 | `supabase/migrations/0002_rls.sql` | Enables RLS, one policy per operation, revokes `anon` |
 | `supabase/migrations/0003_functions.sql` | `handle_new_user()`, `delete_my_account()` |
 | `supabase/migrations/0004_event_shares.sql` | Phase 2b: the `event_shares` table and the four share functions, including `get_shared_event` - the only thing an unauthenticated visitor may call |
+| `supabase/migrations/0005_event_members.sql` | Phase 2c: invited writers. **Contains a behaviour change** - `tournament_matches.user_id` comes to mean the EVENT's owner rather than whoever wrote the row, plus an `updated_by` column. Run it after 0004 |
 
 Either paste each into the dashboard's **SQL editor** in that order, or, with the
 [Supabase CLI](https://supabase.com/docs/guides/local-development):
@@ -170,6 +171,20 @@ Security gate passed: no cross-account read, write, forge, transfer or rewrite.
   pass  deleting the event kills its links
   pass  share rows cascade with the event
 Share gate passed: a token opens one event read-only, and nothing else.
+  pass  viewer, revoked and garbage links are all refused as invites
+  pass  invites are not view links, and view links still work
+  pass  accepting twice leaves exactly one membership
+  pass  a writer scores; the row still belongs to the event's owner, and updated_by names the writer
+  pass  a writer's log line names the writer, whatever they claim
+  pass  a writer cannot rename, delete, invent a match, delete a match or edit the log (2 refused at privilege level)
+  pass  a writer sees and touches one event, not the owner's others
+  pass  a writer cannot invite or list members
+  pass  remove_event_member is owner-only
+  pass  an outsider sees nothing and writes nothing
+  pass  the owner lists members by email and can remove one
+  pass  a removed helper writes nothing and sees nothing
+  pass  their entered score and their audit lines survive their removal
+Writer gate passed: a helper scores matches in one event and can do nothing else.
 ```
 
 **Both suites have been mutation-tested**, because a security test that cannot fail
@@ -178,7 +193,10 @@ is decoration:
 - disabling RLS on one table makes the account suite exit non-zero with
   `SECURITY GATE FAILED: B can read decks`;
 - removing the `revoked_at is null` check from `get_shared_event` makes the share
-  suite exit non-zero with `SECURITY GATE FAILED: a REVOKED token still works`.
+  suite exit non-zero with `SECURITY GATE FAILED: a REVOKED token still works`;
+- reverting the 2c trigger to the old `user_id := auth.uid()` makes the writer suite
+  exit non-zero with `SECURITY GATE FAILED: a writer's update re-stamped the row
+  owner` - the exact regression that migration exists to prevent.
 
 What this does **not** cover, and why `npm run test:rls` against a real project is
 still required: the HTTP surface (PostgREST parsing, headers, the publishable key),

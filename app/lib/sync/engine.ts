@@ -26,6 +26,7 @@ import {
   type Entity,
   type OutboxEntry,
   due,
+  listOutbox,
   markSent,
   markFailed,
   deadLettered,
@@ -251,9 +252,19 @@ export async function syncNow(t: Transport, now = Date.now()): Promise<void> {
       }
     }
 
-    // Anything still queued would be clobbered by a pull, so it wins this round.
+    /* Anything still queued would be clobbered by a pull, so it wins this round.
+     *
+     * Read the WHOLE outbox here, not `due(now)`: `now` was captured before the push,
+     * and an entry queued during the push (a rename landing between request and
+     * response) carries a later timestamp, so `due(now)` excluded it whenever the clock
+     * happened to tick - and the pull then undid that rename. It reproduced as a 1-in-3
+     * flaky test, which is the same bug at a different odds.
+     *
+     * Backoff decides when to PUSH an entry. It has nothing to do with whether this
+     * device has an unsent change for a row, which is the only question the pull needs
+     * answered. */
     const pendingByEntity = new Map<Entity, Set<string>>();
-    for (const e of due(now).concat(deadLettered())) {
+    for (const e of listOutbox()) {
       const set = pendingByEntity.get(e.entity) ?? new Set<string>();
       set.add(e.id);
       pendingByEntity.set(e.entity, set);

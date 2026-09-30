@@ -42,6 +42,12 @@ else happens in the background, and the UI always says which.
   other keys dropped that write silently — the timestamp version collided because
   the replacement is usually queued in the same millisecond. See
   `engine.test.ts` → "a write that lands mid-sync…".
+- **The pull's protected set is the WHOLE outbox, not `due(now)`.** `now` is captured
+  before the push, so an entry re-queued *during* the push is stamped later and
+  `due(now)` excluded it whenever the clock ticked - and the pull then undid that edit.
+  It showed up as a 1-in-3 flaky test and was a silently lost write in production.
+  Backoff decides when to push; it says nothing about whether this device has an unsent
+  change for a row.
 - **Never move a cursor backwards**, or a late page re-pulls for ever.
 - **The status must never lie.** `synced` means the queue is empty. Anything queued
   says so, a dead-lettered entry says what is stuck, and the error text always ends

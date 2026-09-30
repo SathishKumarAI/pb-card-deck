@@ -215,6 +215,46 @@ describe("pulling", () => {
   });
 });
 
+  it("protects a mid-sync write even when the clock ticks past the run's start", async () => {
+    /* The flaky version of the test above, made deterministic by advancing the clock.
+       `syncNow` captures `now` before pushing; a write landing during the push is
+       stamped later. Selecting the protected rows with `due(now)` therefore dropped it
+       whenever a millisecond elapsed - a 1-in-3 flake locally, and a silently lost edit
+       in production. The whole outbox is the right set. */
+    applyRemoteDeck({ id: "d10", name: "Server name", description: "", cards: [], created_at: 1 });
+    const seeded = {
+      decks: [{
+        id: "55555555-5555-4555-8555-555555555555", client_id: "d10", name: "Server name",
+        description: null, cards: [], created_at: "2026-09-01T00:00:00Z",
+        updated_at: "2026-09-04T00:00:00Z",
+      }],
+    };
+
+    const start = Date.now();
+    let ticks = 0;
+    const realNow = Date.now;
+    // Every read of the clock is 50 ms later than the last, so the re-queued entry is
+    // unambiguously stamped after the run began.
+    Date.now = () => start + ++ticks * 50;
+
+    try {
+      const t: Transport = {
+        async upsert() {
+          applyRemoteDeck({ id: "d10", name: "Renamed mid-push", description: "", cards: [], created_at: 1 });
+          enqueue("decks", "d10");
+        },
+        async softDelete() {},
+        async pull(table) { return (seeded as Record<string, Record<string, unknown>[]>)[table] ?? []; },
+        async pullChildren() { return []; },
+      };
+      enqueue("decks", "d10");
+      await syncNow(t);
+      expect(listDecks().find((d) => d.id === "d10")?.name).toBe("Renamed mid-push");
+    } finally {
+      Date.now = realNow;
+    }
+  });
+
 describe("events", () => {
   it("fans one event out into header, matches and log, header first", async () => {
     const { saveTournament } = await import("../store/tournaments");

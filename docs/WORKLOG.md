@@ -1,5 +1,64 @@
 # Worklog
 
+## 2026-09-29 - phase 2c-1: the database half of invited writers, and a flake that was a real bug
+
+A helper can now be given write access to one event, at the database level. The app
+side (the join screen, the writer-mode event screen) is 2c-2.
+
+**The behaviour change this migration carries**
+
+In 0001, `tournament_matches.user_id` meant "the account that owns this row", forced to
+`auth.uid()` on insert **and update**. Correct while only an owner could write; wrong
+the moment a helper writes, because their update would silently re-stamp the row as
+theirs and the row would leave the owner's event - **with the score looking perfectly
+right**.
+
+So `user_id` now means *the event's owner*, derived from the parent by
+`force_event_owner()`, and a new `updated_by` records who wrote last.
+`event_log.actor_user_id` still means the actor - that is the point of an audit trail.
+
+**Invites reuse `event_shares` with `role = 'writer'`** rather than a second table with
+the same shape and a second set of policies to get wrong. Two rules keep the roles from
+blurring: `get_shared_event` accepts **only** a `'viewer'` token, and accepting an
+invite creates a membership row - so revoking an invite stops new people joining while
+removing a member stops that person writing. Different actions, both needed.
+
+One invite link can be accepted by several people on purpose: a desk running eight
+courts sends one link to three helpers, and access is still per account and removable
+per account.
+
+**Thirteen adversarial cases**, the important one being #4: a writer's update must not
+re-stamp the row's owner. Mutation-tested - reverting the trigger to
+`user_id := auth.uid()` makes the suite exit 3 with
+`SECURITY GATE FAILED: a writer's update re-stamped the row owner`.
+
+A writer can update a match and append to the log. They cannot rename, re-draw,
+complete or delete the event, insert or delete a match row (the schedule is the
+engine's output, so a helper who could insert rows could invent matches no format
+produced), edit the log, invite anyone, or see the owner's other events. Removing a
+helper is immediate, and their entered scores and log lines survive it - removing a
+person is not rewriting history.
+
+**A flake that was a real bug.** While running the gates, one test failed and then
+passed: *"a write that lands mid-sync is not clobbered by the pull in the same run"*,
+roughly one run in three. The cause was not the test. `syncNow` captures `now` before
+pushing, and selected the rows to protect from the pull with `due(now)` - so an entry
+re-queued **during** the push carried a later timestamp and fell outside the set
+whenever the clock ticked. The pull then overwrote the local row: a silently lost edit
+in production, on exactly the race the rule exists for.
+
+Backoff decides when to *push* an entry; it has nothing to do with whether this device
+has an unsent change for a row, which is the only question the pull needs answered. The
+engine now reads the whole outbox. A deterministic regression test drives the clock
+forward on every read, and it fails on the old line and passes on the new one - checked
+both ways.
+
+**Verification:** `bash scripts/verify-rls-local.sh` - three suites, 32 groups, all
+pass, and 2a's and 2b's suites still pass against the changed schema, which is the
+regression check that mattered. `npm test` 280 passed (24 files), run three times for
+flake confidence; lint 0 errors, 16 warnings; `tsc --noEmit` clean; contrast pass; build
+clean.
+
 ## 2026-09-29 — phase 2b: a read-only link to a running event
 
 Twenty people at a club night asking "am I on next?" now have an answer that is not

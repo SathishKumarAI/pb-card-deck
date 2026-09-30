@@ -14,8 +14,10 @@ for why any of it exists.
 | Who may read or write a table | `migrations/0002_rls.sql` |
 | A privileged operation (definer function, RPC) | `migrations/0003_functions.sql` |
 | Share links: the table, or any of the four share functions | `migrations/0004_event_shares.sql` |
+| Who may write to an event they do not own | `migrations/0005_event_members.sql` |
+| What "the owner of a match row" means | `migrations/0005_event_members.sql` (`force_event_owner`) |
 | What a SPECTATOR may see | `migrations/0004_event_shares.sql` (`get_shared_event`) |
-| What "try to break in" means | `tests/rls.test.mjs` (accounts), `tests/shares.local.sql` (share links) |
+| What "try to break in" means | `tests/rls.test.mjs` (accounts), `tests/shares.local.sql` (share links), `tests/writers.local.sql` (invited writers) |
 | The owner's setup steps, keys, provider config | `../docs/SUPABASE-SETUP.md` |
 
 Migrations are additive and numbered. A schema change is a new file
@@ -50,6 +52,17 @@ Migrations are additive and numbered. A schema change is a new file
 - **A share token is stored only as a SHA-256 hash**, and a bad, expired or revoked
   token must stay indistinguishable: all three return null, so probing cannot discover
   which events exist.
+- **`tournament_matches.user_id` is the EVENT's owner, never the writer.** A trigger
+  derives it from the parent, and `updated_by` records who wrote last. Setting it to
+  `auth.uid()` (as 0001 did, correctly, when only owners could write) makes a helper's
+  score entry quietly move the row out of the owner's event - invisible, because the
+  score looks right. `tests/writers.local.sql` fails if that returns.
+- **A writer may UPDATE a match and APPEND to the log. Nothing else.** No insert or
+  delete of matches (the schedule is the engine's output), no header change, no
+  inviting. `event_log` stays append-only for everyone, owner included.
+- **An invite is not a view link.** `get_shared_event` accepts only `role = 'viewer'`,
+  and a `'writer'` token grants nothing until an account accepts it - which creates a
+  membership row, so revoking the invite and removing a member are different actions.
 - **Change anything here and run the gate.** `bash scripts/verify-rls-local.sh` runs
   both suites offline; `npm run test:rls` from `app/` covers the HTTP surface. Output
   into the PR. They exit non-zero when they cannot run, so "it passed" always means
