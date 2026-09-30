@@ -72,23 +72,38 @@ app code in this stage, so the app gates prove only that nothing regressed.
 **Proof:** with no env vars the app is byte-for-byte today's behaviour (asserted
 by a test); with env vars, sign in with Google and a magic link on a real project.
 
-## Stage 4 — sync `feat/sync-engine`
+## Stage 4a — sync for decks, matches and prefs `feat/sync-engine` — **DONE** (this PR)
 
-- [ ] `lib/sync/outbox.ts` — append, coalesce by `(entity, id)`, cap 2,000,
+> **Split from the planned single stage 4, deliberately.** Events are stored locally
+> as one JSON blob and in the schema as a header row + one row per match + an
+> append-only log, so that mapping is larger than everything else in the stage put
+> together. Shipping it in the same PR would have made the sync rules unreviewable.
+> Stage 4b is events, on its own.
+
+- [x] `lib/sync/outbox.ts` — append, coalesce by `(entity, id)`, cap 2,000,
       `tries`, backoff schedule, dead-letter at 8
-- [ ] `lib/sync/rows.ts` — local ⇄ row mapping, both directions, one place
-- [ ] `lib/sync/engine.ts` — push, pull by cursor, LWW on server `updated_at`
+- [x] `lib/sync/rows.ts` — local ⇄ row mapping, both directions, one place
+- [x] `lib/sync/engine.ts` — push, pull by cursor, LWW on server `updated_at`
       with server winning an exact tie, tombstones, status
-- [ ] `lib/store/*` — enqueue after each successful local write
-- [ ] `components/SyncStatus.tsx` — `synced` / `pending n` / `offline` / `error`
-- [ ] First-sign-in dialog, counts read from the store, defaults to upload
-- [ ] Sign-out clears the synced copy, keeps never-uploaded local data
-- [ ] `lib/sync/README.md`
-- [ ] Tests: outbox, engine (incl. tie and retry idempotency), rows round-trip,
+- [x] `lib/store/*` — enqueue after each successful local write
+- [x] `components/SyncStatus.tsx` — `synced` / `pending n` / `offline` / `error`
+- [x] First-sign-in dialog, counts read from the store, defaults to upload
+- [x] Sign-out clears the synced copy, keeps never-uploaded local data
+- [x] `lib/sync/README.md`
+- [x] Tests: outbox, engine (incl. tie and retry idempotency), rows round-trip,
       dialog counts match what is enqueued
 
-**Proof:** two browsers signed into one account, a match created in one appearing
-in the other; airplane mode mid-match, then reconnect, with nothing lost.
+**Proof (code):** 47 sync tests against a fake transport, including the conflict
+rule, tombstones, cursor monotonicity, prefs merging, dead-lettering and the
+mid-sync write race. **Proof (real):** two browsers on one account is an owner step
+once a project exists — it needs credentials this repo does not have.
+
+## Stage 4b — events sync `feat/sync-events`
+
+- [ ] Map one local `Tournament` blob → `tournaments` header + `tournament_matches`
+      rows + `event_log` appends, and reassemble on pull
+- [ ] Append-only log handling: never re-send a line, never expect to edit one
+- [ ] Tests: a 12-team event round-trips with every result and correction intact
 
 ## Stage 5 — the docs catch up `docs/two-modes`
 

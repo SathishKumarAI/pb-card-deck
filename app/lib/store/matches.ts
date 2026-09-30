@@ -8,6 +8,7 @@
 
 import { GameSession, elapsedMs } from "../game";
 import { MATCHES_KEY, read, write, uid } from "./keys";
+import { enqueue } from "../sync/outbox";
 
 export interface SavedMatch {
   id: string;
@@ -65,6 +66,7 @@ export function addMatch(g: GameSession) {
       : {}),
   };
   write(MATCHES_KEY, [match, ...matches].slice(0, 200));
+  enqueue("matches", match.id);
 }
 
 // A single-match "match sheet" as plain text - the shareable proof a coach or
@@ -101,7 +103,21 @@ export function matchSheet(g: GameSession): string {
   return lines.join("\n");
 }
 export function clearMatches() {
+  // Every match is individually tombstoned, or clearing history on one device would
+  // leave it intact on the other and then sync straight back.
+  for (const m of read<SavedMatch[]>(MATCHES_KEY, [])) enqueue("matches", m.id, "delete");
   write(MATCHES_KEY, []);
+}
+
+/* ─── applied BY the sync engine, never by the UI (see store/decks.ts) ─── */
+
+export function applyRemoteMatch(match: SavedMatch) {
+  const rest = read<SavedMatch[]>(MATCHES_KEY, []).filter((m) => m.id !== match.id);
+  write(MATCHES_KEY, [match, ...rest].sort((a, b) => b.created_at - a.created_at).slice(0, 200));
+}
+
+export function dropMatchLocally(id: string) {
+  write(MATCHES_KEY, read<SavedMatch[]>(MATCHES_KEY, []).filter((m) => m.id !== id));
 }
 
 // Lifetime win/loss per team name, most wins first (backlog F111). No accounts,

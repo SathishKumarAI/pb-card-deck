@@ -203,9 +203,18 @@ matches, 3 decks and 2 events into this account?" — defaulting to yes. Yes map
 every local row to a UUID, records `client_id`, and enqueues it. No leaves local
 data untouched and starts the account empty. Nothing is deleted on either path.
 
-**Sign-out.** The synced copy is cleared from the device (it is in the cloud), and
-the pre-account local data that was never uploaded is kept. On a shared tablet
-that means signing out leaves nothing of the account behind.
+**Sign-out.** ~~The synced copy is cleared from the device~~ — **changed during
+stage 4a, and worth saying why.** Telling a synced row from a pre-account row needs
+per-row provenance that nothing else in the design wants, and the failure mode of
+getting it wrong is emptying somebody's history. So sign-out clears the queue, the
+cursors and the id map, and **leaves this device's data alone**; the account sheet
+says so in one line, and "Delete all data" in the menu remains the explicit wipe.
+The shared-tablet case is handled by that button rather than by a silent erase.
+
+**Conflicts, restated after implementation.** The rule is "a row with a pending
+outbox entry wins, otherwise the server wins" — the queue, not a clock. It is the
+same intent as last-write-wins on `updated_at` without keeping a local per-row
+timestamp that a wrong device clock could poison.
 
 **Visible state, always.** A chip shows `synced` / `pending n` / `offline` /
 `error`. The app never claims a thing is safe in the cloud when it is sitting in

@@ -21,6 +21,7 @@
 import { useEffect, useState } from "react";
 import { UserRound, Mail, LogOut, Trash2, ShieldCheck, Loader2, Inbox, AlertTriangle } from "lucide-react";
 import { Sheet } from "./HistoryPanel";
+import SyncStatus from "./SyncStatus";
 import {
   useAuth,
   signInWithGoogle,
@@ -176,6 +177,13 @@ export default function AccountPanel({ open, onClose }: { open: boolean; onClose
               {auth.email ?? "your account"}
             </p>
           </div>
+
+          <SyncStatus />
+
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+            Signing out leaves this device&apos;s copy in place - it does not wipe your
+            phone. Use <strong>Delete all data</strong> in the menu for that.
+          </p>
 
           <button
             onClick={signOut}
