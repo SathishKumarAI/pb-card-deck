@@ -55,7 +55,10 @@ run_sql_file "$ROOT/supabase/tests/rls.local.sql"
 echo "==> adversarial suite: share links (shares.local.sql)"
 run_sql_file "$ROOT/supabase/tests/shares.local.sql"
 
+echo "==> adversarial suite: invited writers (writers.local.sql)"
+run_sql_file "$ROOT/supabase/tests/writers.local.sql"
+
 echo ""
-echo "All migrations applied and every attack refused (accounts + share links)."
+echo "All migrations applied and every attack refused (accounts + share links + writers)."
 echo "This verifies the POLICIES. The HTTP surface and real sign-in still need"
 echo "'npm run test:rls' against a Supabase project - see docs/SUPABASE-SETUP.md."
