@@ -63,6 +63,12 @@ lib/auth.ts           - sign in (Google / email magic link), sign out, delete th
                         No passwords anywhere in this app, by design.
 components/AccountPanel - the account sheet. Absent from the menu entirely when
                         no project is configured.
+lib/sync/             - optional cloud sync (signed in only): outbox.ts (the queue),
+                        rows.ts (local <-> row mapping), engine.ts (push/pull, the
+                        conflict rule, status), runtime.ts (when it runs), idmap.ts,
+                        claim.ts (first sign-in). See its README. Events do NOT sync
+                        yet - stage 4b.
+components/SyncStatus - the chip: Synced / n to save / Offline / Not synced
 lib/useFocusTrap.ts   - focus-trap hook for dialogs / sheets
 lib/streaks.ts        - win streaks from saved matches (pure, tested)
 lib/shareImage.ts     - share cards on canvas: result / streak / tournament, in
@@ -229,6 +235,18 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
   back"-style wording.
 - **The security model lives in SQL**, not here: `supabase/migrations/0002_rls.sql`.
   Change anything under `supabase/` and run `bash scripts/verify-rls-local.sh`.
+- **`lib/store/*` enqueues; components never do.** A write calls `enqueue`, and the
+  `applyRemote*` functions (which write what the server already has) must NEVER
+  enqueue - that pushes the row straight back, for ever.
+- **The sync conflict rule is the QUEUE, not a clock.** A row with a pending outbox
+  entry wins; otherwise the server wins. No local per-row timestamp exists on
+  purpose: a device's clock cannot be trusted.
+- **Outbox bookkeeping matches on `seq`, not (entity, id) and not a timestamp.** A
+  write landing while its own row was being pushed used to be deleted as "sent" -
+  silent write loss - and the timestamp version collided in the same millisecond.
+- **Signing out keeps this device's data.** It clears the queue, cursors and id map
+  only. Emptying someone's phone because they signed out would be the worst reading
+  of "sign out"; "Delete all data" is the explicit wipe.
 
 ## Dead code (inert stubs from an abandoned auth experiment - safe to delete)
 `app/api/`, `app/login`, `app/signup`, `lib/db.ts`, `lib/auth.ts`, `lib/supabase/`,

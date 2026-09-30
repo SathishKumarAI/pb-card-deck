@@ -141,6 +141,18 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
+/**
+ * Watch the session from outside React (the sync runtime does). Fires immediately
+ * with the current state, so a subscriber never has to ask separately.
+ */
+export function subscribeAuth(cb: (state: AuthState) => void): () => void {
+  const listener = () => cb(state);
+  listeners.add(listener);
+  void startAuth();
+  cb(state);
+  return () => listeners.delete(listener);
+}
+
 /** React binding. Returns the same object identity until something changes. */
 export function useAuth(): AuthState {
   return useSyncExternalStore(subscribe, getAuthState, () => INITIAL_AUTH);

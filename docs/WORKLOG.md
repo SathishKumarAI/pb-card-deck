@@ -1,5 +1,67 @@
 # Worklog
 
+## 2026-09-29 — phase 2a stage 4a: data actually moves, and a queue bug that would have eaten writes
+
+Matches, decks, favourites and counters now sync for a signed-in player. A tap
+still never waits on the network: it writes `localStorage`, appends to a queue,
+and returns.
+
+**What shipped**
+
+| File | Owns |
+|---|---|
+| `lib/sync/outbox.ts` | The queue: coalescing per row, a 2,000 cap dropping oldest, exponential backoff capped at 5 min, dead-lettering after 8 tries |
+| `lib/sync/rows.ts` | The one local ⇄ row mapping, both directions, plus `mergePrefs` |
+| `lib/sync/engine.ts` | Push, pull by cursor, the conflict rule, the status, and a `Transport` interface with a Supabase implementation |
+| `lib/sync/runtime.ts` | The four triggers: sign-in, a 2s debounce after a write, back-online / tab-visible, and a 5-minute heartbeat. No realtime socket |
+| `lib/sync/{idmap,claim}.ts` | Local id ⇄ cloud UUID, and the first-sign-in "bring your data?" decision with counts read from the store |
+| `components/{SyncStatus,FirstSyncPrompt}.tsx` | The chip, and the one-time dialog |
+
+**Stage 4 split in two, deliberately.** Events are one JSON blob locally and a
+header row + one row per match + an append-only log in the schema. That mapping is
+bigger than everything above put together, and shipping it here would have made
+the sync rules unreviewable. **Events do not sync yet** — stage 4b, its own PR, and
+the README says so out loud rather than leaving it to be discovered.
+
+**A real bug, found by a test that failed for the right reason.** `markSent`
+removed queue entries by `(entity, id)`. If a write landed *while its own row was
+being pushed* — someone renames a deck in the moment between request and response —
+that brand-new entry was deleted as "sent", and the rename never reached the cloud
+until some unrelated later edit happened to re-queue the row. Silent write loss.
+
+Keying on the timestamp instead did **not** fix it: the replacement is queued in
+the same millisecond, so the stamps collided and the test still failed. Entries now
+carry a monotonic `seq`, which is what bookkeeping matches on.
+
+**One test premise was wrong and got corrected rather than forced.** The first
+version asserted that a stale server row never overwrites a local one after a
+successful push. That is not what the engine promises, and it should not: after a
+successful push the server's row *is* ours. The rule is about the queue, so the
+test now drives the race it actually covers — a write landing mid-sync — and says
+so in a comment.
+
+**Decisions worth recording**
+
+- **The conflict rule is the queue, not a clock.** A row with a pending entry wins;
+  otherwise the server wins. No local per-row timestamp, because a device's clock
+  cannot be trusted and the only question that matters is "did this device change
+  this row and not send it yet?".
+- **Prefs merge rather than overwrite.** Two phones each starring a different card
+  end with both stars, and a counter never goes backwards.
+- **Sign-out keeps this device's data** — a change from the spec, which said the
+  synced copy would be cleared. Telling a synced row from a pre-account row needs
+  provenance nothing else wants, and the failure mode is emptying someone's
+  history. The sheet says so in a line; "Delete all data" is still the explicit
+  wipe. Recorded in the spec, not just here.
+- **`applyRemote*` must never enqueue**, or a pulled row is pushed straight back
+  for ever. Stated in `lib/sync/README.md` as a rule.
+
+**Verification:** `npm test` 244 passed (24 files) — 197 plus 47 new; lint 0 errors
+and the same 14 pre-existing warnings (one error of my own, an unescaped
+apostrophe, fixed); `tsc --noEmit` clean; contrast pass; build clean. Two browsers
+on one real account remains an owner step — it needs credentials this repo does not
+have, and `docs/SUPABASE-SETUP.md` has the procedure.
+
 ## 2026-09-29 — phase 2a stage 3: sign in with Google or an email link
 
 The account itself. Sign in, sign out, delete the account — and **nothing changes

@@ -8,6 +8,7 @@
 
 import { Card, CATEGORIES } from "../cards";
 import { DECKS_KEY, read, write, uid } from "./keys";
+import { enqueue } from "../sync/outbox";
 
 export interface CustomDeck {
   id: string;
@@ -25,10 +26,25 @@ export function saveDeck(deck: { name: string; description: string; cards: Custo
   const decks = read<CustomDeck[]>(DECKS_KEY, []);
   const created: CustomDeck = { id: uid(), created_at: Date.now(), ...deck };
   write(DECKS_KEY, [created, ...decks]);
+  enqueue("decks", created.id);
   return created;
 }
 
 export function deleteDeck(id: string) {
+  write(DECKS_KEY, read<CustomDeck[]>(DECKS_KEY, []).filter((d) => d.id !== id));
+  enqueue("decks", id, "delete");
+}
+
+/* ─── applied BY the sync engine, never by the UI ───
+   These write the local copy of something the server already has, so they must not
+   enqueue: queueing here would push the row straight back and loop for ever. */
+
+export function applyRemoteDeck(deck: CustomDeck) {
+  const rest = read<CustomDeck[]>(DECKS_KEY, []).filter((d) => d.id !== deck.id);
+  write(DECKS_KEY, [deck, ...rest]);
+}
+
+export function dropDeckLocally(id: string) {
   write(DECKS_KEY, read<CustomDeck[]>(DECKS_KEY, []).filter((d) => d.id !== id));
 }
 

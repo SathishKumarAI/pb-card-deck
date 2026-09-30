@@ -21,6 +21,7 @@ import HelpPanel from "@/components/HelpPanel";
 import CardBrowserPanel from "@/components/CardBrowserPanel";
 import AchievementsPanel from "@/components/AchievementsPanel";
 import AccountPanel from "@/components/AccountPanel";
+import FirstSyncPrompt from "@/components/FirstSyncPrompt";
 import WelcomeTour from "@/components/WelcomeTour";
 
 export interface AppPanelsProps {
@@ -56,6 +57,8 @@ export default function AppPanels({
       <CardBrowserPanel open={open.browser} onClose={() => onClose("browser")} allCards={allCards} />
       <AchievementsPanel open={open.achievements} onClose={() => onClose("achievements")} />
       <AccountPanel open={open.account} onClose={() => onClose("account")} />
+      {/* Asks once per account per device, right after a first sign-in. */}
+      <FirstSyncPrompt />
       <WelcomeTour
         open={tourOpen}
         onClose={onCloseTour}

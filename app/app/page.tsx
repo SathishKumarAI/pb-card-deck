@@ -24,6 +24,8 @@ import type { Tournament, TournamentMatch } from "@/lib/tournament/types";
 import { recordResult as recordTournamentResult } from "@/lib/tournament/engine";
 import { OfficialMatchOptions } from "@/components/OfficialMatchSetup";
 import AppMenu from "@/components/AppMenu";
+import { subscribeAuth } from "@/lib/auth";
+import { installSyncRuntime } from "@/lib/sync/runtime";
 import AppPanels from "@/components/AppPanels";
 import BeginnerIntro from "@/components/BeginnerIntro";
 import GameScreen from "@/components/GameScreen";
@@ -80,6 +82,10 @@ export default function Home() {
   /* The save answer already given for THIS match (session id), so a best of 3
      asks once instead of once per game. Cleared when a new match starts. */
   const matchAnswerRef = useRef<{ id: string; save: boolean } | null>(null);
+
+  /* Follow the session: start syncing on sign-in, stop on sign-out. A no-op when
+     this deployment has no Supabase project, which is the default. */
+  useEffect(() => installSyncRuntime(subscribeAuth), []);
 
   useEffect(() => {
     fetch("/cards.json", { cache: "no-store" }).then((r) => r.json()).then(setAllCards);
