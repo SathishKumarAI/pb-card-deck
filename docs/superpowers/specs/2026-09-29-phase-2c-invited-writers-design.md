@@ -155,8 +155,8 @@ New adversarial cases, all of which must fail to get in:
 
 | Stage | Contents |
 |---|---|
-| **2c-1** | `0005_event_members.sql`: the table, the trigger change, `updated_by`, the widened role check, the four functions, the policy changes; eleven adversarial cases; docs |
-| **2c-2** | Client: the join route, the organiser's Helpers section, the writer-mode event screen, the engine's shared-event handling; tests |
+| **2c-1** - done | `0005_event_members.sql`: the table, the trigger change, `updated_by`, the widened role check, the four functions, the policy changes; eleven adversarial cases; docs |
+| **2c-2** - done | Client: the join route, the organiser's Helpers section, the writer-mode event screen, the engine's shared-event handling; tests |
 
 As with every stage since 2a, both merge safely with no Supabase project configured:
 the invite controls are absent and `/join` says links are not enabled here.

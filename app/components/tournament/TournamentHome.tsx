@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Plus, Trophy, Trash2, CalendarDays, PlayCircle, Sparkles } from "lucide-react";
+import { Plus, Trophy, Trash2, CalendarDays, PlayCircle, Sparkles, Users } from "lucide-react";
 import type { Tournament, TournamentMatch } from "@/lib/tournament/types";
 import { FORMAT_INFO } from "@/lib/tournament/types";
 import { progress, assignCourts } from "@/lib/tournament/engine";
@@ -15,6 +15,7 @@ import { buildDemoTournament, isDemo } from "@/lib/tournament/demo";
 import { listTournaments, saveTournament, deleteTournament } from "@/lib/client-api";
 import TournamentSetup from "./TournamentSetup";
 import TournamentScreen from "./TournamentScreen";
+import { isSharedEvent } from "@/lib/sync/sharedEvents";
 
 export default function TournamentHome({
   active,
@@ -125,6 +126,11 @@ export default function TournamentHome({
           {events.map((t) => {
             const { played, total } = progress(t);
             const champion = t.teams.find((x) => x.id === t.championTeamId);
+            /* Shared with this account rather than created by it (phase 2c). It is not
+               this device's to delete: the local copy would come straight back on the
+               next pull, and a delete button that undoes itself reads as a bug. Leaving
+               is in the event itself, where the context is. */
+            const sharedWithMe = isSharedEvent(t.id);
             return (
               <div
                 key={t.id}
@@ -145,6 +151,14 @@ export default function TournamentHome({
                   <span className="min-w-0">
                     <span className="flex items-center gap-1.5 min-w-0">
                       <span className="block text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{t.name}</span>
+                      {sharedWithMe && (
+                        <span
+                          className="flex items-center gap-1 shrink-0 px-1.5 py-0.5 text-[10px] font-bold"
+                          style={{ background: "var(--bg-elevated)", color: "var(--accent)", borderRadius: "var(--r-chip)" }}
+                        >
+                          <Users size={9} /> SHARED
+                        </span>
+                      )}
                       {isDemo(t) && (
                         <span
                           className="flex items-center gap-1 shrink-0 px-1.5 py-0.5 text-[10px] font-bold"
@@ -160,18 +174,20 @@ export default function TournamentHome({
                     </span>
                   </span>
                 </button>
-                <button
-                  onClick={() => {
-                    if (!window.confirm(`Delete "${t.name}"? This cannot be undone.`)) return;
-                    deleteTournament(t.id);
-                    setEvents(listTournaments());
-                  }}
-                  aria-label={`Delete ${t.name}`}
-                  className="pressable p-2 rounded-full shrink-0"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  <Trash2 size={15} />
-                </button>
+                {!sharedWithMe && (
+                  <button
+                    onClick={() => {
+                      if (!window.confirm(`Delete "${t.name}"? This cannot be undone.`)) return;
+                      deleteTournament(t.id);
+                      setEvents(listTournaments());
+                    }}
+                    aria-label={`Delete ${t.name}`}
+                    className="pressable p-2 rounded-full shrink-0"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                )}
               </div>
             );
           })}

@@ -90,11 +90,21 @@ and the policies are verified by an adversarial suite that tries to read another
 account's data and must fail - runnable offline with
 `bash scripts/verify-rls-local.sh`.
 
-**Sharing, so far:** a signed-in organiser can create a **revocable read-only link**
-to one event (`Live link` in the event screen). Anyone with it watches the schedule,
-standings and bracket update - no signup, nothing they can change, and it expires in
-seven days by default. Everything else in an account stays private to you. Letting
-invited people *enter* results is phase 2c - see [the plan](#the-plan).
+**Sharing an event — three roles, one event:**
+
+| Role | Gets in by | Can |
+|---|---|---|
+| **Organiser** | created it | everything |
+| **Helper** | an **invite link**, then signs in | enter and correct scores, logged under their name |
+| **Spectator** | a **live link**, no signup | watch the schedule, standings and bracket |
+
+A helper cannot rename, re-draw, delete or invite, and cannot see your other events —
+those controls are absent, not disabled. Links expire (7 days for spectators, 1 day for
+invites) and revoke in one tap; removing a helper stops them immediately while leaving
+the scores they entered and their lines in the change log intact. Everything else in an
+account stays private to you.
+
+Guide: **[`docs/SHARING-AN-EVENT.md`](docs/SHARING-AN-EVENT.md)**.
 
 Running your own copy? An account needs a Supabase project, and the app works
 perfectly with none: see [`docs/SUPABASE-SETUP.md`](docs/SUPABASE-SETUP.md).
@@ -233,6 +243,7 @@ An event for 4 people or 50, on a phone, with no signal. Setup is one paste.
 | **Live bracket tree** | Rounds as columns, matches centred between the two that feed them, byes resolved, connectors turning green as results land. Tap a match to enter or edit its score. It scrolls sideways on a phone, because the shape is the information. |
 | **Fix mistakes safely** | Undo any result and everything downstream is undone with it - a playoff re-seeds itself if a pool result changes. |
 | **A live link for spectators** | With an account: one tap makes a read-only link to this event. People watch the bracket update from their own phones, with no signup. It expires in seven days by default, and one tap revokes it. Only a fingerprint of the link is stored, so it is shown once. |
+| **Helpers who can enter scores** | Invite two or three people to a busy club night. They sign in, get that one event, and every score they enter is logged under their name. They cannot rename it, re-draw it, delete it, invite anyone, or see your other events. Remove one and they stop immediately - without erasing what they already entered. |
 | **A change log** | Every result, correction and clear is logged with the time and the old score, shown in a **Changes** tab and carried into every export. |
 | **Divisions** | Open, men's, women's or mixed. A mixed draw pairs one of each from names marked `Sam (m)` / `Priya (f)`, and says up front how many pairs will be same-sex if the numbers do not balance. |
 | **Any number of courts or pools** | Counts are typed, not picked from a fixed list. |
@@ -424,7 +435,7 @@ place to jump in** - say so in an issue and it is yours.
 ### Next up (most likely to happen)
 | Idea | Where it stands |
 |---|---|
-| **Invited co-organisers entering results** (phase 2c) | The database half is done - membership, policies and the eleven adversarial cases. The app still needs the join screen and the writer-mode event screen. |
+| **Per-card analytics** (most drawn, most skipped, most favourited) | The counters already exist in `lib/client-api.ts`; nothing reads them yet. |
 | **Consolation / plate draws and a third-place play-off** | The slot model already supports it. This is wiring, not engine work - a genuinely good first contribution. |
 | **Per-card analytics** (most drawn, most skipped, most favourited) | The counters already exist in `lib/client-api.ts`; nothing reads them yet. |
 | **Rotating partners that never repeats a pairing** | Today it ranks, groups and pairs, which keeps games close but can repeat a pairing late in a small field. |
@@ -507,6 +518,7 @@ Full index: **[`docs/index.md`](docs/index.md)**.
 | [`CHANGELOG.md`](CHANGELOG.md) | Everything that shipped, newest first, with the why |
 | [`docs/TOURNAMENTS.md`](docs/TOURNAMENTS.md) | Running a real event, start to finish |
 | [`docs/RECORDING-A-MATCH.md`](docs/RECORDING-A-MATCH.md) | Every way to record and export gameplay |
+| [`docs/SHARING-AN-EVENT.md`](docs/SHARING-AN-EVENT.md) | Live links, helper invites, and exactly what each role can do |
 | [`docs/SUPABASE-SETUP.md`](docs/SUPABASE-SETUP.md) | Connecting your own deployment to the optional account service |
 | [the phase 2 spec](docs/superpowers/specs/2026-09-29-supabase-accounts-and-sync-design.md) | Accounts + sync: schema, security control by control, sync mechanics, failure modes |
 | [`app/README.md`](app/README.md) | Architecture deep-dive: data flow, engine, storage schema, PWA, mobile hardening |

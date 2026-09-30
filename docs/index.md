@@ -30,6 +30,7 @@ Open source, MIT. Contributions, card ideas and opinions are all welcome.
 - <a href="plans/2026-09-29-phase-2a-accounts-and-sync-plan.md" target="_blank" rel="noopener noreferrer">Stage plan</a> — the five stages and what each one proved
 
 **Using the app**
+- <a href="SHARING-AN-EVENT.md" target="_blank" rel="noopener noreferrer">Sharing an event</a> — live links for spectators, invites for helpers, and what each role can do
 - <a href="TOURNAMENTS.md" target="_blank" rel="noopener noreferrer">Running a tournament</a> — formats, one-paste setup, courts, brackets, fixing scores, exports
 - <a href="RECORDING-A-MATCH.md" target="_blank" rel="noopener noreferrer">Recording a match</a> — casual history, coach/umpire mode, the match sheet, CSV, backups, storage keys
 

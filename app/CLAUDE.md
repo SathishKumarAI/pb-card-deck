@@ -63,6 +63,12 @@ lib/auth.ts           - sign in (Google / email magic link), sign out, delete th
                         No passwords anywhere in this app, by design.
 components/AccountPanel - the account sheet. Absent from the menu entirely when
                         no project is configured.
+lib/share/            - sharing ONE event: eventShare.ts (spectator links, token +
+                        payload), invite.ts (helper invites, members). Tokens are 256-bit,
+                        hashed server-side, and carried in the URL FRAGMENT so they never
+                        reach a server log.
+app/shared/           - the spectator page (read-only, polls while visible)
+app/join/             - the helper's accept-an-invite page (signs in, then accepts)
 lib/sync/             - optional cloud sync (signed in only): outbox.ts (the queue),
                         rows.ts (local <-> row mapping), engine.ts (push/pull, the
                         conflict rule, status), runtime.ts (when it runs), idmap.ts,
@@ -247,6 +253,13 @@ public/sw.js          - network-first service worker (prod only; dev unregisters
 - **Signing out keeps this device's data.** It clears the queue, cursors and id map
   only. Emptying someone's phone because they signed out would be the worst reading
   of "sign out"; "Delete all data" is the explicit wipe.
+- **An event may belong to somebody else** (phase 2c). `lib/sync/sharedEvents.ts` records
+  that, learned from the pull. Two consequences: the push SKIPS the header for a shared
+  event (a writer's header upsert is refused, and retrying it would dead-letter the whole
+  event), and the screens HIDE what a writer cannot do rather than disabling it.
+- **A share token never goes in a query string.** Fragment only - `/shared#t=…`,
+  `/join#t=…` - so it stays out of server logs and out of the `Referer` header, and
+  survives an OAuth round trip. Both routes are excluded in `robots.ts`.
 
 ## Dead code (inert stubs from an abandoned auth experiment - safe to delete)
 `app/api/`, `app/login`, `app/signup`, `lib/db.ts`, `lib/auth.ts`, `lib/supabase/`,

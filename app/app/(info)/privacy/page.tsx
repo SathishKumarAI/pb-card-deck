@@ -114,6 +114,13 @@ export default function PrivacyPage() {
           including you. Correcting a score adds a line saying what it used to be.
         </li>
         <li>
+          <strong>Helpers you invite.</strong> You can invite people to enter scores in
+          one event. They need an account, because the change log records who entered
+          each score - that attribution is the point. You see their display name or
+          email while they are a helper, they see only that event, and removing them
+          stops them immediately. What they already entered stays.
+        </li>
+        <li>
           <strong>Sharing is something you choose, one event at a time.</strong> An
           account is private to you unless you create a <strong>live link</strong> for a
           specific event. Anyone holding that link can see that event&apos;s schedule,

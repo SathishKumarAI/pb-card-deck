@@ -16,12 +16,13 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Link2, Copy, Check, Ban, Eye, AlertTriangle, Loader2 } from "lucide-react";
+import { Link2, Copy, Check, Ban, Eye, AlertTriangle, Loader2, UserPlus, UserMinus, Pencil } from "lucide-react";
 import { Sheet } from "../HistoryPanel";
 import {
   createShare, listShares, revokeShare, shareState,
   type ShareRow,
 } from "@/lib/share/eventShare";
+import { createInvite, listMembers, removeMember, memberLabel, type MemberRow } from "@/lib/share/invite";
 
 const EXPIRY_CHOICES: { label: string; days: number | null }[] = [
   { label: "1 day", days: 1 },
@@ -42,6 +43,9 @@ export default function ShareLinkPanel({
   eventName: string;
 }) {
   const [rows, setRows] = useState<ShareRow[]>([]);
+  const [members, setMembers] = useState<MemberRow[]>([]);
+  const [freshInvite, setFreshInvite] = useState<{ url: string } | null>(null);
+  const [copiedInvite, setCopiedInvite] = useState(false);
   const [days, setDays] = useState<number | null>(7);
   const [fresh, setFresh] = useState<{ url: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -50,7 +54,9 @@ export default function ShareLinkPanel({
 
   const refresh = useCallback(async () => {
     try {
-      setRows(await listShares(tournamentId));
+      const [shares, joined] = await Promise.all([listShares(tournamentId), listMembers(tournamentId)]);
+      setRows(shares);
+      setMembers(joined);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load this event's links.");
     }
@@ -64,7 +70,9 @@ export default function ShareLinkPanel({
 
   const close = () => {
     setFresh(null);
+    setFreshInvite(null);
     setCopied(false);
+    setCopiedInvite(false);
     setError(null);
     onClose();
   };
@@ -91,6 +99,45 @@ export default function ShareLinkPanel({
       setTimeout(() => setCopied(false), 2500);
     } catch {
       setError("Could not copy automatically - select the link and copy it.");
+    }
+  };
+
+  const invite = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      // One day by default, and deliberately shorter than a viewer link: an invite that
+      // grants WRITE access should not sit in a group chat for a month.
+      const made = await createInvite(tournamentId, 1, "helpers");
+      setFreshInvite({ url: made.url });
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not create the invite.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copyInvite = async () => {
+    if (!freshInvite) return;
+    try {
+      await navigator.clipboard.writeText(freshInvite.url);
+      setCopiedInvite(true);
+      setTimeout(() => setCopiedInvite(false), 2500);
+    } catch {
+      setError("Could not copy automatically - select the link and copy it.");
+    }
+  };
+
+  const kick = async (userId: string) => {
+    setBusy(true);
+    try {
+      await removeMember(tournamentId, userId);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not remove that helper.");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -220,6 +267,77 @@ export default function ShareLinkPanel({
             })}
           </div>
         )}
+
+        {/* ─── Helpers: people who may ENTER scores (phase 2c) ─── */}
+        <div className="flex flex-col gap-2 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+          <p className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text)" }}>
+            <Pencil size={15} style={{ color: "var(--accent)" }} /> Helpers who can enter scores
+          </p>
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+            A helper signs in, and can enter and correct scores in this event. They cannot
+            rename it, change the draw, delete it, or invite anybody. Every score they
+            enter is logged under their name.
+          </p>
+
+          {freshInvite ? (
+            <div className="rounded-[var(--r-panel)] p-3 flex flex-col gap-2" style={{ border: "1px solid var(--accent)" }}>
+              <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+                Invite link - copy it now
+              </p>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Shown once, and it expires in a day. Whoever opens it and signs in becomes
+                a helper, so send it only to the people running your desk.
+              </p>
+              <code className="text-xs break-all p-2 rounded-[var(--r-ctl)]" style={{ background: "var(--bg-elevated)", color: "var(--text)" }}>
+                {freshInvite.url}
+              </code>
+              <button
+                onClick={copyInvite}
+                className="pressable hoverable flex items-center justify-center gap-2 py-2.5 rounded-[var(--r-ctl)] font-semibold"
+                style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+              >
+                {copiedInvite ? <Check size={16} /> : <Copy size={16} />}
+                {copiedInvite ? "Copied" : "Copy invite"}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={invite}
+              disabled={busy}
+              className="pressable hoverable self-start flex items-center gap-2 px-3 py-2 rounded-[var(--r-ctl)] text-sm font-semibold"
+              style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text)", opacity: busy ? 0.6 : 1 }}
+            >
+              <UserPlus size={15} /> Invite a helper
+            </button>
+          )}
+
+          {members.length > 0 && (
+            <div className="flex flex-col gap-2 mt-1">
+              {members.map((m) => (
+                <div key={m.user_id} className="mat-thin rounded-[var(--r-ctl)] p-3 flex items-center justify-between gap-3">
+                  <div className="text-sm min-w-0">
+                    <p className="truncate" style={{ color: "var(--text)" }}>{memberLabel(m)}</p>
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      Joined {new Date(m.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => kick(m.user_id)}
+                    disabled={busy}
+                    className="pressable shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--r-ctl)] text-sm font-semibold"
+                    style={{ background: "transparent", border: "1px solid var(--red)", color: "var(--red)" }}
+                  >
+                    <UserMinus size={14} /> Remove
+                  </button>
+                </div>
+              ))}
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Removing a helper stops them immediately. Revoking the invite above only
+                stops new people joining - both are worth doing when an event is over.
+              </p>
+            </div>
+          )}
+        </div>
 
         {error && (
           <p role="alert" className="text-sm flex items-start gap-2" style={{ color: "var(--red)" }}>

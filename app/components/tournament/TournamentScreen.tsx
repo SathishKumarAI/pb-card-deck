@@ -22,6 +22,8 @@ import { standings, poolStandings, playerStandings } from "@/lib/tournament/stan
 import StandingsTable from "./StandingsTable";
 import ShareLinkPanel from "./ShareLinkPanel";
 import { isCloudConfigured } from "@/lib/supabase/client";
+import { isSharedEvent } from "@/lib/sync/sharedEvents";
+import { leaveEvent } from "@/lib/share/invite";
 import { useAuth } from "@/lib/auth";
 import BracketView from "./BracketView";
 import MatchCard from "./MatchCard";
@@ -47,13 +49,17 @@ export default function TournamentScreen({
      a link lives in the account, so there is nothing to mint without one. */
   const [sharingLink, setSharingLink] = useState(false);
   const auth = useAuth();
-  const canShareLink = isCloudConfigured() && auth.status === "signed-in";
   const [picked, setPicked] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [sharingImage, setSharingImage] = useState(false);
   const toast = useToast();
 
   const t = tournament;
+  /* Phase 2c: this event may have been shared WITH this account rather than created by
+     it. A helper scores matches and nothing else, so the owner-only controls are absent
+     rather than present-and-failing - a disabled button nobody can press is worse. */
+  const sharedWithMe = isSharedEvent(t.id);
+  const canShareLink = isCloudConfigured() && auth.status === "signed-in" && !sharedWithMe;
   const isRotating = t.format === "rotating";
   const hasBracket = t.matches.some((m) => m.bracket === "winners" || m.bracket === "losers" || m.bracket === "final");
   const hasPools = t.matches.some((m) => m.bracket === "pool");
@@ -194,6 +200,31 @@ export default function TournamentScreen({
         </div>
       </div>
 
+      {sharedWithMe && (
+        <div className="mat-thin rounded-[var(--r-panel)] p-3 flex items-start justify-between gap-3 text-sm">
+          <p style={{ color: "var(--text-secondary)" }}>
+            <strong style={{ color: "var(--text)" }}>Shared with you.</strong> You can enter
+            and correct scores here. The organiser keeps the draw, the format and the event
+            itself, and every score you enter is logged under your name.
+          </p>
+          <button
+            onClick={async () => {
+              try {
+                await leaveEvent(t.id);
+                toast("You left the event");
+                onExit();
+              } catch {
+                toast("Could not leave just now");
+              }
+            }}
+            className="pressable shrink-0 px-3 py-1.5 rounded-[var(--r-ctl)] text-sm font-semibold"
+            style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+          >
+            Leave
+          </button>
+        </div>
+      )}
+
       {/* Progress, on a phone where the header row has no room for it */}
       <div className="md:hidden h-1.5 w-full overflow-hidden" style={{ background: "var(--bg-elevated)", borderRadius: 999 }}>
         <div
@@ -285,6 +316,7 @@ export default function TournamentScreen({
 
           {isRotating && (
             <button
+              hidden={sharedWithMe}
               onClick={() => { onChange(addRotatingRound(t)); toast("Round added"); }}
               className="pressable hoverable mat-thin flex items-center justify-center gap-2 py-3 text-sm font-semibold"
               style={{ border: "1px solid var(--mat-edge)", borderRadius: "var(--r-panel)", color: "var(--text)" }}

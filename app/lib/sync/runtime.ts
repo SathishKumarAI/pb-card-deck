@@ -64,7 +64,7 @@ export function installSyncRuntime(subscribeAuth: (cb: (s: AuthState) => void) =
     if (state.status === "signed-in" && state.userId) {
       if (signedInUser === state.userId) return;
       signedInUser = state.userId;
-      startSyncing();
+      startSyncing(state.userId);
       requestSync(0);
     } else if (signedInUser && state.status !== "working" && state.status !== "loading") {
       signedInUser = null;
