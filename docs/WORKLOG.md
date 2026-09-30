@@ -1,5 +1,77 @@
 # Worklog
 
+## 2026-09-29 — phase 2a stage 2: the database, and a security gate that can fail
+
+The schema for the optional account, its row-level security, the two privileged
+functions, and **proof** — verified on a throwaway Postgres in Docker, before the
+owner has created a Supabase project at all.
+
+**What shipped**
+
+| File | What it is |
+|---|---|
+| `supabase/migrations/0001_init.sql` | Seven tables mirroring `lib/store/*`, client-generated UUID ids with the old local id kept as `client_id`, soft deletes, and triggers that force `updated_at` and `user_id` |
+| `supabase/migrations/0002_rls.sql` | RLS on every table, a policy per operation, `anon` revoked, explicit grants for `authenticated`, and `event_log` given no update or delete policy |
+| `supabase/migrations/0003_functions.sql` | `handle_new_user()` and `delete_my_account()`, both `security definer` with `set search_path = ''`, revoked from `public`/`anon`, deriving the account from `auth.uid()` and taking no arguments |
+| `supabase/tests/rls.test.mjs` | The attacks over HTTP against a real project. Zero dependencies (raw `fetch`), and **exits non-zero when credentials are absent** rather than skipping green |
+| `supabase/tests/{local-shim,rls.local}.sql` + `scripts/verify-rls-local.sh` | The same attacks in SQL against `postgres:17-alpine` in Docker. No Supabase account needed |
+| `docs/SUPABASE-SETUP.md` | The owner's one-time runbook: region, migrations, providers, the redirect allowlist, which key is safe in the browser, and how to run both suites |
+
+**Two things the verification caught that reading would not have**
+
+1. **`force row level security` would have broken account deletion.** It subjects
+   the table owner to the policies, and every policy is scoped `to authenticated`
+   while the owner is `postgres` — so the signup trigger could not have inserted a
+   profile and `delete_my_account()` would have deleted **zero rows while
+   reporting success**. Removed, with the reasoning written at the line where
+   someone would add it.
+2. **`event_log` was append-only in policy but not in privilege.** The suite
+   printed `audit lines cannot be edited or deleted (0 refused at privilege
+   level)` — the UPDATE was reaching the policy layer because Supabase's default
+   privileges grant ALL on new tables to `authenticated`. Added
+   `revoke update, delete, truncate on public.event_log from authenticated`; it
+   now reports `(2 refused at privilege level)`.
+
+**The gate was mutation-tested**, because a security test that cannot fail is
+decoration. Disabling RLS on one table:
+
+```
+psql:<stdin>:72: ERROR:  SECURITY GATE FAILED: B can read decks
+EXIT=3
+```
+
+**Verification:** `bash scripts/verify-rls-local.sh` — all nine groups pass (no
+cross-account read, write, forge, transfer or rewrite; server-owned timestamps;
+one-account deletion; `anon` refused). App gates unchanged and green: 169 tests,
+lint 0 errors, `tsc` clean, contrast pass, build clean. No app code in this stage.
+
+**Still owner-only:** creating the project, enabling Google + magic link, and
+running `npm run test:rls` for the HTTP surface. Until those env vars exist the app
+is byte-for-byte the local-first one.
+
+## 2026-09-29 — phase 2a stage 1: the store split, and an erase that missed three keys
+
+`lib/client-api.ts` was 319 lines owning five concerns, and stage 4 will add a
+sync-queue call to every writer. Split into `lib/store/{keys,decks,matches,tournaments,prefs}.ts`
+with `client-api.ts` kept as a façade, so no component changed and the existing
+164 tests were the proof.
+
+The split surfaced a real bug: **`clearAllData` enumerated six keys by hand, and
+three had been added to the app later** — so "Delete all local data" left every
+tournament someone had run, every in-progress game and the local copy of their
+submitted feedback on the device. The function's own comment claimed it wiped
+"every local trace", so the comment was lying, not the code.
+
+Fixed structurally rather than by adding three strings: `keys.ts` owns
+`USER_DATA_KEYS` (what an erase removes) and `PREFERENCE_KEYS` (theme, last deck,
+save-history answer, tour gate — kept on purpose), and `clearAllData` enumerates
+the first. Test written first; it failed with
+`expected [ 'pb-tournaments', …(2) ] to deeply equal []`. The confirm dialog now
+names tournaments too.
+
+**Verification:** 169 tests (164 + 5 new) in 15 files; lint 0 errors; `tsc` clean;
+contrast pass; build clean. PR #17.
+
 ## 2026-09-29 — the open-source pass: a README that tells the story
 
 Four months of work existed in the code and in 16 docs, and nowhere in a form a

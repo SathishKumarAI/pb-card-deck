@@ -4,3 +4,19 @@
 # detection honours .gitignore, so ignoring `app/app/` silently stopped it
 # generating every class used only in app/app/page.tsx (sr-only, gap-8,
 # justify-start, z-[70] ...). See app/CLAUDE.md, "Traps".
+
+# Credentials, anywhere in the tree. `app/.gitignore` already covers app/, but a
+# key pasted into a root `.env` for a script (the RLS suite reads one) was not
+# ignored by anything before this rule. Copies of a credential file are still a
+# live credential, so the suffixes are covered too.
+.env
+.env.*
+*.env
+!.env.example
+*.key
+*.pem
+
+# Supabase CLI local state (a local Postgres, logs and a generated anon key).
+supabase/.branches/
+supabase/.temp/
+supabase/.env

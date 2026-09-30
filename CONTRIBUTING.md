@@ -68,6 +68,19 @@ Plus, if you touched colour:
 npm run contrast   # WCAG table for both themes; also runs as a test
 ```
 
+And if you touched anything under `supabase/` — the optional account's schema or
+its row-level-security policies:
+
+```bash
+bash scripts/verify-rls-local.sh   # repo root; needs Docker, needs no Supabase account
+```
+
+It spins up a throwaway Postgres, applies the migrations, and has a second
+account try to read, edit, delete, forge and rewrite the first one's data. Paste
+the output into the PR. The owner additionally runs `npm run test:rls` against a
+real project for the HTTP surface — see
+[`docs/SUPABASE-SETUP.md`](docs/SUPABASE-SETUP.md).
+
 CI (`.github/workflows/ci.yml`) runs lint → type-check → tests → `npm audit` →
 build, plus a gitleaks secret scan.
 

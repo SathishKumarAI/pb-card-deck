@@ -12,38 +12,43 @@ Gates, every stage, from `app/`:
 
 ---
 
-## Stage 1 — split the local store `refactor/store-split`
+## Stage 1 — split the local store `refactor/store-split` — **DONE** (PR #17)
 
 **Why first:** `client-api.ts` is ~320 lines and stage 4 adds an enqueue call to
 every writer. Splitting before that keeps each file under the repo's 300-line
 target and keeps stage 4's diff readable.
 
-- [ ] `lib/store/keys.ts` — every `localStorage` key, and the `read`/`write`/`uid` helpers
-- [ ] `lib/store/decks.ts` — decks CRUD, share-code encode/decode, `deckToCards`
-- [ ] `lib/store/matches.ts` — history, `addMatch`, `matchSheet`, CSV, `playerRecords`
-- [ ] `lib/store/tournaments.ts` — event CRUD
-- [ ] `lib/store/prefs.ts` — favorites, stats, export/import, `clearAllData`
-- [ ] `lib/client-api.ts` — façade, re-exports the same names, nothing else
-- [ ] `lib/store/README.md` — `change → file` table
+- [x] `lib/store/keys.ts` — every `localStorage` key, and the `read`/`write`/`uid` helpers
+- [x] `lib/store/decks.ts` — decks CRUD, share-code encode/decode, `deckToCards`
+- [x] `lib/store/matches.ts` — history, `addMatch`, `matchSheet`, CSV, `playerRecords`
+- [x] `lib/store/tournaments.ts` — event CRUD
+- [x] `lib/store/prefs.ts` — favorites, stats, export/import, `clearAllData`
+- [x] `lib/client-api.ts` — façade, re-exports the same names, nothing else
+- [x] `lib/store/README.md` — `change → file` table
 
 **Proof:** the existing 164 tests pass untouched. No component edited — verified
 with `git diff --stat` showing no `components/` changes.
 
-## Stage 2 — the database `feat/supabase-schema`
+## Stage 2 — the database `feat/supabase-schema` — **DONE** (this PR)
 
-- [ ] `supabase/migrations/0001_init.sql` — the seven tables, `updated_at` and
+- [x] `supabase/migrations/0001_init.sql` — the seven tables, `updated_at` and
       `user_id` triggers, `profiles` row on signup
-- [ ] `supabase/migrations/0002_rls.sql` — enable RLS, per-table policies,
+- [x] `supabase/migrations/0002_rls.sql` — enable RLS, per-table policies,
       `revoke all from anon`, grants to `authenticated`, no update/delete policy
       on `event_log`
-- [ ] `supabase/migrations/0003_functions.sql` — `delete_my_account()`,
+- [x] `supabase/migrations/0003_functions.sql` — `delete_my_account()`,
       `SECURITY DEFINER`, `set search_path = ''`, schema-qualified
-- [ ] `supabase/tests/rls.test.mjs` — the six adversarial cases from the spec;
+- [x] `supabase/tests/rls.test.mjs` — the six adversarial cases from the spec;
       **exits non-zero when credentials are absent**, with the reason, so it can
       never read as a silent pass
-- [ ] `docs/SUPABASE-SETUP.md` — the one-time owner runbook, including the
+- [x] `docs/SUPABASE-SETUP.md` — the one-time owner runbook, including the
       redirect allowlist and which key is safe in the client
-- [ ] `npm run test:rls` script wired, documented as needing a project
+- [x] `npm run test:rls` script wired, documented as needing a project
+- [x] **Added beyond the plan:** `scripts/verify-rls-local.sh` +
+      `supabase/tests/{local-shim,rls.local}.sql` — the same attacks in SQL against
+      a throwaway Postgres in Docker, so the policies are verifiable with no
+      Supabase account at all. Mutation-tested: disabling RLS on one table makes
+      it exit non-zero.
 
 **Proof:** the suite run against a real project, output pasted into the PR. No
 app code in this stage, so the app gates prove only that nothing regressed.

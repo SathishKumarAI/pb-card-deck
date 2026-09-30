@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:rls": "node ../supabase/tests/rls.test.mjs",
     "contrast": "node scripts/contrast-audit.mjs"
   },
   "dependencies": {
