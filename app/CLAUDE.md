@@ -66,8 +66,8 @@ components/AccountPanel - the account sheet. Absent from the menu entirely when
 lib/sync/             - optional cloud sync (signed in only): outbox.ts (the queue),
                         rows.ts (local <-> row mapping), engine.ts (push/pull, the
                         conflict rule, status), runtime.ts (when it runs), idmap.ts,
-                        claim.ts (first sign-in). See its README. Events do NOT sync
-                        yet - stage 4b.
+                        claim.ts (first sign-in), eventRows.ts (one event <-> header
+                        row + match rows + append-only log). See its README.
 components/SyncStatus - the chip: Synced / n to save / Offline / Not synced
 lib/useFocusTrap.ts   - focus-trap hook for dialogs / sheets
 lib/streaks.ts        - win streaks from saved matches (pure, tested)

@@ -64,6 +64,7 @@ export function importData(json: string): { decks: number; matches: number; tour
   // account would keep whatever it had and the import would look like it failed.
   for (const d of listDecks()) enqueue("decks", d.id);
   for (const m of listMatches()) enqueue("matches", m.id);
+  for (const e of listTournaments()) enqueue("events", e.id);
   enqueue("prefs", PREFS_ROW);
   return {
     decks: data.decks?.length ?? 0,

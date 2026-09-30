@@ -30,8 +30,12 @@ export const OUTBOX_KEY = "pb-sync-outbox";
 export const MAX_ENTRIES = 2000;
 export const MAX_TRIES = 8;
 
-/** The entities phase 2a syncs. Events arrive in their own stage. */
-export type Entity = "decks" | "matches" | "prefs";
+/**
+ * What syncs. `events` is one queue entry per EVENT, not per match: the local blob
+ * is written whole, so the queue mirrors that and the push fans out into the three
+ * tables (`eventRows.ts`).
+ */
+export type Entity = "decks" | "matches" | "prefs" | "events";
 
 export interface OutboxEntry {
   /**

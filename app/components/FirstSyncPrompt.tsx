@@ -27,6 +27,7 @@ export default function FirstSyncPrompt() {
   const parts = [
     counts.matches ? `${counts.matches} match${counts.matches === 1 ? "" : "es"}` : null,
     counts.decks ? `${counts.decks} deck${counts.decks === 1 ? "" : "s"}` : null,
+    counts.events ? `${counts.events} event${counts.events === 1 ? "" : "s"}` : null,
     counts.favorites ? `${counts.favorites} favourite card${counts.favorites === 1 ? "" : "s"}` : null,
   ].filter(Boolean) as string[];
 

@@ -10,6 +10,8 @@ import { toggleFavorite, listFavoriteIds } from "../store/prefs";
 import { addMatch } from "../store/matches";
 import { listOutbox, setSyncEnabled, clearOutbox } from "./outbox";
 import { createGame } from "../game";
+import { saveTournament } from "../store/tournaments";
+import { buildDemoTournament } from "../tournament/demo";
 
 const USER = "user-123";
 
@@ -56,20 +58,28 @@ describe("the counts it shows", () => {
     saveDeck({ name: "Two", description: "", cards: [] });
     addMatch(finishedGame());
     toggleFavorite(42);
-    expect(localDataCounts()).toEqual({ decks: 2, matches: 1, favorites: 1, empty: false });
+    expect(localDataCounts()).toEqual({ decks: 2, matches: 1, events: 0, favorites: 1, empty: false });
   });
 
-  it("queues exactly what it promised to queue", () => {
+  it("counts an event someone ran", () => {
+    saveTournament(buildDemoTournament());
+    expect(localDataCounts().events).toBe(1);
+    expect(shouldAskToClaim(USER)).toBe(true);
+  });
+
+  it("queues exactly what it promised to queue, events included", () => {
     saveDeck({ name: "One", description: "", cards: [] });
     saveDeck({ name: "Two", description: "", cards: [] });
     addMatch(finishedGame());
     toggleFavorite(7);
+    saveTournament(buildDemoTournament());
     clearOutbox(); // pretend those writes predate the account
 
     const promised = claimLocalData(USER);
     const queued = listOutbox();
     expect(queued.filter((e) => e.entity === "decks")).toHaveLength(promised.decks);
     expect(queued.filter((e) => e.entity === "matches")).toHaveLength(promised.matches);
+    expect(queued.filter((e) => e.entity === "events")).toHaveLength(promised.events);
     // Favourites and counters travel as the single prefs row.
     expect(queued.filter((e) => e.entity === "prefs")).toHaveLength(1);
   });

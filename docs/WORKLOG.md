@@ -1,5 +1,44 @@
 # Worklog
 
+## 2026-09-29 — phase 2a stage 4b: events sync, one blob into three tables
+
+Tournaments now sync too, which was the half of stage 4 worth separating.
+
+**The asymmetry this stage exists to pay for.** Locally an event is **one JSON
+blob** — teams, every match, the whole change log — written whole on every change.
+In the database it is a **header row, one row per match, and an append-only log**.
+
+The blob is right locally (one write, no joins, the tournament engine stays free of
+storage) and wrong in the cloud, because phase 2c needs two people entering results
+for *different* matches of one event without overwriting each other. A blob column
+would turn a club night into a last-write-wins race over the whole day's play.
+
+`lib/sync/eventRows.ts` is the only place that asymmetry lives.
+
+**Decisions that fall out of it**
+
+- **The queue holds one entry per event**, mirroring how the blob is saved. The push
+  fans out header → matches → log, in that order, so children always have a parent.
+- **The log is append-only in the database, so re-sending is refused, not merely
+  wasteful.** `logSentCount` tracks how many lines have gone, only ever moves
+  forwards, and is **also set when lines arrive from another device** — otherwise
+  this device would try to append what it just received.
+- **Matches and log lines are pulled by parent, not by timestamp.** A match that has
+  not changed is still part of the event being rebuilt. That is why `Transport`
+  gained a `pullChildren`.
+- **Only the header is tombstoned on delete**; the children cascade.
+- **Absent must stay absent.** A match with no score is "not played yet", and
+  rebuilding it as `0-0` would put a phantom result on a bracket. Tested explicitly.
+
+**The fixture is the demo event**, which is a 12-team day played through the real
+tournament engine — so the round-trip test covers real slot wiring, resolved teams,
+byes, courts, a champion and a change log with per-line match links, rather than a
+hand-written object that happens to match the mapping.
+
+**Verification:** `npm test` 262 passed (26 files) — 244 plus 18 new; lint 0 errors,
+14 pre-existing warnings; `tsc --noEmit` clean; build clean. The first-sign-in dialog
+now counts and queues events as well, so "bring your data" means all of it.
+
 ## 2026-09-29 — phase 2a stage 4a: data actually moves, and a queue bug that would have eaten writes
 
 Matches, decks, favourites and counters now sync for a signed-in player. A tap

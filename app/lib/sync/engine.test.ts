@@ -21,6 +21,9 @@ function fakeTransport(seed: Record<string, Record<string, unknown>[]> = {}) {
     async upsert(table, rows) { calls.upserts.push({ table, rows }); },
     async softDelete(table, ids) { calls.deletes.push({ table, ids }); },
     async pull(table) { calls.pulls.push(table); return remote[table] ?? []; },
+    async pullChildren(table, column, value) {
+      return (remote[table] ?? []).filter((r) => r[column] === value);
+    },
   };
   return { t, calls, remote };
 }
@@ -30,6 +33,7 @@ function failingTransport(): Transport {
     async upsert() { throw new Error("upsert refused"); },
     async softDelete() { throw new Error("delete refused"); },
     async pull() { return []; },
+    async pullChildren() { return []; },
   };
 }
 
@@ -88,7 +92,7 @@ describe("pushing", () => {
     let call = 0;
     const t: Transport = {
       async upsert(table) { call++; if (table === "decks") throw new Error("check constraint"); },
-      async softDelete() {}, async pull() { return []; },
+      async softDelete() {}, async pull() { return []; }, async pullChildren() { return []; },
     };
     await syncNow(t);
     expect(call).toBeGreaterThan(1);
@@ -179,6 +183,7 @@ describe("pulling", () => {
       },
       async softDelete() {},
       async pull(table) { return (seeded as Record<string, Record<string, unknown>[]>)[table] ?? []; },
+      async pullChildren() { return []; },
     };
     enqueue("decks", "d9");
     await syncNow(t);
@@ -207,6 +212,86 @@ describe("pulling", () => {
     });
     await syncNow(t);
     expect(getCursor("decks")).toBe("2026-09-09T00:00:00Z");
+  });
+});
+
+describe("events", () => {
+  it("fans one event out into header, matches and log, header first", async () => {
+    const { saveTournament } = await import("../store/tournaments");
+    const { buildDemoTournament } = await import("../tournament/demo");
+    saveTournament(buildDemoTournament());
+    const { t, calls } = fakeTransport();
+    await syncNow(t);
+    const tables = calls.upserts.map((u) => u.table);
+    expect(tables).toEqual(["tournaments", "tournament_matches", "event_log"]);
+    // Every match row points at the header row that went first.
+    const headerId = (calls.upserts[0].rows[0] as { id: string }).id;
+    expect((calls.upserts[1].rows as { tournament_id: string }[]).every((r) => r.tournament_id === headerId)).toBe(true);
+  });
+
+  it("does not re-send log lines it has already sent", async () => {
+    const { saveTournament } = await import("../store/tournaments");
+    const { buildDemoTournament } = await import("../tournament/demo");
+    const event = buildDemoTournament();
+    saveTournament(event);
+    const first = fakeTransport();
+    await syncNow(first.t);
+    // Touch the event again with no new log lines.
+    saveTournament({ ...event, name: "Renamed" });
+    const second = fakeTransport();
+    await syncNow(second.t);
+    expect(second.calls.upserts.map((u) => u.table)).toEqual(["tournaments", "tournament_matches"]);
+  });
+
+  it("rebuilds an event made on another device, matches and log included", async () => {
+    const { buildDemoTournament } = await import("../tournament/demo");
+    const { eventToHeaderRow, eventToMatchRows, unsentLogRows } = await import("./eventRows");
+    const origin = { ...buildDemoTournament(), id: "from-other-phone" };
+    const header = { ...eventToHeaderRow(origin), updated_at: "2026-09-10T09:00:00Z" };
+    const { t } = fakeTransport({
+      tournaments: [header as unknown as Record<string, unknown>],
+      tournament_matches: eventToMatchRows(origin) as unknown as Record<string, unknown>[],
+      event_log: unsentLogRows(origin) as unknown as Record<string, unknown>[],
+    });
+    localStorage.removeItem("pb-sync-logsent");
+
+    await syncNow(t);
+
+    const { listTournaments } = await import("../store/tournaments");
+    const local = listTournaments();
+    expect(local).toHaveLength(1);
+    expect(local[0].id).toBe("from-other-phone");
+    expect(local[0].matches).toHaveLength(origin.matches.length);
+    expect(local[0].log).toHaveLength(origin.log!.length);
+    expect(local[0].championTeamId).toBe(origin.championTeamId);
+    expect(getCursor("events")).toBe("2026-09-10T09:00:00Z");
+  });
+
+  it("does not re-append log lines that arrived from another device", async () => {
+    const { buildDemoTournament } = await import("../tournament/demo");
+    const { eventToHeaderRow, eventToMatchRows, unsentLogRows, logSentCount } = await import("./eventRows");
+    const origin = { ...buildDemoTournament(), id: "from-other-phone" };
+    const { t } = fakeTransport({
+      tournaments: [{ ...eventToHeaderRow(origin), updated_at: "2026-09-10T09:00:00Z" } as unknown as Record<string, unknown>],
+      tournament_matches: eventToMatchRows(origin) as unknown as Record<string, unknown>[],
+      event_log: unsentLogRows(origin) as unknown as Record<string, unknown>[],
+    });
+    localStorage.removeItem("pb-sync-logsent");
+    await syncNow(t);
+    expect(logSentCount("from-other-phone")).toBe(origin.log!.length);
+  });
+
+  it("tombstones only the header when an event is deleted - children cascade", async () => {
+    const { saveTournament, deleteTournament } = await import("../store/tournaments");
+    const { buildDemoTournament } = await import("../tournament/demo");
+    const event = buildDemoTournament();
+    saveTournament(event);
+    await syncNow(fakeTransport().t);
+    deleteTournament(event.id);
+    const { t, calls } = fakeTransport();
+    await syncNow(t);
+    expect(calls.deletes).toHaveLength(1);
+    expect(calls.deletes[0].table).toBe("tournaments");
   });
 });
 
