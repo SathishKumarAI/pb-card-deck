@@ -31,7 +31,18 @@ functions.
 | `supabase/migrations/0004_event_shares.sql` | Phase 2b: the `event_shares` table and the four share functions, including `get_shared_event` - the only thing an unauthenticated visitor may call |
 | `supabase/migrations/0005_event_members.sql` | Phase 2c: invited writers. **Contains a behaviour change** - `tournament_matches.user_id` comes to mean the EVENT's owner rather than whoever wrote the row, plus an `updated_by` column. Run it after 0004 |
 
-Either paste each into the dashboard's **SQL editor** in that order, or, with the
+**The quickest route for a brand-new project** is the generated single file - one paste
+instead of five:
+
+```
+supabase/ALL-IN-ONE.sql
+```
+
+It is built by `python3 scripts/build-combined-migration.py` from the migrations above,
+so it cannot drift from them, and it is **not idempotent** - on a project where some
+migrations have already run, use the individual files and skip the ones that are done.
+
+Otherwise paste each file into the dashboard's **SQL editor** in that order, or, with the
 [Supabase CLI](https://supabase.com/docs/guides/local-development):
 
 ```bash

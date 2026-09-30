@@ -35,6 +35,7 @@ import {
   setSyncEnabled,
 } from "./outbox";
 import { clearIdMap, rememberCloudId } from "./idmap";
+import { markSharedEvent, markOwnEvent, isSharedEvent, clearSharedEvents } from "./sharedEvents";
 import {
   deckToRow, rowToDeck, matchToRow, rowToMatch,
   prefsToRow, rowToPrefs, mergePrefs,
@@ -79,6 +80,13 @@ export interface SyncStatus {
   error: string | null;
   lastSyncedAt: number | null;
 }
+
+/**
+ * The signed-in account, set by `startSyncing`. The engine needs it for exactly one
+ * question - is this event mine? - and asking `lib/auth` for it here would make the
+ * data layer depend on the auth layer for a string.
+ */
+let sessionUserId: string | null = null;
 
 let status: SyncStatus = { phase: "off", pending: 0, error: null, lastSyncedAt: null };
 const listeners = new Set<() => void>();
@@ -132,7 +140,13 @@ async function pushEntity(t: Transport, entity: Entity, entries: OutboxEntry[]):
       for (const e of upserts) {
         const event = byId.get(e.id);
         if (!event) continue;
-        await t.upsert(EVENT_TABLES.header, [eventToHeaderRow(event) as unknown as Record<string, unknown>]);
+        /* An event shared with this account (phase 2c): the header is the owner's and a
+           writer's upsert of it is refused by policy. Sending it anyway would fail the
+           whole entity every time and eventually dead-letter the event, so the header is
+           skipped and only the work a helper is allowed to do travels. */
+        if (!isSharedEvent(event.id)) {
+          await t.upsert(EVENT_TABLES.header, [eventToHeaderRow(event) as unknown as Record<string, unknown>]);
+        }
         const matchRows = eventToMatchRows(event);
         if (matchRows.length) await t.upsert(EVENT_TABLES.matches, matchRows as unknown as Record<string, unknown>[]);
         // Append-only: only the lines this device has not sent, and only once.
@@ -171,6 +185,13 @@ async function pullEvents(t: Transport, pendingIds: Set<string>): Promise<void> 
   for (const header of headers) {
     const localId = header.client_id || header.id;
     rememberCloudId("tournaments", localId, header.id);
+    /* The header carries its owner, so ownership is LEARNED here rather than guessed
+       later. `sessionUserId` is null only when a pull somehow runs without a session,
+       in which case treating the event as ours is the conservative answer - it keeps
+       the old single-user behaviour. */
+    const ownerId = (header as unknown as { user_id?: string }).user_id;
+    if (ownerId && sessionUserId && ownerId !== sessionUserId) markSharedEvent(localId, ownerId);
+    else markOwnEvent(localId);
     if (!pendingIds.has(localId)) {
       if (header.deleted_at) {
         dropTournamentLocally(localId);
@@ -297,7 +318,8 @@ export function describeStuck(dead: OutboxEntry[]): string {
 
 /* ───────────────────── session start and end ───────────────────── */
 
-export function startSyncing() {
+export function startSyncing(userId: string | null = null) {
+  sessionUserId = userId;
   setSyncEnabled(true);
   setStatus({ phase: "idle" });
 }
@@ -312,8 +334,10 @@ export function startSyncing() {
  */
 export function stopSyncing() {
   setSyncEnabled(false);
+  sessionUserId = null;
   clearOutbox();
   clearIdMap();
+  clearSharedEvents();
   remove(CURSOR_KEY);
   setStatus({ phase: "off", pending: 0, error: null, lastSyncedAt: null });
 }

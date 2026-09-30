@@ -4,17 +4,17 @@ _Last written 2026-09-29. Read this when you come back._
 
 ## Where things stand
 
-**Phases 2a and 2b are built and merged**: an **optional** Supabase account beside the
-local-first default, and a **read-only live link** an organiser can hand to
-spectators. Seven PRs, #16 through #23, each with its own docs and a dated
+**Phase 2 is complete and merged** - 2a (an optional Supabase account beside the
+local-first default), 2b (a read-only live link for spectators) and 2c (invited helpers
+who can enter scores). Eleven PRs, #16 through #26, each with its own docs and a dated
 `WORKLOG.md` entry.
 
 | | |
 |---|---|
 | Live | https://pb-card-deck.vercel.app |
-| Tests | **279 in 24 files** (engine, scoring audit, two bug hunts, tournaments, streaks, contrast, a11y, board rendering, store erase, auth, account sheet, sync: outbox / engine / rows / events / claim) |
+| Tests | **297 in 26 files** (engine, scoring audit, two bug hunts, tournaments, streaks, contrast, a11y, board rendering, store erase, auth, account sheet, sync: outbox / engine / rows / events / claim) |
 | Gates | `npm test` · `npm run lint` · `npx tsc --noEmit` · `npm run contrast` · `npm run build` |
-| Security gate | `bash scripts/verify-rls-local.sh` — two suites (accounts + share links), 19 groups, Docker, no Supabase account needed |
+| Security gate | `bash scripts/verify-rls-local.sh` — three suites (accounts · share links · invited writers), 32 groups, Docker, no Supabase account needed |
 | Default theme | **light**; dark and auto are one tap away and persist |
 
 ## The one thing that needs YOU
@@ -27,7 +27,8 @@ account menu item is absent. That is a supported, tested state, not a broken one
 Six steps, all in **[`docs/SUPABASE-SETUP.md`](docs/SUPABASE-SETUP.md)**:
 
 1. Create the project (**choose the region deliberately** — the privacy page names it).
-2. Run `supabase/migrations/0001` → `0002` → `0003` → `0004`, in order.
+2. Run the migrations. Fresh project: paste `supabase/ALL-IN-ONE.sql` once. Otherwise
+   `0001` → `0002` → `0003` → `0004` → `0005`, in order.
 3. Enable **Google** and **email magic link**; set the redirect allowlist to the
    production origin and `http://localhost:3000` — exact entries, no wildcard.
 4. Put `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in
@@ -52,6 +53,9 @@ Vercel, never in CI.
   deletion.
 - **A live link for spectators** — read-only, revocable, expiring in seven days by
   default; only a hash of it is stored, and it shows nothing but that one event.
+- **Helpers who can enter scores** — invite by link, they sign in at `/join`, they get
+  that one event and are named in its change log. Remove one and they stop immediately,
+  without erasing what they entered.
 - **Help** — a searchable manual, plus tap-to-define pickleball terms.
 - **Sharing** — win / streak / champion cards as PNGs at Instagram and WhatsApp
   sizes.
@@ -61,11 +65,9 @@ Vercel, never in CI.
 Phase 2a is done. Two things are queued and neither is started:
 
 1. **The owner setup above.** Without it, phase 2a is inert in production.
-2. **Phase 2c — invited signed-in writers.** The one still open. A writer needs to
-   update an event they do not own, which means `tournament_matches.user_id` must mean
-   "the event's owner" rather than "whoever wrote last" — today a trigger forces it to
-   `auth.uid()`, so that trigger and the policies change together, with adversarial
-   cases for "a writer cannot touch the header, another event, or the log's history".
+2. **Nothing else is queued.** Phase 2 is done. Pick from **The plan** in `README.md`
+   — per-card analytics is the smallest (the counters already exist and nothing reads
+   them), and consolation / third-place draws are pure slot wiring.
 
 Or pick from **The plan** in `README.md` — each row says why that idea is not there
 yet.
