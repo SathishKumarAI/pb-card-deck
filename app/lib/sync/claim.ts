@@ -14,6 +14,7 @@ import { read, write } from "../store/keys";
 import { listDecks } from "../store/decks";
 import { listMatches } from "../store/matches";
 import { listFavoriteIds } from "../store/prefs";
+import { listTournaments } from "../store/tournaments";
 import { enqueue } from "./outbox";
 import { PREFS_ROW } from "../store/prefs";
 
@@ -24,6 +25,7 @@ type Claims = Record<string, "uploaded" | "declined">;
 export interface LocalDataCounts {
   decks: number;
   matches: number;
+  events: number;
   favorites: number;
   /** True when there is nothing to ask about, so the dialog never appears empty. */
   empty: boolean;
@@ -32,8 +34,9 @@ export interface LocalDataCounts {
 export function localDataCounts(): LocalDataCounts {
   const decks = listDecks().length;
   const matches = listMatches().length;
+  const events = listTournaments().length;
   const favorites = listFavoriteIds().length;
-  return { decks, matches, favorites, empty: decks + matches + favorites === 0 };
+  return { decks, matches, events, favorites, empty: decks + matches + events + favorites === 0 };
 }
 
 export function claimAnswered(userId: string): boolean {
@@ -59,6 +62,7 @@ export function claimLocalData(userId: string): LocalDataCounts {
   const counts = localDataCounts();
   for (const d of listDecks()) enqueue("decks", d.id);
   for (const m of listMatches()) enqueue("matches", m.id);
+  for (const e of listTournaments()) enqueue("events", e.id);
   enqueue("prefs", PREFS_ROW);
   remember(userId, "uploaded");
   return counts;

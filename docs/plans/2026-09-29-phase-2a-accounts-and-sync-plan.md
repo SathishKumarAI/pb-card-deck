@@ -98,12 +98,17 @@ rule, tombstones, cursor monotonicity, prefs merging, dead-lettering and the
 mid-sync write race. **Proof (real):** two browsers on one account is an owner step
 once a project exists — it needs credentials this repo does not have.
 
-## Stage 4b — events sync `feat/sync-events`
+## Stage 4b — events sync `feat/sync-events` — **DONE** (this PR)
 
-- [ ] Map one local `Tournament` blob → `tournaments` header + `tournament_matches`
-      rows + `event_log` appends, and reassemble on pull
-- [ ] Append-only log handling: never re-send a line, never expect to edit one
-- [ ] Tests: a 12-team event round-trips with every result and correction intact
+- [x] Map one local `Tournament` blob → `tournaments` header + `tournament_matches`
+      rows + `event_log` appends, and reassemble on pull (`lib/sync/eventRows.ts`)
+- [x] Append-only log handling: never re-send a line, never expect to edit one
+      (`logSentCount`, forwards only, also set when lines arrive from elsewhere)
+- [x] Only the header is tombstoned on delete; children cascade
+- [x] The first-sign-in dialog counts and queues events too
+- [x] Tests: the demo event (a 12-team day played through the real engine)
+      round-trips field by field, including slot wiring, an unplayed match staying
+      unplayed, the log's order and its per-line match links
 
 ## Stage 5 — the docs catch up `docs/two-modes`
 

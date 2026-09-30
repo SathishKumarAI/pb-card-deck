@@ -20,6 +20,7 @@
 import { listDecks, applyRemoteDeck, dropDeckLocally } from "../store/decks";
 import { listMatches, applyRemoteMatch, dropMatchLocally } from "../store/matches";
 import { listFavoriteIds, getStats, applyRemotePrefs } from "../store/prefs";
+import { listTournaments, applyRemoteTournament, dropTournamentLocally } from "../store/tournaments";
 import { read, write, remove } from "../store/keys";
 import {
   type Entity,
@@ -38,9 +39,18 @@ import {
   prefsToRow, rowToPrefs, mergePrefs,
   type DeckRow, type MatchRow, type PrefsRow,
 } from "./rows";
+import {
+  eventToHeaderRow, eventToMatchRows, unsentLogRows, setLogSentCount,
+  rowsToTournament, type EventRow, type EventMatchRow, type EventLogRow,
+} from "./eventRows";
 
 export const CURSOR_KEY = "pb-sync-cursors";
-const TABLE: Record<Entity, string> = { decks: "decks", matches: "matches", prefs: "prefs" };
+const TABLE: Record<Entity, string> = {
+  decks: "decks", matches: "matches", prefs: "prefs", tournaments: "tournaments",
+} as unknown as Record<Entity, string>;
+/* `events` is the queue's name for a whole event; these are the three tables one
+   event fans out into. */
+const EVENT_TABLES = { header: "tournaments", matches: "tournament_matches", log: "event_log" };
 
 /* ─────────────────────────── transport ─────────────────────────── */
 
@@ -50,6 +60,12 @@ export interface Transport {
   softDelete(table: string, ids: string[]): Promise<void>;
   /** Rows changed after `cursor`, oldest first. */
   pull(table: string, cursor: string | null, limit: number): Promise<Record<string, unknown>[]>;
+  /**
+   * Every row of `table` whose `column` equals `value`. Needed because an event's
+   * matches and log lines are fetched by parent, not by timestamp - a match that
+   * has not changed since the last sync is still part of the event being rebuilt.
+   */
+  pullChildren(table: string, column: string, value: string, orderBy: string): Promise<Record<string, unknown>[]>;
 }
 
 /* ──────────────────────── observable status ────────────────────── */
@@ -108,6 +124,23 @@ async function pushEntity(t: Transport, entity: Entity, entries: OutboxEntry[]):
       const byId = new Map(listMatches().map((m) => [m.id, m]));
       const rows = upserts.map((e) => byId.get(e.id)).filter(Boolean).map((m) => matchToRow(m!));
       if (rows.length) await t.upsert(TABLE.matches, rows as unknown as Record<string, unknown>[]);
+    } else if (entity === "events") {
+      // One event fans out into three tables, header first so the children have a
+      // parent to point at.
+      const byId = new Map(listTournaments().map((e) => [e.id, e]));
+      for (const e of upserts) {
+        const event = byId.get(e.id);
+        if (!event) continue;
+        await t.upsert(EVENT_TABLES.header, [eventToHeaderRow(event) as unknown as Record<string, unknown>]);
+        const matchRows = eventToMatchRows(event);
+        if (matchRows.length) await t.upsert(EVENT_TABLES.matches, matchRows as unknown as Record<string, unknown>[]);
+        // Append-only: only the lines this device has not sent, and only once.
+        const logRows = unsentLogRows(event);
+        if (logRows.length) {
+          await t.upsert(EVENT_TABLES.log, logRows as unknown as Record<string, unknown>[]);
+          setLogSentCount(event.id, (event.log ?? []).length);
+        }
+      }
     } else {
       const row = prefsToRow({ favorites: listFavoriteIds(), stats: getStats() });
       // One row per user, so the conflict target is the owner column.
@@ -115,7 +148,12 @@ async function pushEntity(t: Transport, entity: Entity, entries: OutboxEntry[]):
     }
   }
 
-  if (deletes.length && entity !== "prefs") {
+  if (deletes.length && entity === "events") {
+    const { cloudIdFor } = await import("./idmap");
+    // Only the header is tombstoned: the children cascade from it, and a delete of
+    // an event nobody else can see needs no more than that.
+    await t.softDelete(EVENT_TABLES.header, deletes.map((e) => cloudIdFor("tournaments", e.id)));
+  } else if (deletes.length && entity !== "prefs") {
     // Deleting a row whose local copy is already gone still needs its cloud id,
     // which the id map remembers from when it was first pushed.
     const { cloudIdFor } = await import("./idmap");
@@ -127,7 +165,32 @@ async function pushEntity(t: Transport, entity: Entity, entries: OutboxEntry[]):
 
 const PAGE = 500;
 
+async function pullEvents(t: Transport, pendingIds: Set<string>): Promise<void> {
+  const headers = (await t.pull(EVENT_TABLES.header, getCursor("events"), PAGE)) as unknown as (EventRow & { updated_at?: string })[];
+  for (const header of headers) {
+    const localId = header.client_id || header.id;
+    rememberCloudId("tournaments", localId, header.id);
+    if (!pendingIds.has(localId)) {
+      if (header.deleted_at) {
+        dropTournamentLocally(localId);
+      } else {
+        // Matches and log lines come by parent, not by timestamp: an unchanged match
+        // is still part of the event being rebuilt.
+        const matchRows = (await t.pullChildren(EVENT_TABLES.matches, "tournament_id", header.id, "round")) as unknown as EventMatchRow[];
+        const logRows = (await t.pullChildren(EVENT_TABLES.log, "tournament_id", header.id, "at")) as unknown as EventLogRow[];
+        const event = rowsToTournament(header, matchRows.filter((m) => !m.deleted_at), logRows);
+        applyRemoteTournament(event);
+        // Lines that arrived from elsewhere are already in the cloud, so this device
+        // must not try to append them again.
+        setLogSentCount(localId, (event.log ?? []).length);
+      }
+    }
+    if (header.updated_at) setCursor("events", header.updated_at);
+  }
+}
+
 async function pullEntity(t: Transport, entity: Entity, pendingIds: Set<string>): Promise<void> {
+  if (entity === "events") return pullEvents(t, pendingIds);
   const rows = await t.pull(TABLE[entity], getCursor(entity), PAGE);
   if (!rows.length) return;
 
@@ -196,7 +259,7 @@ export async function syncNow(t: Transport, now = Date.now()): Promise<void> {
       pendingByEntity.set(e.entity, set);
     }
 
-    for (const entity of ["decks", "matches", "prefs"] as Entity[]) {
+    for (const entity of ["decks", "matches", "prefs", "events"] as Entity[]) {
       await pullEntity(t, entity, pendingByEntity.get(entity) ?? new Set());
     }
 
@@ -266,6 +329,13 @@ export function supabaseTransport(sb: {
       if (!ids.length) return;
       const { error } = await sb.from(table).update({ deleted_at: new Date().toISOString() }).in("id", ids);
       if (error) throw new Error(error.message);
+    },
+    async pullChildren(table, column, value, orderBy) {
+      const { data, error } = await (sb.from(table).select("*") as unknown as {
+        eq: (c: string, v: string) => { order: (c: string, o: { ascending: boolean }) => Promise<{ data: unknown; error: { message: string } | null }> };
+      }).eq(column, value).order(orderBy, { ascending: true });
+      if (error) throw new Error(error.message);
+      return (data as Record<string, unknown>[]) ?? [];
     },
     async pull(table, cursor, limit) {
       const base = sb.from(table).select("*");

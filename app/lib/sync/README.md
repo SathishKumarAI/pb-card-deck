@@ -18,6 +18,7 @@ else happens in the background, and the UI always says which.
 | When a push or pull happens, who wins a conflict, the status | `engine.ts` |
 | Talking to Supabase specifically | `engine.ts` (`supabaseTransport`) |
 | What triggers a sync, and following the session | `runtime.ts` |
+| One event ⇄ header row + match rows + log lines | `eventRows.ts` |
 | Local id ⇄ cloud UUID | `idmap.ts` |
 | The first-sign-in "bring your data?" decision and its counts | `claim.ts` |
 | The chip a user reads | `../../components/SyncStatus.tsx` |
@@ -49,13 +50,33 @@ else happens in the background, and the UI always says which.
   Emptying someone's device because they signed out of an account would be the worst
   possible reading of "sign out". "Delete all data" in the menu is the explicit wipe.
 
+## Events, and why they are the odd one out
+
+Locally an event is **one JSON blob** — teams, every match, the whole change log —
+written whole on every change. In the database it is a **header row, one row per
+match, and an append-only log**. `eventRows.ts` is where that asymmetry is paid for.
+
+The blob is right locally (one write, no joins, the tournament engine stays free of
+storage) and wrong in the cloud, because phase 2c needs two people entering results
+for different matches of one event without overwriting each other. A blob column
+would make a club night a last-write-wins race over the entire day.
+
+Consequences to keep in mind:
+
+- **The queue holds one entry per EVENT**, not per match, mirroring how the blob is
+  saved. The push fans out; the pull reassembles.
+- **The log is append-only in the database**, so re-sending is refused, not merely
+  wasteful. `logSentCount` tracks how many lines have gone, only ever moves forwards,
+  and is also set when lines arrive from another device — otherwise this device would
+  try to append what it just received.
+- **Matches and log lines are pulled by parent, not by timestamp.** A match that has
+  not changed is still part of the event being rebuilt.
+- **Only the header is tombstoned on delete**; the children cascade.
+- **Absent must stay absent.** A match with no score is "not played yet", and
+  reassembling it as `0-0` would put a phantom result on a bracket.
+
 ## Not here yet
 
-**Events (tournaments) do not sync.** They are the next stage: the local shape is one
-JSON blob while the schema stores an event as a header row, one row per match and an
-append-only log, so the mapping is bigger than everything in this directory put
-together. Matches, decks, favourites and counters sync today.
-
-No realtime subscription either — it is one person's own data, and a websocket held
-open on a court costs battery for nothing. Phase 2b's shared read link is where that
-question comes back.
+No realtime subscription — it is one person's own data, and a websocket held open on a
+court costs battery for nothing. Phase 2b's shared read link is where that question
+comes back.
